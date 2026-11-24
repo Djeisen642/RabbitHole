@@ -16,6 +16,7 @@ Rabbit Hole, written r/abbitHole. Each day, guess which subreddit a real post ca
   4. Member count and founding year
   5. Its icon, blurred
 - After solving: open the community to join it.
+- After the round: a chart of the most common wrong guesses (for example "41% thought it was r/cats"). Autocomplete means every wrong guess is a real sub, so this needs no moderation.
 - "Regulars say hi": after you solve, show something welcoming from the community, like a pinned welcome or a friendly top comment, so joining feels like being invited in.
 
 ## Progress and scoring

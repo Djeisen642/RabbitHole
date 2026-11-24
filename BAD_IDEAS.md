@@ -12,6 +12,7 @@ Kept for the record only. Not part of the plan; don't build from these unless as
 - Thread: rebuild a comment reply chain by deduction, possibly with fictional or user-submitted threads.
 - Karma Grid: Kakuro with reaction tiles.
 - Yesterday's top comment becomes today's puzzle.
+- Players voting on the funniest wrong guesses: free-text guesses would need moderation. Replaced by the wrong-guess chart.
 
 ## Names not chosen
 
