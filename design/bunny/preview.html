@@ -107,7 +107,7 @@
       .rh-bunny {
         fill: none;
         stroke: var(--orange);
-        stroke-width: 3;
+        stroke-width: 3.4;
         stroke-linecap: round;
         stroke-linejoin: round;
       }
@@ -326,8 +326,9 @@
 
       <ul class="notes">
         <li>
-          The whole bunny is one SVG path. Ears and foot move by bending that
-          path, so it never splits into pieces.
+          The whole bunny is one SVG path: a single line plus a dot for the eye.
+          Ears and foot move by bending that line, so it never splits into
+          pieces.
         </li>
         <li>
           No animation library. About 15 KB of plain JavaScript (5 KB gzipped)

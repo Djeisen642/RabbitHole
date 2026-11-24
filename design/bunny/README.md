@@ -1,6 +1,6 @@
 # Bunny mascot
 
-The r/abbitHole bunny: one continuous SVG line, posed by a few numbers and redrawn every frame.
+The r/abbitHole bunny: one continuous SVG line plus a dot for the eye, posed by a few numbers and redrawn every frame.
 
 - `bunny.js` builds the path and runs the moves: ear twitch (idle), foot thump (waiting or idle for 15 s), perk (close or right guess), droop (wrong guess) and dive (solved). No dependencies. Respects `prefers-reduced-motion`.
 - `preview.html` and `preview.js` show every move with a button. ES modules need a server, so run `npx serve design/bunny` and open the URL it prints.

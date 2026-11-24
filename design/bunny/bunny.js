@@ -1,4 +1,5 @@
-// r/abbitHole mascot: one continuous line, posed by a handful of numbers.
+// r/abbitHole mascot: one continuous line (plus a dot for the eye), posed by
+// a handful of numbers.
 //
 // The bunny is a single SVG <path>. Its shape is built from anchor points
 // tagged with the part they belong to (body, head, back ear, front ear, hind
@@ -14,8 +15,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Pivots in bunny space.
 const NECK = [6, -66];
 const FOOT_PIVOT = [-29, -1];
-const EAR_BACK = { pivot: [2, -100], rest: -14, w: 13, len: 45 };
-const EAR_FRONT = { pivot: [19, -103], rest: 4, w: 15, len: 50 };
+const EAR_BACK = { pivot: [2, -100], rest: -16, w: 15, len: 41 };
+const EAR_FRONT = { pivot: [19, -103], rest: 2, w: 17, len: 46 };
 
 // A leaf-shaped ear in its own frame, base at the origin, pointing up.
 // Returns [start, ...cubic points] so it can be spliced into the line.
@@ -24,11 +25,11 @@ function earPoints(w, len, tag) {
   return {
     start: [-h, 0, tag],
     curves: [
-      [-w * 0.95, -len * 0.42, tag],
-      [-w * 0.6, -len * 0.93, tag],
-      [w * 0.05, -len, tag],
-      [w * 0.55, -len * 0.96, tag],
-      [w * 0.9, -len * 0.44, tag],
+      [-w, -len * 0.45, tag],
+      [-w * 0.72, -len, tag],
+      [0, -len, tag],
+      [w * 0.72, -len, tag],
+      [w, -len * 0.45, tag],
       [h, 0, tag],
     ],
   };
@@ -53,31 +54,34 @@ function buildSpec() {
     ['C', [9, -97, 'h'], [10, -101, 'h'], ef.start],
     ['C', ef.curves[0], ef.curves[1], ef.curves[2]],
     ['C', ef.curves[3], ef.curves[4], ef.curves[5]],
-    // Into the face: the eye is a little loop in the line, then out to the
-    // brow and down to the nose.
-    ['C', [30, -96, 'h'], [36, -93, 'h'], [36, -88, 'h']],
-    ['C', [36, -83, 'h'], [30, -83, 'h'], [30.5, -87.5, 'h']],
-    ['C', [31, -92, 'h'], [39, -93, 'h'], [44, -91, 'h']],
-    ['C', [51, -88, 'h'], [56, -81, 'h'], [55, -75, 'h']],
-    // Nose bump, mouth, chin.
-    ['C', [58.5, -74, 'h'], [58.5, -69, 'h'], [54, -69.5, 'h']],
-    ['C', [50, -64, 'h'], [43, -62, 'h'], [37, -64, 'h']],
+    // A round forehead down to the nose.
+    ['C', [42, -104, 'h'], [57, -93, 'h'], [58, -79, 'h']],
+    // Nose bump, a small smile, a full cheek and chin.
+    ['C', [61.5, -78, 'h'], [61.5, -72.5, 'h'], [57.5, -72.5, 'h']],
+    ['C', [56.5, -68, 'h'], [52.5, -67, 'h'], [50, -69.5, 'h']],
+    ['C', [48.5, -66, 'h'], [45, -61.5, 'h'], [39, -62, 'h']],
     // Chest down the front leg to the paw.
-    ['C', [41, -50, 'b'], [36, -34, 'b'], [36, -20, 'b']],
-    ['C', [36, -11, 'b'], [39, -6, 'b'], [45, -5, 'b']],
+    ['C', [45, -50, 'b'], [39, -34, 'b'], [37, -20, 'b']],
+    ['C', [36.5, -11, 'b'], [39, -6, 'b'], [45, -5, 'b']],
     ['C', [52, -4, 'b'], [53, 0, 'b'], [46, 0, 'b']],
     ['C', [40, 0, 'b'], [34, 0, 'b'], [30, -1, 'b']],
-    // Belly back into the big haunch, round to the heel.
-    ['C', [27, -9, 'b'], [25, -14, 'b'], [21, -17, 'b']],
-    ['C', [12, -42, 'b'], [-25, -50, 'b'], [-34, -29, 'b']],
-    ['C', [-39, -17, 'b'], [-35, -8, 'f'], [-26, -7, 'f']],
-    // Long hind foot: along the top to the toe, back along the sole.
-    ['C', [-12, -8, 'f'], [4, -7, 'f'], [14, -4, 'f']],
-    ['C', [21, -3, 'f'], [21, 0, 'f'], [14, 0, 'f']],
-    ['C', [0, 0.5, 'f'], [-18, 0.5, 'f'], [-30, 0, 'f']],
+    // Belly back into a soft, round haunch that rolls down into the foot.
+    ['C', [26, -2, 'b'], [23, -6, 'b'], [20, -11, 'b']],
+    ['C', [13, -33, 'b'], [-22, -39, 'b'], [-29, -22, 'b']],
+    ['C', [-31, -15, 'f'], [-29, -10, 'f'], [-23, -9.5, 'f']],
+    // A short, plump hind paw: along the top, round the toe, back along
+    // the sole.
+    ['C', [-14, -10, 'f'], [-3, -9, 'f'], [4, -6.5, 'f']],
+    ['C', [10.5, -4.5, 'f'], [10, 0.5, 'f'], [3, 0.5, 'f']],
+    ['C', [-8, 0.8, 'f'], [-21, 0.8, 'f'], [-30, 0, 'f']],
     // Round the heel and trail back up toward the tail.
     ['C', [-37, -1, 'f'], [-38, -6, 'b'], [-41, -11, 'b']],
     ['C', [-44, -17, 'b'], [-46, -26, 'b'], [-49.5, -32, 'b']],
+    // The one pen lift: a round dot for the eye, low and forward on the head
+    // so it reads as friendly rather than staring.
+    ['M', [44.5, -84, 'h']],
+    ['C', [44.5, -81.8, 'h'], [41, -81.8, 'h'], [41, -84, 'h']],
+    ['C', [41, -86.2, 'h'], [44.5, -86.2, 'h'], [44.5, -84, 'h']],
   ];
 }
 
@@ -178,42 +182,45 @@ export const POSES = {
   crouch: { sy: 0.86, sx: 1.07, earB: -28, earF: -30, headDy: 3 },
 };
 
-// Keyframes for the dive, given the distance from home to the hole.
-// rot 100 points the nose straight down; ears lie back so they trail up.
+// Keyframes for the dive, given the distance from home to the hole centre.
+// The bunny turns nose-down while it is still in the air above the hole and
+// squeezes narrower than the opening, then drops straight in, so nothing
+// crosses the rim on the way down. rot 90 is nose straight down; the ears lie
+// back so they trail upward.
 export function diveFrames(dx) {
+  const over = dx + 19; // centres the nose-down bunny on the hole
   return {
     crouch: POSES.crouch,
-    hop: {
-      x: dx * 0.38,
-      y: -30,
-      rot: 34,
+    rise: {
+      x: dx * 0.62,
+      y: -40,
+      rot: 40,
       sx: 1.04,
-      sy: 0.92,
+      sy: 0.82,
       earB: -70,
       earF: -80,
-      headRot: -4,
     },
-    fall: {
-      x: dx + 4,
-      y: 30,
-      rot: 100,
-      sx: 1.06,
-      sy: 0.72,
+    over: {
+      x: over,
+      y: -52,
+      rot: 90,
+      sx: 1.12,
+      sy: 0.5,
       earB: -92,
       earF: -104,
       headRot: 6,
     },
     gone: {
-      x: dx + 4,
-      y: 150,
-      rot: 100,
-      sx: 1.06,
-      sy: 0.7,
+      x: over,
+      y: 170,
+      rot: 90,
+      sx: 1.12,
+      sy: 0.5,
       earB: -92,
       earF: -104,
       headRot: 6,
     },
-    peek: { x: dx - 22, y: 90, earB: -6, earF: 6, headRot: -4 },
+    peek: { x: dx - 26, y: 86, earB: 10, earF: 8, headRot: -4 },
   };
 }
 
@@ -235,7 +242,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 export function createBunny(svg, options = {}) {
   const ground = options.ground ?? 170;
   const home = [options.homeX ?? 78, ground];
-  const hole = { cx: options.holeX ?? 190, cy: ground + 1, rx: 36, ry: 9 };
+  const hole = { cx: options.holeX ?? 190, cy: ground + 1, rx: 40, ry: 10 };
   const reduced =
     options.reducedMotion ??
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -245,7 +252,7 @@ export function createBunny(svg, options = {}) {
     <defs>
       <clipPath id="${id}-clip">
         <rect x="-400" y="-400" width="1200" height="${400 + ground + 2}"></rect>
-        <ellipse cx="${hole.cx}" cy="${hole.cy}" rx="${hole.rx - 3}" ry="${hole.ry - 1}"></ellipse>
+        <ellipse cx="${hole.cx}" cy="${hole.cy}" rx="${hole.rx - 1}" ry="${hole.ry - 0.5}"></ellipse>
       </clipPath>
     </defs>
     <path class="rh-ground" d="M14 ${ground} C40 ${ground - 1.5} 70 ${ground + 1.2} 104 ${ground}
@@ -392,16 +399,16 @@ export function createBunny(svg, options = {}) {
         const f = diveFrames(dx);
         await to(f.crouch, 200, 'out');
         if (!alive(m)) return;
-        await to(f.hop, 280, 'out');
+        await to(f.rise, 230, 'out');
         if (!alive(m)) return;
-        await to(f.fall, 240, 'in');
+        await to(f.over, 190, 'inOut');
         if (!alive(m)) return;
-        await to(f.gone, 200, 'in');
+        await to(f.gone, 300, 'in');
         if (!alive(m)) return;
         await wait(450);
         // Peek: the head comes back up just far enough to look around.
         await to({ ...f.peek, y: 150 }, 0);
-        await to(f.peek, 300, 'back');
+        await to(f.peek, 320, 'out');
         if (!alive(m)) return;
         await wait(200);
         await to({ ...f.peek, earF: 18 }, 80, 'out');
