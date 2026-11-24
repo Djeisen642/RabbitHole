@@ -17,6 +17,15 @@ Judging is 25% each: delightful UX, polish, Reddit-native feel, fresh daily cont
 - Filter NSFW and quarantined communities and NSFW posts. Keep the curated list to communities that are broadly welcoming.
 - No user data beyond what's needed: username for streaks and Atlas, nothing else.
 
+## Design direction
+
+It should look handcrafted, not AI-made, with one consistent theme across every screen.
+
+- Mascot: a fluid single-line-drawing bunny, drawn as one SVG path and animated. Ears twitch every so often. It thumps its hind foot impatiently when the player idles or guesses wrong, ears perk on a right guess and droop on a wrong one, and it dives into the hole on a solve.
+- The whole UI shares that line-drawn style: hand-drawn clue cards, a squiggly tunnel as the progress bar, and each clue revealed as digging one layer deeper.
+- Tight palette: Reddit orange plus a soil brown on a light paper background. One distinctive display font paired with a plain body font.
+- Avoid the usual AI tells: purple gradients, glassy cards, default Inter, stock Tailwind components.
+
 ## Milestones
 
 **1. Spike and setup (Nov 24 to 26).** Log in, playtest in a test subreddit, add a throwaway `/api/spike` endpoint that pulls a top post, a top comment, one rule, member count and icon from three outside subreddits. This proves the reads on the live runtime before anything else is built.
