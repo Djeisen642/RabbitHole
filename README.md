@@ -7,14 +7,14 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
 ## How to play
 
 1. Open today's r/abbitHole post. You see one real Reddit post (title, text or image) with the subreddit hidden.
-2. Type a guess. The box autocompletes from the communities in today's pool, and `r/`, capitals and spaces don't matter.
+2. Type a guess. Matching communities are suggested as you type, but the full list of possible answers stays hidden. `r/`, capitals and spaces don't matter.
 3. Every wrong guess reveals a clue, each one more obvious than the last:
    1. A top comment from the original thread
    2. One of the community's rules
    3. A cloud of the community's in-jokes and jargon
    4. Member count and the year it was founded
-   5. The community icon, blurred
-4. You get six guesses: one on the post alone, then one after each clue. Solve it and you can jump straight to the community to join it.
+   5. The community icon, blurred (only when the community has a custom icon)
+4. You get one guess on the post alone, then one after each clue: six guesses, or five when there's no icon clue. Solve it and you can jump straight to the community to join it.
 
 ### Scoring
 

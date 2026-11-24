@@ -14,7 +14,9 @@ Rabbit Hole, written r/abbitHole. Each day, guess which subreddit a real post ca
   2. One of the sub's rules (the "no posting your own cat" kind)
   3. A word cloud of its jargon
   4. Member count and founding year
-  5. Its icon, blurred
+  5. Its icon, blurred, only when the sub has a custom icon (otherwise the round has four clues)
+- One guess on the post alone, then one after each clue.
+- Guesses autocomplete against a hidden pool of possible answers; the pool is never shown as a list.
 - After solving: open the community to join it.
 - After the round: a chart of the most common wrong guesses (for example "41% thought it was r/cats"). Autocomplete means every wrong guess is a real sub, so this needs no moderation.
 - "Regulars say hi": after you solve, show something welcoming from the community, like a pinned welcome or a friendly top comment, so joining feels like being invited in.

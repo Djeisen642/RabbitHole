@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MAX_GUESSES,
   applyGuess,
+  cluesFor,
   cluesRevealed,
   isCorrectGuess,
+  maxGuesses,
   newRound,
   normalizeSubreddit,
   rankByScore,
@@ -31,7 +32,7 @@ describe('isCorrectGuess', () => {
 
 describe('a round', () => {
   it('reveals one clue per wrong guess and scores clues used', () => {
-    let round = newRound('Breadit');
+    let round = newRound('Breadit', { hasCustomIcon: true });
     round = applyGuess(round, 'Baking');
     round = applyGuess(round, 'Sourdough');
     expect(cluesRevealed(round)).toBe(2);
@@ -42,24 +43,52 @@ describe('a round', () => {
   });
 
   it('scores 0 when solved on the post alone', () => {
-    expect(score(applyGuess(newRound('Breadit'), 'Breadit'))).toBe(0);
+    expect(
+      score(applyGuess(newRound('Breadit', { hasCustomIcon: true }), 'Breadit'))
+    ).toBe(0);
   });
 
   it('ignores blank and repeated guesses', () => {
-    let round = applyGuess(newRound('Breadit'), 'Baking');
+    let round = applyGuess(
+      newRound('Breadit', { hasCustomIcon: true }),
+      'Baking'
+    );
     round = applyGuess(round, ' baking ');
     round = applyGuess(round, '   ');
     expect(round.guesses).toHaveLength(1);
   });
 
-  it(`fails after ${MAX_GUESSES} wrong guesses and ignores later guesses`, () => {
-    let round = newRound('Breadit');
+  it('fails after six wrong guesses when the sub has an icon', () => {
+    let round = newRound('Breadit', { hasCustomIcon: true });
+    expect(maxGuesses(round)).toBe(6);
     for (const g of ['a', 'b', 'c', 'd', 'e', 'f'])
       round = applyGuess(round, g);
     expect(round.status).toBe('failed');
     expect(cluesRevealed(round)).toBe(5);
     expect(score(round)).toBeNull();
     expect(applyGuess(round, 'Breadit').status).toBe('failed');
+  });
+
+  it('skips the icon clue and allows five guesses without a custom icon', () => {
+    let round = newRound('Breadit', { hasCustomIcon: false });
+    expect(round.clues).not.toContain('icon');
+    expect(maxGuesses(round)).toBe(5);
+    for (const g of ['a', 'b', 'c', 'd', 'e']) round = applyGuess(round, g);
+    expect(round.status).toBe('failed');
+    expect(cluesRevealed(round)).toBe(4);
+  });
+});
+
+describe('cluesFor', () => {
+  it('keeps reveal order and only adds the icon when there is one', () => {
+    expect(cluesFor(true)).toEqual([
+      'topComment',
+      'rule',
+      'jargon',
+      'stats',
+      'icon',
+    ]);
+    expect(cluesFor(false)).toEqual(['topComment', 'rule', 'jargon', 'stats']);
   });
 });
 

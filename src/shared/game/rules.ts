@@ -2,15 +2,19 @@
  * Core r/abbitHole rules. Pure functions only: no Devvit, no React, no I/O.
  *
  * A round: the player sees one real post with its subreddit hidden. They may
- * guess on the post alone, and every wrong guess reveals the next clue. With
- * five clues that is at most six guesses. Score is the number of clues the
- * player needed; time never counts and ties share a rank.
+ * guess on the post alone, and every wrong guess reveals the next clue, so a
+ * round allows one more guess than it has clues. The icon clue is only used
+ * when the subreddit has a custom icon, so a round has four or five clues.
+ * Score is the number of clues the player needed; time never counts and ties
+ * share a rank.
  */
 
-export const CLUE_COUNT = 5;
-export const MAX_GUESSES = CLUE_COUNT + 1;
-
 export type ClueKind = 'topComment' | 'rule' | 'jargon' | 'stats' | 'icon';
+
+/** The clues a round uses, in reveal order. The icon clue needs a custom icon. */
+export function cluesFor(hasCustomIcon: boolean): ClueKind[] {
+  return CLUE_ORDER.filter((kind) => kind !== 'icon' || hasCustomIcon);
+}
 
 /** Order in which clues are revealed, least to most obvious. */
 export const CLUE_ORDER: readonly ClueKind[] = [
@@ -26,15 +30,27 @@ export type RoundStatus = 'playing' | 'solved' | 'failed';
 export type Round = {
   answer: string;
   aliases: readonly string[];
+  clues: readonly ClueKind[];
   guesses: readonly string[];
   status: RoundStatus;
 };
 
 export function newRound(
   answer: string,
-  aliases: readonly string[] = []
+  options: { aliases?: readonly string[]; hasCustomIcon: boolean }
 ): Round {
-  return { answer, aliases, guesses: [], status: 'playing' };
+  return {
+    answer,
+    aliases: options.aliases ?? [],
+    clues: cluesFor(options.hasCustomIcon),
+    guesses: [],
+    status: 'playing',
+  };
+}
+
+/** One guess on the post alone, then one after each clue. */
+export function maxGuesses(round: Round): number {
+  return round.clues.length + 1;
 }
 
 /** Lowercase, strip a leading "r/" or "/r/", and drop spaces, dashes and underscores. */
@@ -64,7 +80,7 @@ export function wrongGuessCount(round: Round): number {
 
 /** How many clues are visible right now. */
 export function cluesRevealed(round: Round): number {
-  return Math.min(wrongGuessCount(round), CLUE_COUNT);
+  return Math.min(wrongGuessCount(round), round.clues.length);
 }
 
 /** Returns a new round with the guess applied. Guesses after the round ends, blank or repeated guesses are ignored. */
@@ -79,13 +95,13 @@ export function applyGuess(round: Round, guess: string): Round {
   const solved = isCorrectGuess(guess, round.answer, round.aliases);
   const status: RoundStatus = solved
     ? 'solved'
-    : guesses.length >= MAX_GUESSES
+    : guesses.length >= maxGuesses(round)
       ? 'failed'
       : 'playing';
   return { ...round, guesses, status };
 }
 
-/** Clues used to solve (0 to CLUE_COUNT), or null if the round was not solved. */
+/** Clues used to solve (0 to the round's clue count), or null if the round was not solved. */
 export function score(round: Round): number | null {
   return round.status === 'solved' ? wrongGuessCount(round) : null;
 }

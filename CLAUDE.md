@@ -42,7 +42,7 @@ Do not read `BAD_IDEAS.md` unless someone asks about rejected ideas. It holds co
 
 ## Game rules (source of truth: `src/shared/game/rules.ts`)
 
-One puzzle per day, the same for everyone. Up to six guesses: one on the post alone, then one after each of five clues (top comment, a rule, jargon cloud, member count and founding year, blurred icon). Score is clues used; time never counts, ties share a rank, unsolved ranks last. Consecutive solved days build a streak.
+One puzzle per day, the same for everyone. One guess on the post alone, then one after each clue: top comment, a rule, jargon cloud, member count and founding year, and the blurred icon only if the sub has a custom icon. That makes six guesses with an icon, five without. Guesses autocomplete against a hidden pool of answers; never show the pool as a list. Score is clues used; time never counts, ties share a rank, unsolved ranks last. Consecutive solved days build a streak.
 
 ## Design rules
 
