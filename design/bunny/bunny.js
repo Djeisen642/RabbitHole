@@ -13,7 +13,7 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Pivots in bunny space.
-const NECK = [16, -80];
+const NECK = [16, -98];
 // The hind foot hinges where it comes out from under the haunch, so a thump
 // lifts the toe clear of the thigh.
 const FOOT_PIVOT = [2, -1];
@@ -23,12 +23,14 @@ const EAR_BACK = { pivot: [15, -109], rest: -58, w: 15, len: 46 };
 const EAR_FRONT = { pivot: [25, -113], rest: -44, w: 17, len: 54 };
 
 // The head is drawn a little small below and scaled up from the chin, which
-// keeps the face big and round without redrawing every point.
+// keeps the face big and round without redrawing every point. HEAD_LIFT
+// raises it onto the long neck.
 const HEAD_SCALE = 1.14;
+const HEAD_LIFT = 18;
 const CHIN = [36, -76];
 const big = ([x, y]) => [
   CHIN[0] + (x - CHIN[0]) * HEAD_SCALE,
-  CHIN[1] + (y - CHIN[1]) * HEAD_SCALE,
+  CHIN[1] + (y - CHIN[1]) * HEAD_SCALE - HEAD_LIFT,
 ];
 EAR_BACK.pivot = big(EAR_BACK.pivot);
 EAR_FRONT.pivot = big(EAR_FRONT.pivot);
@@ -60,23 +62,23 @@ function buildSpec() {
   return [
     // Start at the crease where the belly meets the thigh and run down the
     // round front of the haunch onto the hind foot.
-    ['M', [2, -39, 'b']],
-    ['C', [6.5, -33, 'b'], [9.5, -25, 'b'], [8.5, -18, 'b']],
-    ['C', [8, -14, 'b'], [6, -11.5, 'b'], [4, -9.5, 'b']],
+    ['M', [3.5, -40, 'b']],
+    ['C', [7.5, -33.5, 'b'], [10, -25, 'b'], [9, -18, 'b']],
+    ['C', [8.5, -14, 'b'], [6.5, -11.5, 'b'], [4.5, -9.5, 'b']],
     // A long hind foot flat on the ground: top, round toe, sole. Only the
     // part in front of the haunch lifts for a thump.
-    ['C', [9, -9.8, 'f'], [14, -9.3, 'f'], [18, -7, 'f']],
+    ['C', [9.5, -10, 'b'], [14, -9.5, 'f'], [18, -7, 'f']],
     ['C', [23.5, -4.5, 'f'], [23, 0.5, 'f'], [16, 0.5, 'f']],
-    ['C', [11, 0.6, 'f'], [5, 0.7, 'f'], [0, 0.7, 'f']],
-    ['C', [-12, 0.7, 'b'], [-26, 0.6, 'b'], [-36, 0.3, 'b']],
+    ['C', [11, 0.5, 'f'], [5, 0.5, 'f'], [0, 0.5, 'f']],
+    ['C', [-12, 0.5, 'b'], [-26, 0.5, 'b'], [-36, 0.5, 'b']],
     // Round the heel and up the full back of the haunch to the tail.
-    ['C', [-45, 0, 'b'], [-52, -6, 'b'], [-53, -15, 'b']],
-    ['C', [-53.5, -21, 'b'], [-52, -26, 'b'], [-50, -30, 'b']],
+    ['C', [-45, 0, 'b'], [-50.5, -6, 'b'], [-49.5, -15, 'b']],
+    ['C', [-49.5, -21, 'b'], [-47, -26, 'b'], [-45, -30, 'b']],
     // Tail: a round puff on the rump.
-    ['C', [-60, -28, 'b'], [-66, -38, 'b'], [-61, -45, 'b']],
-    ['C', [-58, -50, 'b'], [-51, -50, 'b'], [-49, -45, 'b']],
+    ['C', [-54.5, -28, 'b'], [-58.5, -38.5, 'b'], [-53, -46.5, 'b']],
+    ['C', [-50, -52.5, 'b'], [-43.5, -52.5, 'b'], [-42.5, -46.5, 'b']],
     // The rump rolls up into one smooth slope to the nape.
-    ['C', [-50, -59, 'b'], [-36, -73, 'b'], [-12, -79, 'b']],
+    ['C', [-42, -64, 'b'], [-28.5, -85.5, 'b'], [-7.5, -97, 'b']],
     ['C', [-4, -81, 'h'], [2, -82, 'h'], [6, -86, 'h']],
     // The back of the big round head, up to the far ear.
     ['C', [3, -92, 'h'], [5, -101, 'h'], eb.start],
@@ -93,17 +95,17 @@ function buildSpec() {
     ['C', [53.5, -82.5, 'h'], [49.5, -81.5, 'h'], [47, -83.5, 'h']],
     ['C', [46, -77, 'h'], [41, -72.5, 'h'], [34, -73, 'h']],
     // A full chest down a sturdy front leg to the paw.
-    ['C', [47, -66, 'b'], [49, -52, 'b'], [46, -40, 'b']],
-    ['C', [44, -28, 'b'], [43, -14, 'b'], [45, -6, 'b']],
-    ['C', [47, -2, 'b'], [54, -3.5, 'b'], [54, -0.5, 'b']],
-    ['C', [54, 1.5, 'b'], [48, 1, 'b'], [41, 0.5, 'b']],
-    ['C', [32, 0, 'b'], [27, -2, 'b'], [27, -7, 'b']],
-    ['C', [27, -14, 'b'], [26, -19, 'b'], [24, -25, 'b']],
+    ['C', [43, -74, 'b'], [45.5, -54.5, 'b'], [43.5, -41, 'b']],
+    ['C', [42, -28, 'b'], [42, -14, 'b'], [44.5, -6, 'b']],
+    ['C', [46.5, -2, 'b'], [53.5, -3.5, 'b'], [54, -0.5, 'b']],
+    ['C', [53.5, 1.5, 'b'], [48, 1, 'b'], [41, 0.5, 'b']],
+    ['C', [32, 0, 'b'], [27, -2, 'b'], [26.5, -7, 'b']],
+    ['C', [26.5, -14, 'b'], [25.5, -19, 'b'], [23.5, -25, 'b']],
     // A short belly into the crease, then the domed top of the thigh arcs
     // back over the haunch and into the rump at the tail.
-    ['C', [18, -32, 'b'], [9, -39, 'b'], [2, -39, 'b']],
-    ['C', [-2, -48, 'b'], [-11, -56, 'b'], [-23, -56, 'b']],
-    ['C', [-35, -56, 'b'], [-43, -51, 'b'], [-49, -45, 'b']],
+    ['C', [18, -32.5, 'b'], [9.5, -40, 'b'], [3.5, -40, 'b']],
+    ['C', [0, -50, 'b'], [-7.5, -60, 'b'], [-18.5, -60, 'b']],
+    ['C', [-29, -60, 'b'], [-36.5, -53.5, 'b'], [-42.5, -46.5, 'b']],
     // The one pen lift: a big round eye.
     ['M', [43, -97, 'h']],
     ['C', [43, -94.2, 'h'], [38.6, -94.2, 'h'], [38.6, -97, 'h']],
@@ -217,7 +219,7 @@ export const POSES = {
 // crosses the rim on the way down. rot 90 is nose straight down; the ears lie
 // back so they trail upward.
 export function diveFrames(dx) {
-  const over = dx + 17; // centres the nose-down bunny on the hole
+  const over = dx + 14; // centres the nose-down bunny on the hole
   return {
     crouch: POSES.crouch,
     rise: {
@@ -249,7 +251,7 @@ export function diveFrames(dx) {
       earF: -48,
       headRot: 6,
     },
-    peek: { x: dx - 26, y: 86, earB: 46, earF: 40, headRot: -4 },
+    peek: { x: dx - 26, y: 104, earB: 46, earF: 40, headRot: -4 },
   };
 }
 
@@ -291,7 +293,7 @@ export function createBunny(svg, options = {}) {
       C${hole.cx - 28} ${ground - 15} ${hole.cx + 26} ${ground - 17} ${hole.cx + hole.rx + 4} ${ground}"></path>
     <ellipse class="rh-hole" cx="${hole.cx}" cy="${hole.cy}" rx="${hole.rx}" ry="${hole.ry}"></ellipse>
     <g class="rh-dust" opacity="0">
-      <path d="M-58 -3 l-9 -1.5 M-58 -10 l-8 -5 M-55 -17 l-5 -6"></path>
+      <path d="M-54.5 -3 l-9 -1.5 M-54.5 -10 l-8 -5 M-51.5 -17 l-5 -6"></path>
     </g>
     <g clip-path="url(#${id}-clip)">
       <path class="rh-bunny"></path>
@@ -436,7 +438,7 @@ export function createBunny(svg, options = {}) {
         if (!alive(m)) return;
         await wait(450);
         // Peek: the head comes back up just far enough to look around.
-        await to({ ...f.peek, y: 150 }, 0);
+        await to({ ...f.peek, y: 168 }, 0);
         await to(f.peek, 320, 'out');
         if (!alive(m)) return;
         await wait(200);
@@ -445,7 +447,7 @@ export function createBunny(svg, options = {}) {
         await to(f.peek, 120, 'out');
         await wait(450);
         if (!alive(m)) return;
-        await to({ ...f.peek, y: 150, earB: -40, earF: -40 }, 200, 'in');
+        await to({ ...f.peek, y: 168, earB: -40, earF: -40 }, 200, 'in');
         if (!alive(m)) return;
         await wait(350);
         pose = { ...REST };
