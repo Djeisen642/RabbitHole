@@ -14,7 +14,9 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Pivots in bunny space.
 const NECK = [16, -80];
-const FOOT_PIVOT = [-38, -1];
+// The hind foot hinges where it comes out from under the haunch, so a thump
+// lifts the toe clear of the thigh.
+const FOOT_PIVOT = [2, -1];
 // Ears lie swept back along the head; the far ear sits lower, behind the
 // near one.
 const EAR_BACK = { pivot: [15, -109], rest: -58, w: 15, len: 46 };
@@ -56,12 +58,25 @@ function buildSpec() {
   const eb = earPoints(EAR_BACK.w, EAR_BACK.len, 'eb');
   const ef = earPoints(EAR_FRONT.w, EAR_FRONT.len, 'ef');
   return [
+    // Start at the crease where the belly meets the thigh and run down the
+    // round front of the haunch onto the hind foot.
+    ['M', [2, -39, 'b']],
+    ['C', [6.5, -33, 'b'], [9.5, -25, 'b'], [8.5, -18, 'b']],
+    ['C', [8, -14, 'b'], [6, -11.5, 'b'], [4, -9.5, 'b']],
+    // A long hind foot flat on the ground: top, round toe, sole. Only the
+    // part in front of the haunch lifts for a thump.
+    ['C', [9, -9.8, 'f'], [14, -9.3, 'f'], [18, -7, 'f']],
+    ['C', [23.5, -4.5, 'f'], [23, 0.5, 'f'], [16, 0.5, 'f']],
+    ['C', [11, 0.6, 'f'], [5, 0.7, 'f'], [0, 0.7, 'f']],
+    ['C', [-12, 0.7, 'b'], [-26, 0.6, 'b'], [-36, 0.3, 'b']],
+    // Round the heel and up the full back of the haunch to the tail.
+    ['C', [-45, 0, 'b'], [-52, -6, 'b'], [-53, -15, 'b']],
+    ['C', [-53.5, -21, 'b'], [-52, -26, 'b'], [-50, -30, 'b']],
     // Tail: a round puff on the rump.
-    ['M', [-46, -19, 'b']],
-    ['C', [-57, -16, 'b'], [-64, -27, 'b'], [-58, -35, 'b']],
-    ['C', [-55, -40, 'b'], [-49, -41, 'b'], [-47, -37, 'b']],
-    // One smooth slope up the back into the nape, no hump.
-    ['C', [-56, -54, 'b'], [-36, -72, 'b'], [-12, -79, 'b']],
+    ['C', [-60, -28, 'b'], [-66, -38, 'b'], [-61, -45, 'b']],
+    ['C', [-58, -50, 'b'], [-51, -50, 'b'], [-49, -45, 'b']],
+    // The rump rolls up into one smooth slope to the nape.
+    ['C', [-50, -59, 'b'], [-36, -73, 'b'], [-12, -79, 'b']],
     ['C', [-4, -81, 'h'], [2, -82, 'h'], [6, -86, 'h']],
     // The back of the big round head, up to the far ear.
     ['C', [3, -92, 'h'], [5, -101, 'h'], eb.start],
@@ -84,16 +99,11 @@ function buildSpec() {
     ['C', [54, 1.5, 'b'], [48, 1, 'b'], [41, 0.5, 'b']],
     ['C', [32, 0, 'b'], [27, -2, 'b'], [27, -7, 'b']],
     ['C', [27, -14, 'b'], [26, -19, 'b'], [24, -25, 'b']],
-    // The big round haunch, rolling down into the hind foot.
-    ['C', [19, -46, 'b'], [-26, -50, 'b'], [-34, -30, 'b']],
-    ['C', [-37, -22, 'f'], [-30, -11, 'f'], [-16, -10, 'f']],
-    // A long hind foot flat on the ground: top, round toe, sole.
-    ['C', [-5, -10, 'f'], [7, -9, 'f'], [13, -6.5, 'f']],
-    ['C', [19.5, -4.5, 'f'], [19, 0.5, 'f'], [12, 0.5, 'f']],
-    ['C', [0, 0.8, 'f'], [-20, 0.8, 'f'], [-36, 0.3, 'f']],
-    // Round the heel and back up to the tail.
-    ['C', [-43, 0, 'f'], [-47, -5, 'b'], [-47, -11, 'b']],
-    ['C', [-47, -14, 'b'], [-46.5, -17, 'b'], [-46, -19, 'b']],
+    // A short belly into the crease, then the domed top of the thigh arcs
+    // back over the haunch and into the rump at the tail.
+    ['C', [18, -32, 'b'], [9, -39, 'b'], [2, -39, 'b']],
+    ['C', [-2, -48, 'b'], [-11, -56, 'b'], [-23, -56, 'b']],
+    ['C', [-35, -56, 'b'], [-43, -51, 'b'], [-49, -45, 'b']],
     // The one pen lift: a big round eye.
     ['M', [43, -97, 'h']],
     ['C', [43, -94.2, 'h'], [38.6, -94.2, 'h'], [38.6, -97, 'h']],
@@ -281,7 +291,7 @@ export function createBunny(svg, options = {}) {
       C${hole.cx - 28} ${ground - 15} ${hole.cx + 26} ${ground - 17} ${hole.cx + hole.rx + 4} ${ground}"></path>
     <ellipse class="rh-hole" cx="${hole.cx}" cy="${hole.cy}" rx="${hole.rx}" ry="${hole.ry}"></ellipse>
     <g class="rh-dust" opacity="0">
-      <path d="M-44 -6 l-9 -4 M-46 -14 l-8 -9 M-38 -18 l-2 -10"></path>
+      <path d="M-58 -3 l-9 -1.5 M-58 -10 l-8 -5 M-55 -17 l-5 -6"></path>
     </g>
     <g clip-path="url(#${id}-clip)">
       <path class="rh-bunny"></path>
@@ -379,7 +389,7 @@ export function createBunny(svg, options = {}) {
         }
         await to({ sy: 0.97, earB: -6, earF: -4 }, 120, 'out');
         for (let i = 0; i < 3 && alive(m); i += 1) {
-          await to({ foot: -16 }, 120, 'out', true);
+          await to({ foot: -26 }, 120, 'out', true);
           if (!alive(m)) return;
           await to({ foot: 2, sy: 0.95 }, 55, 'in', true);
           puff();

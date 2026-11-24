@@ -34,7 +34,7 @@ const stills = {
   rest: {},
   perk: POSES.perk,
   droop: POSES.droop,
-  thump: { foot: -16, sy: 0.97, earB: -6, earF: -4 },
+  thump: { foot: -26, sy: 0.97, earB: -6, earF: -4 },
 };
 for (const [name, pose] of Object.entries(stills)) {
   const svg = document.querySelector(`[data-still="${name}"]`);
