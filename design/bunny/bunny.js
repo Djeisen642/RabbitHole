@@ -13,10 +13,23 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Pivots in bunny space.
-const NECK = [6, -66];
-const FOOT_PIVOT = [-29, -1];
-const EAR_BACK = { pivot: [2, -100], rest: -16, w: 15, len: 41 };
-const EAR_FRONT = { pivot: [19, -103], rest: 2, w: 17, len: 46 };
+const NECK = [16, -80];
+const FOOT_PIVOT = [-38, -1];
+// Ears lie swept back along the head; the far ear sits lower, behind the
+// near one.
+const EAR_BACK = { pivot: [15, -109], rest: -58, w: 15, len: 46 };
+const EAR_FRONT = { pivot: [25, -113], rest: -44, w: 17, len: 54 };
+
+// The head is drawn a little small below and scaled up from the chin, which
+// keeps the face big and round without redrawing every point.
+const HEAD_SCALE = 1.14;
+const CHIN = [36, -76];
+const big = ([x, y]) => [
+  CHIN[0] + (x - CHIN[0]) * HEAD_SCALE,
+  CHIN[1] + (y - CHIN[1]) * HEAD_SCALE,
+];
+EAR_BACK.pivot = big(EAR_BACK.pivot);
+EAR_FRONT.pivot = big(EAR_FRONT.pivot);
 
 // A leaf-shaped ear in its own frame, base at the origin, pointing up.
 // Returns [start, ...cubic points] so it can be spliced into the line.
@@ -36,56 +49,62 @@ function earPoints(w, len, tag) {
 }
 
 // The drawing, in pen order. 'b' body, 'h' head, 'eb'/'ef' ears (in ear
-// frame), 'f' hind foot. Each C entry is three points.
+// frame), 'f' hind foot. Each C entry is three points. An upright, sitting
+// bunny: big round head, ears swept back, a dipped nape, thin front legs and
+// a big round haunch with a puff of tail behind it.
 function buildSpec() {
   const eb = earPoints(EAR_BACK.w, EAR_BACK.len, 'eb');
   const ef = earPoints(EAR_FRONT.w, EAR_FRONT.len, 'ef');
   return [
-    // Tail: a small curl, then up the back to the nape.
-    ['M', [-49, -31, 'b']],
-    ['C', [-61, -29, 'b'], [-64, -43, 'b'], [-55, -45, 'b']],
-    ['C', [-47, -47, 'b'], [-44, -37, 'b'], [-50, -35, 'b']],
-    ['C', [-62, -64, 'b'], [-34, -90, 'h'], [-6, -90, 'h']],
-    // Back of the head up to the back ear.
-    ['C', [-4, -94, 'h'], [-3, -98, 'h'], eb.start],
+    // Tail: a round puff on the rump.
+    ['M', [-46, -19, 'b']],
+    ['C', [-57, -16, 'b'], [-64, -27, 'b'], [-58, -35, 'b']],
+    ['C', [-55, -40, 'b'], [-49, -41, 'b'], [-47, -37, 'b']],
+    // Up the round back into a dipped nape.
+    ['C', [-49, -53, 'b'], [-32, -67, 'b'], [-14, -71, 'b']],
+    ['C', [-3, -73, 'h'], [5, -76, 'h'], [9, -82, 'h']],
+    // The back of the big round head, up to the far ear.
+    ['C', [5, -90, 'h'], [6, -100, 'h'], eb.start],
     ['C', eb.curves[0], eb.curves[1], eb.curves[2]],
     ['C', eb.curves[3], eb.curves[4], eb.curves[5]],
-    // Dip between the ears, then the front ear.
-    ['C', [9, -97, 'h'], [10, -101, 'h'], ef.start],
+    // Across the crown to the near ear.
+    ['C', [17, -110, 'h'], [18, -111, 'h'], ef.start],
     ['C', ef.curves[0], ef.curves[1], ef.curves[2]],
     ['C', ef.curves[3], ef.curves[4], ef.curves[5]],
-    // A round forehead down to the nose.
-    ['C', [42, -104, 'h'], [57, -93, 'h'], [58, -79, 'h']],
-    // Nose bump, a small smile, a full cheek and chin.
-    ['C', [61.5, -78, 'h'], [61.5, -72.5, 'h'], [57.5, -72.5, 'h']],
-    ['C', [56.5, -68, 'h'], [52.5, -67, 'h'], [50, -69.5, 'h']],
-    ['C', [48.5, -66, 'h'], [45, -61.5, 'h'], [39, -62, 'h']],
-    // Chest down the front leg to the paw.
-    ['C', [45, -50, 'b'], [39, -34, 'b'], [37, -20, 'b']],
-    ['C', [36.5, -11, 'b'], [39, -6, 'b'], [45, -5, 'b']],
-    ['C', [52, -4, 'b'], [53, 0, 'b'], [46, 0, 'b']],
-    ['C', [40, 0, 'b'], [34, 0, 'b'], [30, -1, 'b']],
-    // Belly back into a soft, round haunch that rolls down into the foot.
-    ['C', [26, -2, 'b'], [24, -6, 'b'], [22, -11, 'b']],
-    ['C', [16, -47, 'b'], [-34, -55, 'b'], [-38, -26, 'b']],
-    ['C', [-39.5, -15, 'f'], [-32, -9.5, 'f'], [-23, -9.5, 'f']],
-    // A short, plump hind paw: along the top, round the toe, back along
-    // the sole.
-    ['C', [-14, -10, 'f'], [-3, -9, 'f'], [4, -6.5, 'f']],
-    ['C', [10.5, -4.5, 'f'], [10, 0.5, 'f'], [3, 0.5, 'f']],
-    ['C', [-8, 0.8, 'f'], [-21, 0.8, 'f'], [-30, 0, 'f']],
-    // Round the heel and trail back up toward the tail.
-    ['C', [-37, -1, 'f'], [-38, -6, 'b'], [-41, -11, 'b']],
-    ['C', [-44, -17, 'b'], [-46, -26, 'b'], [-49.5, -32, 'b']],
-    // The one pen lift: a round dot for the eye, low and forward on the head
-    // so it reads as friendly rather than staring.
-    ['M', [44.5, -84, 'h']],
-    ['C', [44.5, -81.8, 'h'], [41, -81.8, 'h'], [41, -84, 'h']],
-    ['C', [41, -86.2, 'h'], [44.5, -86.2, 'h'], [44.5, -84, 'h']],
+    // A full forehead down to the nose.
+    ['C', [44, -117, 'h'], [55, -105, 'h'], [55, -93, 'h']],
+    // Nose bump, a small smile, a round cheek and chin.
+    ['C', [58.5, -92, 'h'], [58.5, -86.5, 'h'], [54.5, -86.5, 'h']],
+    ['C', [53.5, -82.5, 'h'], [49.5, -81.5, 'h'], [47, -83.5, 'h']],
+    ['C', [46, -77, 'h'], [41, -72.5, 'h'], [34, -73, 'h']],
+    // Chest down a slim front leg to the paw.
+    ['C', [41, -64, 'b'], [41, -50, 'b'], [39, -40, 'b']],
+    ['C', [38, -28, 'b'], [38, -14, 'b'], [40, -6, 'b']],
+    ['C', [42, -2, 'b'], [49, -3.5, 'b'], [49, -0.5, 'b']],
+    ['C', [49, 1.5, 'b'], [43, 1, 'b'], [38, 0.5, 'b']],
+    ['C', [33, 0, 'b'], [31, -2, 'b'], [31, -7, 'b']],
+    ['C', [31, -14, 'b'], [31, -19, 'b'], [30, -25, 'b']],
+    // The big round haunch, rolling down into the hind foot.
+    ['C', [24, -52, 'b'], [-17, -60, 'b'], [-27, -36, 'b']],
+    ['C', [-31, -25, 'f'], [-27, -11, 'f'], [-16, -10, 'f']],
+    // A long hind foot flat on the ground: top, round toe, sole.
+    ['C', [-5, -10, 'f'], [7, -9, 'f'], [13, -6.5, 'f']],
+    ['C', [19.5, -4.5, 'f'], [19, 0.5, 'f'], [12, 0.5, 'f']],
+    ['C', [0, 0.8, 'f'], [-20, 0.8, 'f'], [-36, 0.3, 'f']],
+    // Round the heel and back up to the tail.
+    ['C', [-43, 0, 'f'], [-47, -5, 'b'], [-47, -11, 'b']],
+    ['C', [-47, -14, 'b'], [-46.5, -17, 'b'], [-46, -19, 'b']],
+    // The one pen lift: a big round eye.
+    ['M', [43, -97, 'h']],
+    ['C', [43, -94.2, 'h'], [38.6, -94.2, 'h'], [38.6, -97, 'h']],
+    ['C', [38.6, -99.8, 'h'], [43, -99.8, 'h'], [43, -97, 'h']],
   ];
 }
 
-const SPEC = buildSpec();
+const SPEC = buildSpec().map(([cmd, ...pts]) => [
+  cmd,
+  ...pts.map((p) => (p[2] === 'h' ? [...big(p), 'h'] : p)),
+]);
 
 export const REST = {
   x: 0, // world offset of the bunny origin
@@ -162,8 +181,8 @@ export function bunnyTransform(pose, origin) {
 export const POSES = {
   rest: {},
   perk: {
-    earB: 12,
-    earF: 8,
+    earB: 22,
+    earF: 18,
     earLen: 1.07,
     headDy: -5,
     headRot: -4,
@@ -171,15 +190,15 @@ export const POSES = {
     sx: 0.98,
   },
   droop: {
-    earB: -90,
-    earF: -102,
+    earB: -30,
+    earF: -38,
     earLen: 0.94,
     headDy: 6,
     headRot: 12,
     sy: 0.95,
     sx: 1.03,
   },
-  crouch: { sy: 0.86, sx: 1.07, earB: -28, earF: -30, headDy: 3 },
+  crouch: { sy: 0.86, sx: 1.07, earB: -12, earF: -12, headDy: 3 },
 };
 
 // Keyframes for the dive, given the distance from home to the hole centre.
@@ -188,7 +207,7 @@ export const POSES = {
 // crosses the rim on the way down. rot 90 is nose straight down; the ears lie
 // back so they trail upward.
 export function diveFrames(dx) {
-  const over = dx + 19; // centres the nose-down bunny on the hole
+  const over = dx + 17; // centres the nose-down bunny on the hole
   return {
     crouch: POSES.crouch,
     rise: {
@@ -197,17 +216,17 @@ export function diveFrames(dx) {
       rot: 40,
       sx: 1.04,
       sy: 0.82,
-      earB: -70,
-      earF: -80,
+      earB: -30,
+      earF: -40,
     },
     over: {
       x: over,
       y: -52,
       rot: 90,
       sx: 1.12,
-      sy: 0.5,
-      earB: -92,
-      earF: -104,
+      sy: 0.46,
+      earB: -38,
+      earF: -48,
       headRot: 6,
     },
     gone: {
@@ -215,12 +234,12 @@ export function diveFrames(dx) {
       y: 170,
       rot: 90,
       sx: 1.12,
-      sy: 0.5,
-      earB: -92,
-      earF: -104,
+      sy: 0.46,
+      earB: -38,
+      earF: -48,
       headRot: 6,
     },
-    peek: { x: dx - 26, y: 86, earB: 10, earF: 8, headRot: -4 },
+    peek: { x: dx - 26, y: 86, earB: 46, earF: 40, headRot: -4 },
   };
 }
 
