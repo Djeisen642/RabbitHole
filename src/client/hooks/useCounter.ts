@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
+import { getJson } from '../lib/http';
 import type {
   InitResponse,
   IncrementResponse,
   DecrementResponse,
 } from '../../shared/api';
 
-interface CounterState {
+type CounterState = {
   count: number;
   username: string | null;
   loading: boolean;
-}
+};
 
 export const useCounter = () => {
   const [state, setState] = useState<CounterState>({
@@ -25,8 +26,7 @@ export const useCounter = () => {
       try {
         const res = await fetch('/api/init');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: InitResponse = await res.json();
-        if (data.type !== 'init') throw new Error('Unexpected response');
+        const data = await getJson<InitResponse>(res);
         setState({
           count: data.count,
           username: data.username,
@@ -54,7 +54,7 @@ export const useCounter = () => {
           body: JSON.stringify({}),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: IncrementResponse | DecrementResponse = await res.json();
+        const data = await getJson<IncrementResponse | DecrementResponse>(res);
         setState((prev) => ({ ...prev, count: data.count }));
       } catch (err) {
         console.error(`Failed to ${action}`, err);
@@ -63,8 +63,12 @@ export const useCounter = () => {
     [postId]
   );
 
-  const increment = useCallback(() => update('increment'), [update]);
-  const decrement = useCallback(() => update('decrement'), [update]);
+  const increment = useCallback(() => {
+    void update('increment');
+  }, [update]);
+  const decrement = useCallback(() => {
+    void update('decrement');
+  }, [update]);
 
   return {
     ...state,

@@ -16,7 +16,7 @@ menu.post('/post-create', async (c) => {
       200
     );
   } catch (error) {
-    console.error(`Error creating post: ${error}`);
+    console.error(`Error creating post: ${String(error)}`);
     return c.json<UiResponse>(
       {
         showToast: 'Failed to create post',
@@ -26,7 +26,7 @@ menu.post('/post-create', async (c) => {
   }
 });
 
-menu.post('/example-form', async (c) => {
+menu.post('/example-form', (c) => {
   return c.json<UiResponse>(
     {
       showForm: {

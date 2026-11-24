@@ -7,6 +7,8 @@ export const scheduler = new Hono();
 // curated subreddit list and stores it in redis. See PLAN.md, milestone 2.
 scheduler.post('/daily-pick', async (c) => {
   await c.req.json<TaskRequest>();
-  console.log(`daily-pick ran at ${new Date().toISOString()} (not implemented yet)`);
+  console.log(
+    `daily-pick ran at ${new Date().toISOString()} (not implemented yet)`
+  );
   return c.json<TaskResponse>({ status: 'ok' }, 200);
 });

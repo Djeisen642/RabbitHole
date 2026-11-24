@@ -48,21 +48,27 @@ export const App = () => {
       <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 text-[0.8em] text-gray-600 dark:text-gray-400">
         <button
           className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => navigateTo('https://developers.reddit.com/docs')}
+          onClick={() => {
+            navigateTo('https://developers.reddit.com/docs');
+          }}
         >
           Docs
         </button>
         <span className="text-gray-300 dark:text-gray-600">|</span>
         <button
           className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => navigateTo('https://www.reddit.com/r/Devvit')}
+          onClick={() => {
+            navigateTo('https://www.reddit.com/r/Devvit');
+          }}
         >
           r/Devvit
         </button>
         <span className="text-gray-300 dark:text-gray-600">|</span>
         <button
           className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => navigateTo('https://discord.com/invite/R7yu2wh9Qz')}
+          onClick={() => {
+            navigateTo('https://discord.com/invite/R7yu2wh9Qz');
+          }}
         >
           Discord
         </button>
@@ -71,7 +77,10 @@ export const App = () => {
   );
 };
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Missing #root element');
+
+createRoot(rootElement).render(
   <StrictMode>
     <App />
   </StrictMode>
