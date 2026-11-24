@@ -11,6 +11,10 @@ Judging is 25% each: delightful UX, polish, Reddit-native feel, fresh daily cont
 - Redis: strings, hashes, sorted sets, numbers, bitfields, transactions (no plain sets or lists). 100 MB per install until published, 5 GB after.
 - Joining: the API can only subscribe a user to the subreddit the app is installed in (`subscribeToCurrentSubreddit`). For the solved community we use `navigateTo` its page, where the player taps Join. We can offer a real one-tap "follow r/abbitHole" for the daily habit.
 
+## Scoring
+
+Leaderboard ranks by how few clues (wrong guesses) a player needed: solving on the post alone beats solving after one clue, and so on, with unsolved last. Time is not part of the score and there is no tiebreak, so players with the same count share a rank.
+
 ## Compliance points to design in
 
 - Devvit Rules require removing Reddit content that was deleted. Delete triggers only fire for the installed subreddit, so store post IDs and derived clues only, re-fetch the post when serving a puzzle, and drop it if `removed` or deleted.
