@@ -12,6 +12,7 @@ Do not read `BAD_IDEAS.md` unless someone asks about rejected ideas. It holds co
 
 ## Commands
 
+- Every change lands through a pull request against `main`, on its own branch. Never push directly to `main`.
 - `npm run check` runs type check, lint, format check and tests. It must pass before every commit and push; CI runs the same plus a build.
 - `npm test` / `npm run test:watch` for unit tests.
 - `npm run format` to fix formatting.
