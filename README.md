@@ -33,25 +33,48 @@ Reddit has hundreds of thousands of communities and most people only know a hand
 
 A scheduled job runs nightly and picks the next day's post from a curated list of public, safe-for-work communities. It skips NSFW and quarantined communities, posts whose title gives the answer away, and posts that are too long to read quickly. Moderators of the r/abbitHole community can preview upcoming puzzles and swap out a bad pick. Posts that are deleted or removed on Reddit are dropped from the game.
 
-## Development
+## Setup
 
-Requires Node 22 or newer (CI uses Node 24).
+### Prerequisites
+
+- Node 24 (the exact version is in `.nvmrc`; with nvm, run `nvm use`) and npm.
+- A Reddit account, for the Devvit CLI.
+
+### Install
 
 ```
+git clone https://github.com/Djeisen642/RabbitHole.git
+cd RabbitHole
 npm install
-npm run login      # log the Devvit CLI into your Reddit account
-npm run dev        # playtest live in your test subreddit
 ```
 
-Other commands:
+`npm install` also turns on the pre-commit hook (husky). On every commit it lints the staged TypeScript files and formats staged files with Prettier, and blocks the commit if lint fails.
 
-- `npm run build` builds the client and server
-- `npm run test:types` type checks
-- `npm run lint` lints
-- `npm run deploy` uploads a new version of the app
-- `npm run launch` publishes the app for review
+### Everyday commands
 
-Layout: `src/client` is the React web view (`splash.html` inline in the feed, `game.html` expanded), `src/server` is the Hono server with access to `reddit`, `redis` and `context` from `@devvit/web/server`, and `src/shared` holds types shared by both. App config lives in `devvit.json`. See `PLAN.md` for the build plan.
+- `npm run check` runs everything CI runs except the build: type check, lint, format check and unit tests. Run it before opening a pull request.
+- `npm run test:types` type checks.
+- `npm run lint` lints with zero warnings allowed.
+- `npm run format` fixes formatting; `npm run format:check` only reports it.
+- `npm test` runs the unit tests once; `npm run test:watch` reruns them on save.
+- `npm run build` builds the client and server into `dist/`.
+
+### Run it on Reddit
+
+1. `npm run login` logs the Devvit CLI into your Reddit account (opens a browser).
+2. `npm run deploy` runs `npm run check`, then uploads the app. The first upload creates a private playtest subreddit for you. Playtest subreddits must stay under 200 members.
+3. `npm run dev` starts a playtest: it prints the playtest subreddit link and pushes code changes to it live as you save.
+4. `npm run launch` uploads and submits the app for Reddit's review. Only do this when it's ready to go public.
+
+### Workflow
+
+- Every change goes on its own branch and lands through a pull request against `main`. Nothing is pushed straight to `main`.
+- GitHub Actions (`.github/workflows/ci.yaml`) runs type check, lint, format check, tests and build on every pull request and every push to `main`.
+- Dependabot (`.github/dependabot.yml`) opens pull requests for npm updates on Monday and Tuesday evenings and for GitHub Actions weekly. Actions are pinned to commit SHAs with the version in a comment.
+
+### Layout
+
+`src/client` is the React web view (`splash.html` inline in the feed, `game.html` expanded). `src/server` is the Hono server, with `reddit`, `redis` and `context` from `@devvit/web/server`. `src/shared` holds code used by both, including the game rules in `src/shared/game`. App config lives in `devvit.json`. See `PLAN.md` for the build plan and `CLAUDE.md` for coding rules.
 
 ## Credits
 
