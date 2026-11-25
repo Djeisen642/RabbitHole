@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shareText } from './share';
+import { shareText, solvedWith } from './share';
 
 describe('shareText', () => {
   it('shows squares and the clue count but never the answer', () => {
@@ -29,5 +29,13 @@ describe('shareText', () => {
         maxGuesses: 5,
       })
     ).toBe('r/abbitHole #2: stumped this time\n🟫🟫🟫🟫🟫');
+  });
+});
+
+describe('solvedWith', () => {
+  it('counts clues in words, singular for one', () => {
+    expect(solvedWith(0)).toBe('solved on the post alone');
+    expect(solvedWith(1)).toBe('solved with 1 clue');
+    expect(solvedWith(3)).toBe('solved with 3 clues');
   });
 });

@@ -72,8 +72,7 @@ export function findEntry(
  */
 export function suggest(
   input: string,
-  pool: readonly PoolEntry[] = POOL,
-  limit = SUGGEST_LIMIT
+  pool: readonly PoolEntry[] = POOL
 ): string[] {
   const prefix = normalizeSubreddit(input);
   if (prefix.length < SUGGEST_MIN_CHARS) return [];
@@ -89,6 +88,6 @@ export function suggest(
     a.toLowerCase().localeCompare(b.toLowerCase());
   return [...byName.sort(alpha), ...byAlias.sort(alpha)].slice(
     0,
-    Math.max(0, Math.min(limit, SUGGEST_LIMIT))
+    SUGGEST_LIMIT
   );
 }

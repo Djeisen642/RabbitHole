@@ -7,6 +7,7 @@ import {
   findEntry,
   suggest,
 } from './pool';
+import type { PoolEntry } from './pool';
 
 describe('POOL', () => {
   it('has about 140 communities with unique names and spellings', () => {
@@ -50,9 +51,11 @@ describe('suggest', () => {
   });
 
   it('never returns more than the limit, so the pool cannot be listed', () => {
-    for (const prefix of ['ba', 'ca', 'co', 'bo', 'sp', 'ma', 'th', 'wh'])
-      expect(suggest(prefix).length).toBeLessThanOrEqual(SUGGEST_LIMIT);
-    expect(suggest('ca', POOL, 500).length).toBeLessThanOrEqual(SUGGEST_LIMIT);
+    const crowded: PoolEntry[] = Array.from(
+      { length: SUGGEST_LIMIT + 5 },
+      (_, i) => ({ name: `same${String(i)}`, aliases: [], category: 'hobby' })
+    );
+    expect(suggest('same', crowded)).toHaveLength(SUGGEST_LIMIT);
   });
 
   it('puts name matches before alias matches', () => {

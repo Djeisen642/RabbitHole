@@ -5,6 +5,7 @@ import { StrictMode, useEffect, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { PuzzleResponse } from '../shared/api';
+import { solvedWith } from '../shared/game/share';
 import { bunnyPath } from './bunny/bunny';
 import { fetchPuzzle } from './lib/api';
 import { openGame } from './lib/platform';
@@ -13,9 +14,7 @@ const BUNNY = bunnyPath();
 
 function statusLine(p: PuzzleResponse): string {
   if (p.status === 'solved')
-    return p.result?.score === 0
-      ? 'Solved on the post alone. Come back tomorrow.'
-      : `Solved with ${p.result?.score ?? 0} clues. Come back tomorrow.`;
+    return `Today: ${solvedWith(p.result?.score ?? 0)}. Come back tomorrow.`;
   if (p.status === 'failed')
     return 'Stumped today. A new hole opens at midnight ET.';
   if (p.guesses.length > 0)

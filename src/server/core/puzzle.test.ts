@@ -4,8 +4,10 @@ import type { PoolEntry } from '../../shared/pool';
 import { createMockDeps } from './mock/mock-deps';
 import { MOCK_POOL } from './mock/mock-source';
 import { readPoolCheck, runPoolCheckBatch, startPoolCheck } from './pool-check';
+import { addDays } from '../../shared/game/day';
 import {
   LIVE_CHECK_MS,
+  REUSE_DAYS,
   buildPuzzle,
   checkSub,
   loadPuzzle,
@@ -109,7 +111,7 @@ describe('buildPuzzle', () => {
 });
 
 describe('pickPuzzle', () => {
-  it('is deterministic for a date and logs skipped subs', async () => {
+  it('is deterministic for a date', async () => {
     const a = createMockDeps({ now: NOW, quiet: true });
     const b = createMockDeps({ now: NOW, quiet: true });
     const pa = await pickPuzzle(a, '2026-12-03');
@@ -130,7 +132,7 @@ describe('pickPuzzle', () => {
     expect(deps.logs.filter((l) => l.includes('skipped'))).toHaveLength(2);
   });
 
-  it('does not reuse a sub within 60 days', async () => {
+  it('uses every usable sub once before repeating any', async () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
     const seen = new Set<string>();
     for (let d = 1; d <= MOCK_POOL.length; d += 1) {
@@ -139,8 +141,20 @@ describe('pickPuzzle', () => {
       expect(seen.has(p.answer)).toBe(false);
       seen.add(p.answer);
     }
-    // Every usable fixture sub gets used once before running out.
+    // Lighthouses is too small, so one fixture sub never gets picked.
     expect(seen.size).toBe(MOCK_POOL.length - 1);
+  });
+
+  it(`can pick a sub again ${String(REUSE_DAYS)} days later, not sooner`, async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    deps.pool = [entry('Breadit')];
+    expect((await pickPuzzle(deps, '2026-12-01'))?.answer).toBe('Breadit');
+    expect(await pickPuzzle(deps, addDays('2026-12-01', REUSE_DAYS - 1))).toBe(
+      null
+    );
+    expect(
+      (await pickPuzzle(deps, addDays('2026-12-01', REUSE_DAYS)))?.answer
+    ).toBe('Breadit');
   });
 });
 

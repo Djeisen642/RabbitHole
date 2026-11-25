@@ -9,8 +9,9 @@ import { runDailyPick } from '../core/puzzle';
 export function createScheduler(deps: Deps): Hono {
   const scheduler = new Hono();
 
-  // Runs daily at 05:00 UTC (midnight ET). Makes sure today's and tomorrow's
-  // puzzles exist, picking any that are missing.
+  // Runs daily at 05:00 UTC: midnight ET in winter, 1 AM in summer. That
+  // hour's gap is fine because each run also picks tomorrow's puzzle, so the
+  // new day's puzzle already exists when midnight ET comes.
   scheduler.post('/daily-pick', async (c) => {
     try {
       await c.req.json<TaskRequest>();

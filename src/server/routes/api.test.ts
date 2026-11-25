@@ -5,7 +5,6 @@ import type {
   SuggestResponse,
 } from '../../shared/api';
 import { createMockDeps } from '../core/mock/mock-deps';
-import type { MockDeps } from '../core/mock/mock-deps';
 import { findEntry, POOL } from '../../shared/pool';
 import { runDailyPick } from '../core/puzzle';
 import { createApi } from './api';
@@ -72,18 +71,18 @@ function puzzle(body: Json): PuzzleResponse {
 }
 
 /** Everything the player must not see before the round ends. */
-function expectNoLeak(view: PuzzleResponse, deps: MockDeps): void {
+function expectNoLeak(view: PuzzleResponse): void {
   const text = JSON.stringify(view).toLowerCase();
   expect(view.result).toBeNull();
   expect(text).not.toContain('breadit');
-  expect(text).not.toContain('scoring angle'.toLowerCase()); // unrevealed top comment until clue 1
+  // Breadit's top comment, which stays hidden until the first wrong guess.
+  expect(text).not.toContain('scoring angle');
   expect(view.clues.length).toBe(view.guesses.filter((g) => !g.correct).length);
-  expect(deps.pool.length).toBeGreaterThan(0);
 }
 
 describe('GET /puzzle', () => {
   it('sends the masked post and nothing that gives the answer away', async () => {
-    const { deps, get } = await setup();
+    const { get } = await setup();
     const { status, body } = await get('/puzzle');
     expect(status).toBe(200);
     const view = puzzle(body);
@@ -101,7 +100,7 @@ describe('GET /puzzle', () => {
     expect(view.guessesLeft).toBe(6);
     expect(view.status).toBe('playing');
     expect(view.username).toBe('mock_player');
-    expectNoLeak(view, deps);
+    expectNoLeak(view);
     // The rule and the stats aren't in the payload either.
     const text = JSON.stringify(view);
     expect(text).not.toContain('Share your recipe');
