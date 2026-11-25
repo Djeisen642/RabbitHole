@@ -3,7 +3,8 @@
  * the puzzle the API sends back.
  *
  * Redis keys:
- * - `round:YYYY-MM-DD:{userId}` hash: `guesses` (JSON array of names).
+ * - `round:YYYY-MM-DD:{userId}` hash: one field per guess, `0`, `1`, ...,
+ *   holding the community name.
  * - `user:{userId}:streak` hash: `current`, `best`, `lastSolvedDay`.
  * - `wrong:YYYY-MM-DD` sorted set: wrong guess name scored by how many
  *   players made it.
@@ -33,7 +34,6 @@ import type { Round, Streak } from '../../shared/game/rules';
 import { shareText } from '../../shared/game/share';
 import { POOL, findEntry } from '../../shared/pool';
 import type { Deps, User } from './deps';
-import { asStringArray, parseJson } from './json';
 import { clueView } from './puzzle';
 import type { StoredCandidate, StoredPuzzle } from './puzzle';
 
@@ -49,11 +49,9 @@ const scoresKey = (date: string): string => `scores:${date}`;
 
 const EMPTY_STREAK: Streak = { current: 0, best: 0, lastSolvedDay: null };
 
-function startRound(puzzle: StoredPuzzle, deps: Deps): Round {
-  const entry =
-    findEntry(puzzle.answer, POOL) ?? findEntry(puzzle.answer, deps.pool);
+function startRound(puzzle: StoredPuzzle): Round {
   return newRound(puzzle.answer, {
-    aliases: entry?.aliases ?? [],
+    aliases: findEntry(puzzle.answer, POOL)?.aliases ?? [],
     hasCustomIcon: puzzle.hasCustomIcon,
   });
 }
@@ -63,11 +61,11 @@ export async function loadRound(
   puzzle: StoredPuzzle,
   user: User | null
 ): Promise<Round> {
-  let round = startRound(puzzle, deps);
+  let round = startRound(puzzle);
   if (!user) return round;
-  const raw = await deps.store.hGet(roundKey(puzzle.date, user.id), 'guesses');
-  const guesses = raw ? (asStringArray(parseJson(raw)) ?? []) : [];
-  for (const guess of guesses) round = applyGuess(round, guess);
+  const slots = await deps.store.hGetAll(roundKey(puzzle.date, user.id));
+  for (let i = 0; slots[String(i)] !== undefined; i += 1)
+    round = applyGuess(round, slots[String(i)] ?? '');
   return round;
 }
 
@@ -91,9 +89,15 @@ export type GuessOutcome =
 
 /**
  * Apply a guess for a user. Guesses must name a community in the full
- * answer pool (the autocomplete only offers those), so the wrong-guess chart only ever shows
- * real subs. Records the guess, the wrong-guess tally, and on the last guess
- * the score and streak.
+ * answer pool (the autocomplete only offers those), so the wrong-guess chart
+ * only ever shows real subs. Records the guess, the wrong-guess tally, and
+ * on the last guess the score and streak.
+ *
+ * Two requests from the same player can arrive together (a double tap, two
+ * tabs, or a script firing every guess at once). Each guess claims its slot
+ * with HSETNX, so only one request can be the player's Nth guess; the other
+ * gets a 409 and records nothing. Without this, parallel guesses all read
+ * an empty round and the right one scores 0.
  */
 export async function submitGuess(
   deps: Deps,
@@ -114,13 +118,16 @@ export async function submitGuess(
     return { ok: false, status: 409, message: 'Today’s round is over.' };
   const round = applyGuess(before, entry.name);
   let streak = await loadStreak(deps, user);
-  if (round === before || round.guesses.length === before.guesses.length)
-    return { ok: true, round, streak };
+  if (round === before) return { ok: true, round, streak };
 
   const date = puzzle.date;
-  await deps.store.hSet(roundKey(date, user.id), {
-    guesses: JSON.stringify(round.guesses),
-  });
+  const slot = String(before.guesses.length);
+  if (!(await deps.store.hSetNX(roundKey(date, user.id), slot, entry.name)))
+    return {
+      ok: false,
+      status: 409,
+      message: 'Another guess got there first. Reload to see your round.',
+    };
   if (before.guesses.length === 0)
     await deps.store.hIncrBy(statsKey(date), 'players', 1);
   if (!isCorrectGuess(entry.name, round.answer, round.aliases))

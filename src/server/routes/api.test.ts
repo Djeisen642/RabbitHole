@@ -205,6 +205,26 @@ describe('a full round', () => {
   });
 });
 
+describe('concurrent guesses', () => {
+  it('cannot solve for free by sending several guesses at once', async () => {
+    const { deps, get, guess } = await setup();
+    const sent = await Promise.all(
+      ['Baking', 'Cooking', 'Breadit'].map((name) => guess(name))
+    );
+    // Only one guess can take the first slot; the rest are turned away.
+    expect(sent.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(sent.filter((r) => r.status === 409)).toHaveLength(2);
+
+    const stored = puzzle((await get('/puzzle')).body);
+    expect(stored.guesses).toHaveLength(1);
+    const accepted = sent.find((r) => r.status === 200);
+    expect(accepted && puzzle(accepted.body).guesses).toEqual(stored.guesses);
+    expect(
+      await deps.store.hGet(`stats:${TODAY}`, 'players').then(Number)
+    ).toBe(1);
+  });
+});
+
 describe('POST /guess validation', () => {
   it('rejects blanks and names outside the pool, and ignores repeats', async () => {
     const { guess } = await setup();

@@ -16,6 +16,8 @@ export type Store = {
   hGet(key: string, field: string): Promise<string | undefined>;
   hGetAll(key: string): Promise<Record<string, string>>;
   hSet(key: string, fieldValues: Record<string, string>): Promise<number>;
+  /** Set a field only if it is missing; 1 if it was set, 0 if it existed. */
+  hSetNX(key: string, field: string, value: string): Promise<number>;
   hIncrBy(key: string, field: string, value: number): Promise<number>;
   zAdd(key: string, ...members: ZMember[]): Promise<number>;
   zIncrBy(key: string, member: string, value: number): Promise<number>;
@@ -109,6 +111,13 @@ export class MemoryStore implements Store {
       hash.set(field, value);
     }
     return Promise.resolve(added);
+  }
+
+  hSetNX(key: string, field: string, value: string): Promise<number> {
+    const hash = this.#hash(key);
+    if (hash.has(field)) return Promise.resolve(0);
+    hash.set(field, value);
+    return Promise.resolve(1);
   }
 
   hIncrBy(key: string, field: string, value: number): Promise<number> {
