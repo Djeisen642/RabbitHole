@@ -574,6 +574,10 @@ body {
   white-space: nowrap;
   cursor: pointer;
 }
+.rh-choice.long {
+  font-size: 13px;
+  white-space: normal;
+}
 .rh-choice:active:not(:disabled) {
   transform: translate(2px, 2px);
   box-shadow: none;
