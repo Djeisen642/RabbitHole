@@ -5,8 +5,12 @@
  * through the scheduler until the pool is done.
  *
  * Redis: `poolcheck:YYYY-MM-DD` hash, one field per sub (SubCheck JSON) plus
- * `_cursor` (next pool index) and `_total`.
+ * `_cursor` (next pool index), `_total` and `_updatedAt` (ms of the last
+ * batch). Expires PUZZLE_KEEP_DAYS after its date. `poolcheck-lock:` guards
+ * starting a check.
  */
+import { addDays, puzzleDateAt } from '../../shared/game/day';
+import { normalizeSubreddit } from '../../shared/game/rules';
 import type { Deps } from './deps';
 import {
   asBoolean,
@@ -16,10 +20,16 @@ import {
   asStringArray,
   parseJson,
 } from './json';
-import { checkSub } from './puzzle';
+import { tryLock } from './lock';
+import { checkSub, loadPuzzle, secondsToKeep } from './puzzle';
 import type { SubCheck } from './puzzle';
 
 export const POOL_CHECK_BATCH = 10;
+/**
+ * A check whose last batch is older than this counts as dead (its
+ * scheduler job failed), so a new one may start.
+ */
+export const POOL_CHECK_STALE_MS = 10 * 60_000;
 
 export const poolCheckKey = (date: string): string => `poolcheck:${date}`;
 
@@ -50,19 +60,51 @@ export async function runPoolCheckBatch(
     ...results,
     _cursor: String(checked),
     _total: String(total),
+    _updatedAt: String(deps.now().getTime()),
   });
+  await deps.store.expire(key, secondsToKeep(deps, date));
   const done = checked >= total;
   if (!done) await deps.scheduleNextPoolCheck(date);
   return { checked, total, done };
 }
 
-/** Start a fresh check for a date (dropping any earlier results). */
+export type PoolCheckStart = PoolCheckProgress & { started: boolean };
+
+/**
+ * Start a fresh check for a date (dropping any earlier results), unless one
+ * is still running: two would read every sub twice and write over each
+ * other's cursor. A short lock covers two starts at the same moment; after
+ * the first batch, `_updatedAt` shows the check is alive.
+ */
 export async function startPoolCheck(
   deps: Deps,
   date: string
-): Promise<PoolCheckProgress> {
-  await deps.store.del(poolCheckKey(date));
-  return runPoolCheckBatch(deps, date);
+): Promise<PoolCheckStart> {
+  const key = poolCheckKey(date);
+  const fields = await deps.store.hGetAll(key);
+  const running = progressOf(deps, fields);
+  const updatedAt = Number(fields._updatedAt ?? '0') || 0;
+  const alive = deps.now().getTime() - updatedAt < POOL_CHECK_STALE_MS;
+  if (running.checked > 0 && !running.done && alive)
+    return { started: false, ...running };
+  const lockKey = `poolcheck-lock:${date}`;
+  if (!(await tryLock(deps.store, lockKey, 60_000, deps.now())))
+    return { started: false, ...running };
+  try {
+    await deps.store.del(key);
+    return { started: true, ...(await runPoolCheckBatch(deps, date)) };
+  } finally {
+    await deps.store.del(lockKey);
+  }
+}
+
+function progressOf(
+  deps: Deps,
+  fields: Record<string, string>
+): PoolCheckProgress {
+  const checked = Number(fields._cursor ?? '0') || 0;
+  const total = Number(fields._total ?? String(deps.pool.length)) || 0;
+  return { checked, total, done: total > 0 && checked >= total };
 }
 
 function parseCheck(json: string): SubCheck | null {
@@ -98,19 +140,37 @@ export type PoolCheckReport = PoolCheckProgress & {
   results: SubCheck[];
 };
 
+/**
+ * The stored results of a check. Sample titles of today's and tomorrow's
+ * answers are left out, since they are likely the very posts players are
+ * shown, and a moderator who plays shouldn't get the answer from them.
+ */
 export async function readPoolCheck(
   deps: Deps,
   date: string
 ): Promise<PoolCheckReport> {
   const fields = await deps.store.hGetAll(poolCheckKey(date));
+  const hidden = await currentAnswers(deps);
   const results = Object.entries(fields)
     .filter(([field]) => !field.startsWith('_'))
     .map(([, json]) => parseCheck(json))
     .filter((c): c is SubCheck => c !== null)
+    .map((c) =>
+      hidden.has(normalizeSubreddit(c.name)) ? { ...c, sampleTitles: [] } : c
+    )
     .sort(
       (a, b) => Number(a.ok) - Number(b.ok) || a.name.localeCompare(b.name)
     );
-  const checked = Number(fields._cursor ?? '0') || 0;
-  const total = Number(fields._total ?? String(deps.pool.length)) || 0;
-  return { date, checked, total, done: total > 0 && checked >= total, results };
+  return { date, ...progressOf(deps, fields), results };
+}
+
+/** Today's and tomorrow's answers, normalized. */
+async function currentAnswers(deps: Deps): Promise<Set<string>> {
+  const today = puzzleDateAt(deps.now());
+  const out = new Set<string>();
+  for (const date of [today, addDays(today, 1)]) {
+    const loaded = await loadPuzzle(deps, date);
+    if (loaded) out.add(normalizeSubreddit(loaded.puzzle.answer));
+  }
+  return out;
 }

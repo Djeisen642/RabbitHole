@@ -3,7 +3,12 @@ import { POOL, findEntry } from '../../shared/pool';
 import type { PoolEntry } from '../../shared/pool';
 import { MOCK_SALT, createMockDeps } from './mock/mock-deps';
 import { MOCK_POOL, createMockSource } from './mock/mock-source';
-import { readPoolCheck, runPoolCheckBatch, startPoolCheck } from './pool-check';
+import {
+  POOL_CHECK_STALE_MS,
+  readPoolCheck,
+  runPoolCheckBatch,
+  startPoolCheck,
+} from './pool-check';
 import { addDays } from '../../shared/game/day';
 import {
   LIVE_CHECK_MS,
@@ -417,10 +422,55 @@ describe('pool check', () => {
     );
   });
 
-  it('starts over when a new check is started', async () => {
+  it('starts over when a new check is started after the last one finished', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    let progress = await runPoolCheckBatch(deps, '2026-11-25', 4);
+    while (!progress.done)
+      progress = await runPoolCheckBatch(deps, '2026-11-25', 4);
+    const restarted = await startPoolCheck(deps, '2026-11-25');
+    expect(restarted.started).toBe(true);
+    expect(restarted.checked).toBe(Math.min(10, MOCK_POOL.length));
+  });
+
+  it('will not start a second check while one is running', async () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
     await runPoolCheckBatch(deps, '2026-11-25', 2);
-    const restarted = await startPoolCheck(deps, '2026-11-25');
-    expect(restarted.checked).toBe(Math.min(10, MOCK_POOL.length));
+    const busy = await startPoolCheck(deps, '2026-11-25');
+    expect(busy).toMatchObject({ started: false, checked: 2 });
+    // Two starts at the same moment: only one runs.
+    const fresh = createMockDeps({ now: NOW, quiet: true });
+    const both = await Promise.all([
+      startPoolCheck(fresh, '2026-11-25'),
+      startPoolCheck(fresh, '2026-11-25'),
+    ]);
+    expect(both.filter((p) => p.started)).toHaveLength(1);
+  });
+
+  it('starts again once a running check has gone quiet', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runPoolCheckBatch(deps, '2026-11-25', 2);
+    deps.setNow(new Date(NOW.getTime() + POOL_CHECK_STALE_MS));
+    expect((await startPoolCheck(deps, '2026-11-25')).started).toBe(true);
+  });
+
+  it('leaves out sample titles of today and tomorrow’s answers', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const picks = await runDailyPick(deps, '2026-11-25');
+    const answers = picks.map((p) => p.answer);
+    let progress = await runPoolCheckBatch(deps, '2026-11-25');
+    while (!progress.done)
+      progress = await runPoolCheckBatch(deps, '2026-11-25');
+    const report = await readPoolCheck(deps, '2026-11-25');
+    for (const r of report.results) {
+      if (answers.includes(r.name)) expect(r.sampleTitles).toEqual([]);
+      else if (r.ok) expect(r.sampleTitles.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('expires a few days after its date', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runPoolCheckBatch(deps, '2026-11-25', 2);
+    deps.setNow(new Date(NOW.getTime() + (PUZZLE_KEEP_DAYS + 1) * 86_400_000));
+    expect((await readPoolCheck(deps, '2026-11-25')).results).toEqual([]);
   });
 });

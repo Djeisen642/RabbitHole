@@ -9,6 +9,7 @@ import { POOL } from '../../shared/pool';
 import type { Deps } from './deps';
 import { devvitSource } from './devvit-source';
 import { MOCK_POOL, mockSource } from './mock/mock-source';
+import { cachedIsModerator } from './moderator';
 import { randomSalt } from './puzzle';
 
 export type SourceMode = 'devvit' | 'mock';
@@ -28,15 +29,17 @@ export function createDevvitDeps(mode: SourceMode): Deps {
         userId && username ? { id: userId, username } : null
       );
     },
-    async isModerator() {
-      const { username, subredditName } = context;
-      if (!username) return false;
-      const mods = await reddit
-        .getModerators({ subredditName, username, limit: 1 })
-        .get(1);
-      return mods.some(
-        (m) => m.username.toLowerCase() === username.toLowerCase()
-      );
+    isModerator() {
+      const { userId, username, subredditName } = context;
+      if (!userId || !username) return Promise.resolve(false);
+      return cachedIsModerator(redis, userId, new Date(), async () => {
+        const mods = await reddit
+          .getModerators({ subredditName, username, limit: 1 })
+          .get(1);
+        return mods.some(
+          (m) => m.username.toLowerCase() === username.toLowerCase()
+        );
+      });
     },
     newSalt: randomSalt,
     async scheduleNextPoolCheck(date) {
