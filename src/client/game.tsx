@@ -1,81 +1,184 @@
+import './fonts';
 import './index.css';
 
-import { StrictMode } from 'react';
+import { StrictMode, useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { navigateTo } from '@devvit/web/client';
-import { useCounter } from './hooks/useCounter';
+import type { PuzzleResponse } from '../shared/api';
+import type { BunnyControls } from './bunny/bunny';
+import { BunnyStage } from './components/BunnyStage';
+import { Clue } from './components/Clue';
+import { GuessBox } from './components/GuessBox';
+import { PostCard } from './components/PostCard';
+import { Result } from './components/Result';
+import { Tunnel } from './components/Tunnel';
+import { ApiError, fetchPuzzle, sendGuess } from './lib/api';
+import { CLUE_LABELS } from './lib/clue-labels';
 
 export const App = () => {
-  const { count, username, loading, increment, decrement } = useCounter();
-  return (
-    <div className="flex relative flex-col justify-center items-center min-h-screen gap-4 bg-white dark:bg-gray-900">
-      <img
-        className="object-contain w-1/2 max-w-[250px] mx-auto"
-        src="/snoo.png"
-        alt="Snoo"
-      />
-      <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-gray-100">
-          {username ? `Hey ${username} 👋` : ''}
-        </h1>
-        <p className="text-base text-center text-gray-600 dark:text-gray-300">
-          Edit{' '}
-          <span className="bg-[#e5ebee] dark:bg-gray-700 px-1 py-0.5 rounded">
-            src/client/game.tsx
-          </span>{' '}
-          to get started.
+  const [puzzle, setPuzzle] = useState<PuzzleResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [freshFrom, setFreshFrom] = useState(Number.POSITIVE_INFINITY);
+  const bunny = useRef<BunnyControls | null>(null);
+  const onBunny = useCallback((controls: BunnyControls | null) => {
+    bunny.current = controls;
+  }, []);
+
+  useEffect(() => {
+    fetchPuzzle()
+      .then(setPuzzle)
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : 'Could not load the puzzle.');
+      });
+  }, []);
+
+  const onGuess = useCallback(
+    async (name: string): Promise<boolean> => {
+      if (!puzzle) return false;
+      setBusy(true);
+      setNotice(null);
+      try {
+        const next = await sendGuess(name);
+        const shownBefore = puzzle.result?.clues.length ?? puzzle.clues.length;
+        setFreshFrom(shownBefore);
+        setPuzzle(next);
+        const last = next.guesses[next.guesses.length - 1];
+        if (next.status === 'solved') {
+          void bunny.current
+            ?.play('perk')
+            .then(() => bunny.current?.play('dive'));
+        } else if (last && !last.correct) {
+          const wrong = next.guesses.filter((g) => !g.correct).length;
+          void bunny.current?.play(wrong % 2 === 1 ? 'droop' : 'thump');
+        }
+        return true;
+      } catch (e: unknown) {
+        setNotice(
+          e instanceof ApiError || e instanceof Error
+            ? e.message
+            : 'That guess did not go through.'
+        );
+        void bunny.current?.play('thump');
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [puzzle]
+  );
+
+  if (error) {
+    return (
+      <main className="rh-page">
+        <Header puzzle={null} />
+        <BunnyStage onReady={onBunny} />
+        <p className="rh-error" role="alert">
+          {error}
         </p>
+      </main>
+    );
+  }
+  if (!puzzle) {
+    return (
+      <main className="rh-page">
+        <Header puzzle={null} />
+        <BunnyStage onReady={onBunny} />
+        <p className="rh-muted" style={{ textAlign: 'center' }}>
+          Digging up today’s post…
+        </p>
+      </main>
+    );
+  }
+
+  const done = puzzle.status !== 'playing';
+  const clues = puzzle.result?.clues ?? puzzle.clues;
+  const wonAt = puzzle.guesses.findIndex((g) => g.correct);
+  const buried = done ? [] : puzzle.clueKinds.slice(clues.length);
+
+  return (
+    <main className="rh-page">
+      <Header puzzle={puzzle} />
+      <BunnyStage onReady={onBunny} />
+      <Tunnel
+        max={puzzle.maxGuesses}
+        used={puzzle.guesses.length}
+        wonAt={wonAt >= 0 ? wonAt : null}
+      />
+      <PostCard post={puzzle.post} answer={puzzle.result?.answer ?? null} />
+
+      {done && puzzle.result ? (
+        <Result
+          result={puzzle.result}
+          solved={puzzle.status === 'solved'}
+          clueCount={puzzle.clueKinds.length}
+        />
+      ) : puzzle.username ? (
+        <GuessBox
+          disabled={busy}
+          guessed={puzzle.guesses.map((g) => g.name)}
+          guessesLeft={puzzle.guessesLeft}
+          onGuess={onGuess}
+        />
+      ) : (
+        <p className="rh-muted">Log in to Reddit to make a guess.</p>
+      )}
+
+      {notice ? (
+        <p className="rh-error" role="alert">
+          {notice}
+        </p>
+      ) : null}
+
+      {puzzle.guesses.length > 0 ? (
+        <ul className="rh-guesses" aria-label="Your guesses">
+          {puzzle.guesses.map((g) => (
+            <li key={g.name} className={g.correct ? 'right' : ''}>
+              r/{g.name}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <div className="rh-clues" aria-live="polite">
+        {clues.map((clue, i) => (
+          <Clue
+            key={clue.kind}
+            clue={clue}
+            layer={i + 1}
+            fresh={i >= freshFrom}
+            clearIcon={done}
+          />
+        ))}
+        {buried.map((kind, i) => (
+          <div className="rh-buried" key={kind}>
+            Layer {clues.length + i + 1}:{' '}
+            {i === 0 ? CLUE_LABELS[kind] : 'still buried'}
+          </div>
+        ))}
       </div>
-      <div className="flex items-center justify-center mt-5">
-        <button
-          className="flex items-center justify-center bg-[#d93900] dark:bg-orange-600 text-white w-14 h-14 text-[2.5em] rounded-full cursor-pointer font-mono leading-none transition-colors hover:bg-[#c23300] dark:hover:bg-orange-700"
-          onClick={decrement}
-          disabled={loading}
-        >
-          -
-        </button>
-        <span className="text-[1.8em] font-medium mx-5 min-w-[50px] text-center leading-none text-gray-900 dark:text-white">
-          {loading ? '...' : count}
-        </span>
-        <button
-          className="flex items-center justify-center bg-[#d93900] dark:bg-orange-600 text-white w-14 h-14 text-[2.5em] rounded-full cursor-pointer font-mono leading-none transition-colors hover:bg-[#c23300] dark:hover:bg-orange-700"
-          onClick={increment}
-          disabled={loading}
-        >
-          +
-        </button>
-      </div>
-      <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 text-[0.8em] text-gray-600 dark:text-gray-400">
-        <button
-          className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => {
-            navigateTo('https://developers.reddit.com/docs');
-          }}
-        >
-          Docs
-        </button>
-        <span className="text-gray-300 dark:text-gray-600">|</span>
-        <button
-          className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => {
-            navigateTo('https://www.reddit.com/r/Devvit');
-          }}
-        >
-          r/Devvit
-        </button>
-        <span className="text-gray-300 dark:text-gray-600">|</span>
-        <button
-          className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => {
-            navigateTo('https://discord.com/invite/R7yu2wh9Qz');
-          }}
-        >
-          Discord
-        </button>
-      </footer>
-    </div>
+    </main>
   );
 };
+
+function Header({ puzzle }: { puzzle: PuzzleResponse | null }) {
+  return (
+    <header className="rh-header">
+      <h1 className="rh-wordmark" style={{ margin: 0 }}>
+        <b>r/</b>abbitHole
+      </h1>
+      {puzzle ? (
+        <span className="rh-chip">
+          #{puzzle.number}
+          <span aria-hidden="true">·</span>
+          {puzzle.streak.current > 0
+            ? `${puzzle.streak.current} day streak`
+            : 'no streak yet'}
+        </span>
+      ) : null}
+    </header>
+  );
+}
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Missing #root element');

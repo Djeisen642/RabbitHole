@@ -1,0 +1,50 @@
+/**
+ * Deps for tests and the local mock server: the fixture source, an
+ * in-memory store, a fixed player and a clock you can set.
+ */
+import type { Deps, User } from '../deps';
+import { MemoryStore } from '../store';
+import type { Store } from '../store';
+import { MOCK_POOL, createMockSource } from './mock-source';
+import type { MockSource } from './mock-source';
+
+export type MockDeps = Deps & {
+  source: MockSource;
+  store: Store;
+  setUser(user: User | null): void;
+  setNow(now: Date): void;
+  logs: string[];
+};
+
+export function createMockDeps(
+  options: { now?: Date; user?: User | null; quiet?: boolean } = {}
+): MockDeps {
+  let user: User | null =
+    options.user === undefined
+      ? { id: 't2_mockplayer', username: 'mock_player' }
+      : options.user;
+  let now = options.now ?? new Date();
+  const logs: string[] = [];
+  const deps: MockDeps = {
+    store: new MemoryStore(),
+    source: createMockSource(),
+    pool: MOCK_POOL,
+    logs,
+    user: () => Promise.resolve(user),
+    isModerator: () => Promise.resolve(user !== null),
+    // Tests and the mock server run the next batch themselves.
+    scheduleNextPoolCheck: () => Promise.resolve(),
+    now: () => now,
+    log: (message) => {
+      logs.push(message);
+      if (!options.quiet) console.log(message);
+    },
+    setUser(next) {
+      user = next;
+    },
+    setNow(next) {
+      now = next;
+    },
+  };
+  return deps;
+}

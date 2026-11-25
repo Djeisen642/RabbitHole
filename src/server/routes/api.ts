@@ -1,93 +1,129 @@
 import { Hono } from 'hono';
-import { context, redis, reddit } from '@devvit/web/server';
+import type { Context } from 'hono';
 import type {
-  DecrementResponse,
-  IncrementResponse,
-  InitResponse,
+  ErrorResponse,
+  PuzzleResponse,
+  SuggestResponse,
 } from '../../shared/api';
+import { dayNumber, puzzleDateAt } from '../../shared/game/day';
+import { suggest } from '../../shared/pool';
+import type { Deps } from '../core/deps';
+import { readPoolCheck } from '../core/pool-check';
+import type { PoolCheckReport } from '../core/pool-check';
+import { servePuzzle } from '../core/puzzle';
+import {
+  loadRound,
+  loadStreak,
+  puzzleView,
+  submitGuess,
+  wrongGuessChart,
+} from '../core/round';
+import type { Round, Streak } from '../../shared/game/rules';
+import type { User } from '../core/deps';
+import { asRecord, asString } from '../core/json';
 
-type ErrorResponse = {
-  status: 'error';
-  message: string;
-};
+const fail = (
+  c: Context,
+  status: 400 | 401 | 403 | 404 | 409 | 500 | 503,
+  message: string
+) => c.json<ErrorResponse>({ type: 'error', message }, status);
 
-export const api = new Hono();
+/** The player-facing API: today's puzzle, guessing and autocomplete. */
+export function createApi(deps: Deps): Hono {
+  const api = new Hono();
 
-api.get('/init', async (c) => {
-  const { postId } = context;
-
-  if (!postId) {
-    console.error('API Init Error: postId not found in devvit context');
-    return c.json<ErrorResponse>(
-      {
-        status: 'error',
-        message: 'postId is required but missing from context',
-      },
-      400
-    );
-  }
-
-  try {
-    const [count, username] = await Promise.all([
-      redis.get('count'),
-      reddit.getCurrentUsername(),
-    ]);
-
-    return c.json<InitResponse>({
-      type: 'init',
-      postId: postId,
-      count: count ? parseInt(count) : 0,
-      username: username ?? 'anonymous',
+  async function view(
+    date: string,
+    user: User | null,
+    round: Round,
+    streak: Streak,
+    served: NonNullable<Awaited<ReturnType<typeof servePuzzle>>>
+  ): Promise<PuzzleResponse> {
+    const chart =
+      round.status === 'playing' ? null : await wrongGuessChart(deps, date);
+    return puzzleView({
+      puzzle: served.puzzle,
+      candidate: served.candidate,
+      round,
+      streak,
+      day: dayNumber(date),
+      username: user?.username ?? null,
+      chart,
     });
-  } catch (error) {
-    console.error(`API Init Error for post ${postId}:`, error);
-    let errorMessage = 'Unknown error during initialization';
-    if (error instanceof Error) {
-      errorMessage = `Initialization failed: ${error.message}`;
+  }
+
+  api.get('/puzzle', async (c) => {
+    try {
+      const date = puzzleDateAt(deps.now());
+      const served = await servePuzzle(deps, date);
+      if (!served)
+        return fail(
+          c,
+          503,
+          'Today’s puzzle is still being dug up. Try again soon.'
+        );
+      const user = await deps.user();
+      const [round, streak] = await Promise.all([
+        loadRound(deps, served.puzzle, user),
+        loadStreak(deps, user),
+      ]);
+      return c.json<PuzzleResponse>(
+        await view(date, user, round, streak, served)
+      );
+    } catch (error) {
+      console.error('GET /api/puzzle failed', error);
+      return fail(c, 500, 'Something went wrong loading the puzzle.');
     }
-    return c.json<ErrorResponse>(
-      { status: 'error', message: errorMessage },
-      400
-    );
-  }
-});
-
-api.post('/increment', async (c) => {
-  const { postId } = context;
-  if (!postId) {
-    return c.json<ErrorResponse>(
-      {
-        status: 'error',
-        message: 'postId is required',
-      },
-      400
-    );
-  }
-
-  const count = await redis.incrBy('count', 1);
-  return c.json<IncrementResponse>({
-    count,
-    postId,
-    type: 'increment',
   });
-});
 
-api.post('/decrement', async (c) => {
-  const { postId } = context;
-  if (!postId) {
-    return c.json<ErrorResponse>(
-      {
-        status: 'error',
-        message: 'postId is required',
-      },
-      400
-    );
-  }
-
-  const count = await redis.incrBy('count', -1);
-  return c.json<DecrementResponse>({
-    count,
-    postId,
-    type: 'decrement',
+  api.post('/guess', async (c) => {
+    try {
+      const body = asRecord(await c.req.json<unknown>().catch(() => null));
+      const guess = asString(body?.guess)?.trim() ?? '';
+      if (guess === '' || guess.length > 64)
+        return fail(c, 400, 'Type a community to guess.');
+      const date = puzzleDateAt(deps.now());
+      const served = await servePuzzle(deps, date);
+      if (!served)
+        return fail(
+          c,
+          503,
+          'Today’s puzzle is still being dug up. Try again soon.'
+        );
+      const user = await deps.user();
+      const outcome = await submitGuess(deps, served.puzzle, user, guess);
+      if (!outcome.ok) return fail(c, outcome.status, outcome.message);
+      return c.json<PuzzleResponse>(
+        await view(date, user, outcome.round, outcome.streak, served)
+      );
+    } catch (error) {
+      console.error('POST /api/guess failed', error);
+      return fail(c, 500, 'Something went wrong with that guess.');
+    }
   });
-});
+
+  api.get('/suggest', (c) => {
+    const q = c.req.query('q') ?? '';
+    return c.json<SuggestResponse>({
+      type: 'suggest',
+      names: suggest(q.slice(0, 64)),
+    });
+  });
+
+  // Moderators only: the latest "Check pool" results.
+  api.get('/pool-check', async (c) => {
+    try {
+      if (!(await deps.isModerator()))
+        return fail(c, 403, 'Only moderators can see the pool check.');
+      const date = c.req.query('date') ?? puzzleDateAt(deps.now());
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
+        return fail(c, 400, 'Use a YYYY-MM-DD date.');
+      return c.json<PoolCheckReport>(await readPoolCheck(deps, date));
+    } catch (error) {
+      console.error('GET /api/pool-check failed', error);
+      return fail(c, 500, 'Could not read the pool check.');
+    }
+  });
+
+  return api;
+}

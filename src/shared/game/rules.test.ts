@@ -10,6 +10,7 @@ import {
   rankByScore,
   score,
   updateStreak,
+  visibleStreak,
 } from './rules';
 
 describe('normalizeSubreddit', () => {
@@ -127,5 +128,18 @@ describe('updateStreak', () => {
   it('does not double count the same day', () => {
     const s = updateStreak(updateStreak(start, 10, true), 10, true);
     expect(s.current).toBe(1);
+  });
+});
+
+describe('visibleStreak', () => {
+  const s = { current: 4, best: 6, lastSolvedDay: 20 };
+
+  it('keeps a streak solved today or yesterday', () => {
+    expect(visibleStreak(s, 20).current).toBe(4);
+    expect(visibleStreak(s, 21).current).toBe(4);
+  });
+
+  it('shows a lapsed streak as zero but keeps the best', () => {
+    expect(visibleStreak(s, 22)).toEqual({ ...s, current: 0 });
   });
 });

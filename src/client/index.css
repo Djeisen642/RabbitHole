@@ -1,1 +1,580 @@
 @import 'tailwindcss';
+
+/*
+ * r/abbitHole theme. One paper-and-soil look on every screen, drawn with the
+ * bunny's line. Colours are tokens so light and dark share every rule;
+ * Reddit's apps set the web view's colour scheme to the reader's Reddit
+ * theme, so prefers-color-scheme follows it.
+ */
+:root {
+  color-scheme: light dark;
+  --paper: #f7f0e3;
+  --paper-deep: #efe4d0;
+  --card: #fffaf1;
+  --ink: #3b2719;
+  --muted: #6b5541;
+  --soil: #7a4f2e;
+  --soil-soft: #d9c2a2;
+  --hole: #2a1a0f;
+  --line: #ff4500;
+  --accent: #b23400;
+  --on-accent: #ffffff;
+  --accent-bg: #c63a00;
+  --good: #2e6b34;
+  --bad: #a13a1c;
+  --focus: #ff4500;
+  --display: 'Gluten', 'Trebuchet MS', cursive;
+  --body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  --wobble: 18px 12px 20px 11px / 12px 19px 11px 18px;
+  --wobble-sm: 11px 8px 12px 7px / 8px 12px 7px 11px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1d1510;
+    --paper-deep: #261c15;
+    --card: #2a2019;
+    --ink: #f1e4d2;
+    --muted: #c0a88d;
+    --soil: #b0825a;
+    --soil-soft: #4a3626;
+    --hole: #0a0604;
+    --line: #ff5a1f;
+    --accent: #ff8a5c;
+    --on-accent: #1d1510;
+    --accent-bg: #ff6a33;
+    --good: #8fd08f;
+    --bad: #ff9478;
+    --focus: #ff8a5c;
+  }
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.5 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.rh-page {
+  min-height: 100dvh;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 12px 16px 40px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.rh-display {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.rh-muted {
+  color: var(--muted);
+}
+
+/* Header ---------------------------------------------------------------- */
+.rh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rh-wordmark {
+  font: 600 26px/1 var(--display);
+  color: var(--ink);
+}
+.rh-wordmark b {
+  color: var(--accent);
+  font-weight: 600;
+}
+.rh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 4px;
+  border: 1.5px solid var(--soil);
+  border-radius: var(--wobble-sm);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--card);
+  white-space: nowrap;
+}
+
+/* Bunny stage ------------------------------------------------------------ */
+.rh-stage {
+  width: 100%;
+  max-width: 320px;
+  margin: -4px auto -6px;
+}
+.rh-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.rh-bunny {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rh-ground {
+  fill: none;
+  stroke: var(--soil);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.rh-mound {
+  fill: var(--soil);
+  opacity: 0.45;
+}
+.rh-hole {
+  fill: var(--hole);
+}
+.rh-dust path {
+  fill: none;
+  stroke: var(--soil);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* Tunnel progress ---------------------------------------------------------- */
+.rh-tunnel {
+  display: block;
+  width: 100%;
+  height: 34px;
+}
+.rh-tunnel .track {
+  fill: none;
+  stroke: var(--soil-soft);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+.rh-tunnel .dug {
+  fill: none;
+  stroke: var(--soil);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2 6;
+}
+.rh-tunnel .slot {
+  fill: var(--paper);
+  stroke: var(--soil);
+  stroke-width: 2;
+}
+.rh-tunnel .slot.used {
+  fill: var(--soil);
+}
+.rh-tunnel .slot.won {
+  fill: var(--line);
+  stroke: var(--line);
+}
+
+/* Reddit-style post card --------------------------------------------------- */
+.rh-post {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--wobble);
+  box-shadow: 4px 4px 0 var(--soil);
+  padding: 12px 14px 10px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.rh-post-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.rh-post-meta .sub {
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.06em;
+}
+.rh-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--soil);
+  display: grid;
+  place-items: center;
+  font: 600 13px/1 var(--display);
+  color: var(--soil);
+  flex: none;
+}
+.rh-post h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.rh-post-body {
+  margin: 0;
+  font-size: 15px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.rh-post-body.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rh-post-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.rh-post-actions span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.rh-post-actions svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* Clues ---------------------------------------------------------------- */
+.rh-clues {
+  display: grid;
+  gap: 10px;
+}
+.rh-clue {
+  position: relative;
+  background: var(--paper-deep);
+  border: 2px solid var(--soil);
+  border-radius: var(--wobble);
+  padding: 10px 14px 12px;
+  min-width: 0;
+}
+.rh-clue.fresh {
+  animation: rh-dig 520ms cubic-bezier(0.3, 0.7, 0.3, 1.2) both;
+}
+.rh-clue-label {
+  font: 600 15px/1.2 var(--display);
+  color: var(--soil);
+  margin-bottom: 4px;
+}
+.rh-clue p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.rh-clue .quote {
+  border-left: 3px solid var(--line);
+  padding-left: 10px;
+}
+.rh-buried {
+  border: 2px dashed var(--soil-soft);
+  border-radius: var(--wobble);
+  padding: 8px 14px;
+  color: var(--muted);
+  font: 500 14px/1.3 var(--display);
+}
+.rh-jargon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+}
+.rh-jargon span {
+  font-family: var(--display);
+  color: var(--ink);
+}
+.rh-stats {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.rh-stats b {
+  display: block;
+  font: 600 22px/1.1 var(--display);
+}
+.rh-icon-clue {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--soil);
+  object-fit: cover;
+  filter: blur(6px) saturate(0.8);
+}
+.rh-icon-clue.clear {
+  filter: none;
+}
+
+@keyframes rh-dig {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) rotate(-1deg);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Guessing ---------------------------------------------------------------- */
+.rh-guess {
+  display: grid;
+  gap: 8px;
+}
+.rh-guess-row {
+  display: flex;
+  gap: 8px;
+  position: relative;
+}
+.rh-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 17px;
+  padding: 10px 12px;
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: var(--wobble-sm);
+}
+.rh-input::placeholder {
+  color: var(--muted);
+}
+.rh-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--wobble-sm);
+  box-shadow: 3px 3px 0 var(--soil);
+}
+.rh-suggest li {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.rh-suggest li[aria-selected='true'],
+.rh-suggest li:hover {
+  background: var(--paper-deep);
+  color: var(--accent);
+}
+.rh-guesses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rh-guesses li {
+  font-size: 14px;
+  padding: 2px 9px 3px;
+  border-radius: var(--wobble-sm);
+  border: 1.5px solid var(--bad);
+  color: var(--bad);
+  text-decoration: line-through;
+}
+.rh-guesses li.right {
+  border-color: var(--good);
+  color: var(--good);
+  text-decoration: none;
+  font-weight: 700;
+}
+.rh-error {
+  color: var(--bad);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Buttons ---------------------------------------------------------------- */
+.rh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px 11px;
+  font: 600 18px/1 var(--display);
+  color: var(--on-accent);
+  background: var(--accent-bg);
+  border: 2px solid var(--ink);
+  border-radius: var(--wobble-sm);
+  box-shadow: 3px 3px 0 var(--soil);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease;
+}
+.rh-button:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--soil);
+}
+.rh-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.rh-button.quiet {
+  background: var(--card);
+  color: var(--ink);
+}
+.rh-button:focus-visible,
+.rh-input:focus-visible,
+.rh-link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.rh-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Result ----------------------------------------------------------------- */
+.rh-result {
+  display: grid;
+  gap: 14px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--wobble);
+  box-shadow: 4px 4px 0 var(--soil);
+  padding: 14px 16px 16px;
+}
+.rh-result h2 {
+  margin: 0;
+  font: 600 28px/1.1 var(--display);
+  overflow-wrap: anywhere;
+}
+.rh-result h2 b {
+  color: var(--accent);
+  font-weight: 600;
+}
+.rh-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rh-chart {
+  display: grid;
+  gap: 6px;
+}
+.rh-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  font-size: 14px;
+}
+.rh-bar .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rh-bar .fill {
+  grid-column: 1 / -1;
+  height: 10px;
+  background: var(--soil-soft);
+  border-radius: 6px 4px 7px 3px;
+  overflow: hidden;
+}
+.rh-bar .fill span {
+  display: block;
+  height: 100%;
+  background: var(--soil);
+  border-radius: inherit;
+}
+.rh-share {
+  width: 100%;
+  font: 15px/1.4 var(--body);
+  color: var(--ink);
+  background: var(--paper-deep);
+  border: 1.5px dashed var(--soil);
+  border-radius: var(--wobble-sm);
+  padding: 8px 10px;
+  resize: none;
+}
+.rh-section-title {
+  margin: 0;
+  font: 600 18px/1.2 var(--display);
+  color: var(--soil);
+}
+
+/* Splash ----------------------------------------------------------------- */
+.rh-splash {
+  min-height: 100dvh;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+}
+.rh-splash .teaser {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.rh-splash .teaser q {
+  font-weight: 700;
+}
+.rh-splash-bunny {
+  width: 64px;
+  height: 64px;
+}
+.rh-splash-bunny path {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rh-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rh-clue.fresh {
+    animation: none;
+  }
+  .rh-button {
+    transition: none;
+  }
+}

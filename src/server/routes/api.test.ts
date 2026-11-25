@@ -1,0 +1,239 @@
+import { describe, expect, it } from 'vitest';
+import type {
+  ErrorResponse,
+  PuzzleResponse,
+  SuggestResponse,
+} from '../../shared/api';
+import { createMockDeps } from '../core/mock/mock-deps';
+import type { MockDeps } from '../core/mock/mock-deps';
+import { findEntry, POOL } from '../../shared/pool';
+import { runDailyPick } from '../core/puzzle';
+import { createApi } from './api';
+
+const NOW = new Date('2026-11-25T15:00:00Z');
+const TODAY = '2026-11-25';
+
+type Json = PuzzleResponse | ErrorResponse | SuggestResponse;
+
+/** Responses are built by our own handlers; check the tag and trust the rest. */
+function isJson(value: unknown): value is Json {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    (value.type === 'puzzle' ||
+      value.type === 'error' ||
+      value.type === 'suggest')
+  );
+}
+
+async function readJson(res: Response): Promise<Json> {
+  const value: unknown = await res.json();
+  if (!isJson(value)) throw new Error('unexpected response');
+  return value;
+}
+
+async function setup(answer = 'Breadit') {
+  const deps = createMockDeps({ now: NOW, quiet: true });
+  const entry = findEntry(answer, POOL);
+  if (!entry) throw new Error('missing entry');
+  // Pin the answer so the test knows it; guesses still resolve against the
+  // whole mock pool.
+  const pool = deps.pool;
+  deps.pool = [entry];
+  await runDailyPick(deps, TODAY);
+  deps.pool = pool;
+  const app = createApi(deps);
+  const get = async (path: string): Promise<{ status: number; body: Json }> => {
+    const res = await app.request(path);
+    const body = await readJson(res);
+    return { status: res.status, body };
+  };
+  const guess = async (
+    text: string
+  ): Promise<{ status: number; body: Json }> => {
+    const res = await app.request('/guess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guess: text }),
+    });
+    const body = await readJson(res);
+    return { status: res.status, body };
+  };
+  const statusOf = async (path: string): Promise<number> =>
+    (await app.request(path)).status;
+  return { deps, get, guess, statusOf };
+}
+
+function puzzle(body: Json): PuzzleResponse {
+  if (body.type !== 'puzzle') throw new Error(JSON.stringify(body));
+  return body;
+}
+
+/** Everything the player must not see before the round ends. */
+function expectNoLeak(view: PuzzleResponse, deps: MockDeps): void {
+  const text = JSON.stringify(view).toLowerCase();
+  expect(view.result).toBeNull();
+  expect(text).not.toContain('breadit');
+  expect(text).not.toContain('scoring angle'.toLowerCase()); // unrevealed top comment until clue 1
+  expect(view.clues.length).toBe(view.guesses.filter((g) => !g.correct).length);
+  expect(deps.pool.length).toBeGreaterThan(0);
+}
+
+describe('GET /puzzle', () => {
+  it('sends the masked post and nothing that gives the answer away', async () => {
+    const { deps, get } = await setup();
+    const { status, body } = await get('/puzzle');
+    expect(status).toBe(200);
+    const view = puzzle(body);
+    expect(view.date).toBe(TODAY);
+    expect(view.post.title).toMatch(/open crumb/);
+    expect(view.clues).toEqual([]);
+    expect(view.clueKinds).toEqual([
+      'topComment',
+      'rule',
+      'jargon',
+      'stats',
+      'icon',
+    ]);
+    expect(view.maxGuesses).toBe(6);
+    expect(view.guessesLeft).toBe(6);
+    expect(view.status).toBe('playing');
+    expect(view.username).toBe('mock_player');
+    expectNoLeak(view, deps);
+    // The rule and the stats aren't in the payload either.
+    const text = JSON.stringify(view);
+    expect(text).not.toContain('Share your recipe');
+    expect(text).not.toContain('1240000');
+  });
+
+  it('lets a logged-out visitor look but not guess', async () => {
+    const { deps, get, guess } = await setup();
+    deps.setUser(null);
+    expect(puzzle((await get('/puzzle')).body).username).toBeNull();
+    expect((await guess('Baking')).status).toBe(401);
+  });
+});
+
+describe('a full round', () => {
+  it('wrong, wrong, right: reveals clues one by one, then the answer', async () => {
+    const { get, guess } = await setup();
+
+    const first = puzzle((await guess('r/Baking')).body);
+    expect(first.status).toBe('playing');
+    expect(first.clues.map((c) => c.kind)).toEqual(['topComment']);
+    expect(first.guessesLeft).toBe(5);
+    expect(first.result).toBeNull();
+    expect(JSON.stringify(first).toLowerCase()).not.toContain('breadit');
+
+    const second = puzzle((await guess('sourdough')).body);
+    expect(second.clues.map((c) => c.kind)).toEqual(['topComment', 'rule']);
+    expect(JSON.stringify(second)).not.toContain('"words"');
+    expect(JSON.stringify(second).toLowerCase()).not.toContain('breadit');
+    expect(second.result).toBeNull();
+
+    const done = puzzle((await guess('bredit')).body);
+    expect(done.status).toBe('solved');
+    expect(done.guesses.map((g) => g.correct)).toEqual([false, false, true]);
+    expect(done.guessesLeft).toBe(0);
+    expect(done.streak.current).toBe(1);
+    const result = done.result;
+    if (!result) throw new Error('no result');
+    expect(result.answer).toBe('Breadit');
+    expect(result.score).toBe(2);
+    expect(result.clues.map((c) => c.kind)).toEqual([
+      'topComment',
+      'rule',
+      'jargon',
+      'stats',
+      'icon',
+    ]);
+    expect(result.visitUrl).toBe('https://www.reddit.com/r/Breadit/');
+    expect(result.wrongGuesses.map((w) => w.name).sort()).toEqual([
+      'Baking',
+      'Sourdough',
+    ]);
+    expect(result.wrongGuesses[0]?.percent).toBe(100);
+    expect(result.players).toBe(1);
+    expect(result.shareText).toContain('solved with 2 clues');
+    expect(result.shareText.toLowerCase()).not.toContain('breadit');
+
+    // The finished round comes back the same on reload, and is closed.
+    const reload = puzzle((await get('/puzzle')).body);
+    expect(reload.result?.answer).toBe('Breadit');
+    expect((await guess('Cooking')).status).toBe(409);
+  });
+
+  it('fails after every guess is used and resets the streak', async () => {
+    const { deps, get, guess } = await setup('houseplants');
+    for (const name of ['Breadit', 'castiron', 'birding', 'canada']) {
+      const view = puzzle((await guess(name)).body);
+      expect(view.result).toBeNull();
+      expect(JSON.stringify(view).toLowerCase()).not.toContain('houseplants');
+    }
+    const last = puzzle((await guess('whatisthisthing')).body);
+    expect(last.maxGuesses).toBe(5); // no custom icon, so four clues
+    expect(last.status).toBe('failed');
+    expect(last.result?.answer).toBe('houseplants');
+    expect(last.result?.score).toBeNull();
+    expect(last.result?.shareText).toContain('stumped');
+    expect(last.streak.current).toBe(0);
+    expect(await deps.store.zScore(`scores:${TODAY}`, 't2_mockplayer')).toBe(
+      99
+    );
+    expect(puzzle((await get('/puzzle')).body).status).toBe('failed');
+  });
+
+  it('counts wrong guesses across players for the chart', async () => {
+    const { deps, guess } = await setup();
+    await guess('Baking');
+    await guess('Breadit');
+    deps.setUser({ id: 't2_second', username: 'second_player' });
+    await guess('Baking');
+    await guess('Cooking');
+    const done = puzzle((await guess('Breadit')).body);
+    expect(done.result?.players).toBe(2);
+    expect(done.result?.wrongGuesses[0]).toEqual({
+      name: 'Baking',
+      count: 2,
+      percent: 100,
+    });
+    expect(done.result?.wrongGuesses[1]).toMatchObject({
+      name: 'Cooking',
+      percent: 50,
+    });
+  });
+});
+
+describe('POST /guess validation', () => {
+  it('rejects blanks and names outside the pool, and ignores repeats', async () => {
+    const { guess } = await setup();
+    expect((await guess('   ')).status).toBe(400);
+    expect((await guess('definitely_not_a_sub')).status).toBe(400);
+    puzzle((await guess('Baking')).body);
+    const repeat = puzzle((await guess('r/baking')).body);
+    expect(repeat.guesses).toHaveLength(1);
+  });
+});
+
+describe('GET /suggest', () => {
+  it('returns at most 8 names and nothing for one character', async () => {
+    const { get } = await setup();
+    const one = (await get('/suggest?q=b')).body;
+    expect(one).toEqual({ type: 'suggest', names: [] });
+    const two = (await get('/suggest?q=ca')).body;
+    if (two.type !== 'suggest') throw new Error('bad');
+    expect(two.names.length).toBeGreaterThan(0);
+    expect(two.names.length).toBeLessThanOrEqual(8);
+    expect(two.names).toContain('castiron');
+  });
+});
+
+describe('GET /pool-check', () => {
+  it('is for moderators only', async () => {
+    const { deps, statusOf } = await setup();
+    expect(await statusOf('/pool-check')).toBe(200);
+    deps.isModerator = () => Promise.resolve(false);
+    expect(await statusOf('/pool-check')).toBe(403);
+  });
+});

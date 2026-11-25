@@ -1,69 +1,86 @@
+import './fonts';
 import './index.css';
 
-import { navigateTo } from '@devvit/web/client';
-import { context, requestExpandedMode } from '@devvit/web/client';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
+import type { MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
+import type { PuzzleResponse } from '../shared/api';
+import { bunnyPath } from './bunny/bunny';
+import { fetchPuzzle } from './lib/api';
+import { openGame } from './lib/platform';
+
+const BUNNY = bunnyPath();
+
+function statusLine(p: PuzzleResponse): string {
+  if (p.status === 'solved')
+    return p.result?.score === 0
+      ? 'Solved on the post alone. Come back tomorrow.'
+      : `Solved with ${p.result?.score ?? 0} clues. Come back tomorrow.`;
+  if (p.status === 'failed')
+    return 'Stumped today. A new hole opens at midnight ET.';
+  if (p.guesses.length > 0)
+    return `${p.guessesLeft} guesses left. Keep digging.`;
+  return `One post, ${p.maxGuesses} guesses. Which community is it from?`;
+}
 
 export const Splash = () => {
+  const [puzzle, setPuzzle] = useState<PuzzleResponse | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    fetchPuzzle()
+      .then(setPuzzle)
+      .catch(() => {
+        setFailed(true);
+      });
+  }, []);
+
+  function play(event: MouseEvent<HTMLAnchorElement>): void {
+    if (openGame(event.nativeEvent)) event.preventDefault();
+  }
+
   return (
-    <div className="flex relative flex-col justify-center items-center min-h-screen gap-4 bg-white dark:bg-gray-900">
-      <img
-        className="object-contain w-1/2 max-w-[250px] mx-auto"
-        src="/snoo.png"
-        alt="Snoo"
-      />
-      <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
-          Hey {context.username ?? 'user'} 👋
+    <main className="rh-splash">
+      <div>
+        <h1 className="rh-wordmark" style={{ margin: 0 }}>
+          <b>r/</b>abbitHole
         </h1>
-        <p className="text-base text-center text-gray-600 dark:text-gray-300">
-          Edit{' '}
-          <span className="bg-[#e5ebee] dark:bg-gray-700 px-1 py-0.5 rounded">
-            src/client/splash.tsx
-          </span>{' '}
-          to get started.
+        <p className="rh-muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
+          {puzzle
+            ? `#${puzzle.number}${puzzle.streak.current > 0 ? ` · ${puzzle.streak.current} day streak` : ''}`
+            : 'Guess the community'}
         </p>
       </div>
-      <div className="flex items-center justify-center mt-5">
-        <button
-          className="flex items-center justify-center bg-[#d93900] dark:bg-orange-600 text-white w-auto h-10 rounded-full cursor-pointer transition-colors px-4 hover:bg-[#c23300] dark:hover:bg-orange-700"
-          onClick={(e) => {
-            requestExpandedMode(e.nativeEvent, 'game');
-          }}
-        >
-          Tap to Start
-        </button>
-      </div>
-      <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 text-[0.8em] text-gray-600 dark:text-gray-400">
-        <button
-          className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => {
-            navigateTo('https://developers.reddit.com/docs');
-          }}
-        >
-          Docs
-        </button>
-        <span className="text-gray-300 dark:text-gray-600">|</span>
-        <button
-          className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => {
-            navigateTo('https://www.reddit.com/r/Devvit');
-          }}
-        >
-          r/Devvit
-        </button>
-        <span className="text-gray-300 dark:text-gray-600">|</span>
-        <button
-          className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
-          onClick={() => {
-            navigateTo('https://discord.com/invite/R7yu2wh9Qz');
-          }}
-        >
-          Discord
-        </button>
-      </footer>
-    </div>
+      <svg
+        className="rh-splash-bunny"
+        viewBox="-60 -182 125 186"
+        aria-hidden="true"
+      >
+        <path d={BUNNY} />
+      </svg>
+      <p className="teaser">
+        {puzzle ? (
+          <>
+            <q>{puzzle.post.title}</q>
+            <br />
+            <span className="rh-muted">{statusLine(puzzle)}</span>
+          </>
+        ) : failed ? (
+          'Today’s post is still being dug up.'
+        ) : (
+          'Loading today’s post…'
+        )}
+      </p>
+      {/* On Reddit this opens the expanded view; in local mock mode it is a plain link. */}
+      <a
+        className="rh-button"
+        href="game.html"
+        style={{ gridColumn: '1 / -1', justifySelf: 'start' }}
+        onClick={play}
+      >
+        {puzzle && puzzle.status !== 'playing' ? 'See results' : 'Play'}
+      </a>
+    </main>
   );
 };
 

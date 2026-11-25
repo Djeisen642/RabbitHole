@@ -31,6 +31,20 @@
         "endpoint": "/internal/menu/post-create"
       },
       {
+        "label": "Pick today's r/abbitHole puzzle",
+        "description": "Picks today's and tomorrow's puzzles now if they are missing",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/pick-puzzle"
+      },
+      {
+        "label": "Check r/abbitHole pool",
+        "description": "Checks every pool community; results at /api/pool-check",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/check-pool"
+      },
+      {
         "label": "Example form",
         "description": "Show a simple form",
         "location": "subreddit",
@@ -54,6 +68,9 @@
       "daily-pick": {
         "endpoint": "/internal/scheduler/daily-pick",
         "cron": "0 5 * * *"
+      },
+      "pool-check": {
+        "endpoint": "/internal/scheduler/pool-check"
       }
     }
   }
