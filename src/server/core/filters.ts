@@ -29,9 +29,9 @@ const MASK = '?????';
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * Every way a post could name the answer: the sub's name and aliases. Names
- * written as one word also match split into their parts, so
- * "MechanicalKeyboards" catches "mechanical-keyboards".
+ * Every way a post could name the answer: the sub's name and aliases as whole
+ * words. A multi-word alias matches with any separator or none, so "cast
+ * iron" also catches "cast-iron" and "castiron".
  */
 function giveawayPattern(entry: PoolEntry): RegExp {
   const terms = [entry.name, ...entry.aliases]
@@ -178,7 +178,11 @@ export function pickTopComment(
     if (BOTS.has(c.author.toLowerCase()) || GONE.has(body)) continue;
     if (body.length < MIN_COMMENT_CHARS || body.length > MAX_COMMENT_CHARS)
       continue;
-    return { body: maskGiveaways(body, entry), score: c.score };
+    const masked = maskGiveaways(body, entry);
+    // Masking only replaces whole words; a name glued into another word
+    // ("#castironcooking") survives it, so such a comment is skipped.
+    if (containsGiveaway(masked, entry)) continue;
+    return { body: masked, score: c.score };
   }
   return null;
 }
@@ -187,26 +191,40 @@ export function pickTopComment(
 const GENERIC_RULE =
   /\b(civil|civility|respect|respectful|kind|spam|reddiquette|self[\s-]?promo|promotion|harass|nsfw|personal info|doxx|repost|low[\s-]?effort|be nice|no hate|bigotry|trolling|politics)\b/i;
 
-/** The most telling rule: the first that isn't boilerplate. */
+const MAX_RULE_CHARS = 240;
+
+/**
+ * The most telling rule: the first that isn't boilerplate, with the answer
+ * masked. Rules that still name the sub after masking are skipped, as in
+ * pickTopComment.
+ */
 export function pickRule(
   rules: readonly SourceRule[],
   entry: PoolEntry
 ): SourceRule | null {
-  const usable = rules.filter((r) => r.title.trim().length > 0);
-  const chosen =
+  const usable = rules
+    .map((r) => {
+      const description = r.description.trim();
+      return {
+        title: maskGiveaways(r.title.trim(), entry),
+        description: maskGiveaways(
+          description.length > MAX_RULE_CHARS
+            ? `${description.slice(0, MAX_RULE_CHARS - 3)}...`
+            : description,
+          entry
+        ),
+      };
+    })
+    .filter(
+      (r) =>
+        r.title.length > 0 &&
+        !containsGiveaway(`${r.title} ${r.description}`, entry)
+    );
+  return (
     usable.find((r) => !GENERIC_RULE.test(`${r.title} ${r.description}`)) ??
-    usable[0];
-  if (!chosen) return null;
-  const description = chosen.description.trim();
-  return {
-    title: maskGiveaways(chosen.title.trim(), entry),
-    description: maskGiveaways(
-      description.length > 240
-        ? `${description.slice(0, 237)}...`
-        : description,
-      entry
-    ),
-  };
+    usable[0] ??
+    null
+  );
 }
 
 /** Everyday words that never count as a community's jargon. */
@@ -235,7 +253,8 @@ export const COMMON_WORDS: ReadonlySet<string> = new Set(
 
 /**
  * A few distinctive words from a community's recent titles: words that come
- * up in more than one title, aren't everyday words and don't name the sub.
+ * up in more than one title, aren't everyday words and don't name the sub
+ * (alone or together with their neighbours).
  * Most frequent first, then longest.
  */
 export function jargonWords(
@@ -245,8 +264,9 @@ export function jargonWords(
 ): string[] {
   const docs = new Map<string, number>();
   for (const title of titles) {
+    // Mask first so a spaced name ("cast iron") doesn't become two words.
     const words = new Set(
-      title
+      maskGiveaways(title, entry)
         .toLowerCase()
         .replace(/['’]/g, '')
         .split(/[^a-z0-9]+/)

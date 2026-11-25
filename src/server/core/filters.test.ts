@@ -25,6 +25,11 @@ const keyboards: PoolEntry = {
   aliases: ['mechanical keyboards', 'mechkeys'],
   category: 'hobby',
 };
+const castiron: PoolEntry = {
+  name: 'castiron',
+  aliases: ['cast iron'],
+  category: 'food',
+};
 const canada: PoolEntry = {
   name: 'canada',
   aliases: ['canadian', 'canadians'],
@@ -210,6 +215,20 @@ describe('pickTopComment', () => {
     });
     expect(pickTopComment([], breadit)).toBeNull();
   });
+
+  it('skips a comment that still names the sub after masking', () => {
+    // Masking only replaces whole words; a name glued into a hashtag can't
+    // be masked, so the comment would give the answer away as clue one.
+    expect(
+      pickTopComment(
+        [
+          comment({ body: 'Welcome to the #castironcooking club, friend!' }),
+          comment({ body: 'Lovely seasoning, keep using it every day.' }),
+        ],
+        castiron
+      )?.body
+    ).toBe('Lovely seasoning, keep using it every day.');
+  });
 });
 
 describe('pickRule', () => {
@@ -234,6 +253,18 @@ describe('pickRule', () => {
     ).toBe('Be civil');
     expect(pickRule([], breadit)).toBeNull();
   });
+
+  it('skips a rule that still names the sub after masking', () => {
+    expect(
+      pickRule(
+        [
+          { title: 'Castironcookware only', description: 'Pans and pots.' },
+          { title: 'Show the pan', description: 'Photos of the cooking.' },
+        ],
+        castiron
+      )?.title
+    ).toBe('Show the pan');
+  });
 });
 
 describe('jargonWords', () => {
@@ -254,5 +285,19 @@ describe('jargonWords', () => {
     expect(words).not.toContain('breddit');
     expect(words).not.toContain('what');
     expect(words.length).toBeLessThanOrEqual(8);
+  });
+
+  it('drops the words of a spaced name', () => {
+    const words = jargonWords(
+      [
+        'My cast iron skillet after a year',
+        'Cast iron seasoning flaking off',
+        'Stripping a cast iron skillet',
+      ],
+      castiron
+    );
+    expect(words).not.toContain('cast');
+    expect(words).not.toContain('iron');
+    expect(words[0]).toBe('skillet');
   });
 });
