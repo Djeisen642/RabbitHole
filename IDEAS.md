@@ -43,4 +43,3 @@ Rabbit Hole, written r/abbitHole. Each day, guess which subreddit a real post ca
 - Mascot: a single continuous-line animated SVG bunny. Ears twitch, it thumps its foot when impatient or after a wrong guess, ears perk or droop, it dives into the hole on a solve.
 - Each clue is digging one layer deeper; progress is a squiggly tunnel.
 - Reddit orange plus soil brown, one distinctive display font.
-- Logo idea: Snoo with bunny ears.
