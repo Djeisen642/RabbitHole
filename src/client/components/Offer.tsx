@@ -15,7 +15,7 @@ export function Offer({
   const id = useId();
   return (
     <div className="rh-offer" role="group" aria-labelledby={id}>
-      <p id={id}>Tough few days. Want some options?</p>
+      <p id={id}>Missed the last few? Want to pick from a list?</p>
       <button
         type="button"
         className="rh-button"

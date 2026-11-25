@@ -640,17 +640,10 @@ body {
   font: 600 22px/1.1 var(--display);
   color: var(--accent);
 }
-.rh-howto ol {
+.rh-howto p {
   margin: 0;
-  padding-left: 1.4em;
-  display: grid;
-  gap: 4px;
   font-size: 15px;
   line-height: 1.4;
-}
-.rh-howto li::marker {
-  font-family: var(--display);
-  color: var(--soil);
 }
 .rh-howto .rh-button {
   justify-self: start;

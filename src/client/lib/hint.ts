@@ -7,8 +7,8 @@ export function guessHint(
   nextClue: string | null
 ): string {
   return guessesLeft === 1 || nextClue === null
-    ? 'Last guess. Make it count.'
-    : `A miss digs up ${lowerFirst(nextClue)}.`;
+    ? 'Last guess.'
+    : `A wrong guess shows you ${lowerFirst(nextClue)}.`;
 }
 
 const lowerFirst = (text: string): string =>
