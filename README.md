@@ -6,7 +6,7 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
 
 ## How to play
 
-1. Open today's r/abbitHole post. You see one real Reddit post (title, text or image) with the subreddit hidden.
+1. Open today's r/abbitHole post. You see one real Reddit text post (title and body) with the subreddit hidden.
 2. Type a guess. Matching communities are suggested as you type, but the full list of possible answers stays hidden. `r/`, capitals and spaces don't matter.
 3. Every wrong guess reveals a clue, each one more obvious than the last:
    1. A top comment from the original thread
@@ -21,7 +21,6 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
 - Your score is the number of clues you needed. Solving on the post alone scores 0, the best possible.
 - Time doesn't count, and there is no tiebreak: players with the same score share a rank. Unsolved rounds rank last.
 - Solving on consecutive days builds your streak. Missing a day or failing a round resets it.
-- Every community you solve is added to your Atlas.
 
 Everyone gets the same puzzle each day, a round takes under two minutes, and a new one drops at midnight Eastern.
 
