@@ -12,7 +12,11 @@ updates:
     ignore:
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+    # Wait a week before taking a new release, so a compromised or broken
+    # version is likely caught and pulled first. Devvit is exempt: its
+    # releases track the platform.
     cooldown:
+      default-days: 7
       exclude:
         - 'devvit'
         - '@devvit/*'
