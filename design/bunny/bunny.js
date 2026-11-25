@@ -131,7 +131,7 @@ export const REST = {
   earF: 0,
   earLen: 1,
   foot: 0, // negative lifts the toe for a thump
-  turn: 1, // -1 faces the other way (used while hopping home)
+  turn: 1, // -1 looks the other way (the head peeking out of the hole)
   opacity: 1,
 };
 
@@ -167,7 +167,6 @@ function place(point, pose) {
 }
 
 const fmt = (n) => Math.round(n * 10) / 10;
-const r3 = (n) => Math.round(n * 1000) / 1000;
 
 // The posed drawing as numbers: each entry is [cmd, ...placed points].
 function posed(pose) {
@@ -188,28 +187,23 @@ export function bunnyPath(pose = REST) {
 const BODY_CENTRE = [0, -48];
 
 // facing is 1 to look right, -1 to look left (a mirror image). pose.turn
-// flips it again, and rot always tips the nose forward for positive angles,
-// whichever way it faces.
+// flips it again; easing it from 1 to -1 reads as a turn of the head.
 const look = (p, facing) => facing * p.turn;
-const tip = (p, facing) => (look(p, facing) < 0 ? -p.rot : p.rot);
+const r3 = (n) => Math.round(n * 1000) / 1000;
 
 export function bunnyTransform(pose, origin, facing = 1) {
   const p = { ...REST, ...pose };
   const [ox, oy] = origin;
   return (
     `translate(${fmt(ox + p.x)} ${fmt(oy + p.y)}) ` +
-    `rotate(${fmt(tip(p, facing))} ${BODY_CENTRE[0]} ${BODY_CENTRE[1]}) ` +
+    `rotate(${fmt(p.rot)} ${BODY_CENTRE[0]} ${BODY_CENTRE[1]}) ` +
     `scale(${r3(p.sx * look(p, facing))} ${r3(p.sy)})`
   );
 }
 
 // bunnyTransform applied to a single point.
 function toWorld([x, y], p, origin, facing) {
-  const r = rotate(
-    [x * p.sx * look(p, facing), y * p.sy],
-    BODY_CENTRE,
-    tip(p, facing)
-  );
+  const r = rotate([x * p.sx * look(p, facing), y * p.sy], BODY_CENTRE, p.rot);
   return [r[0] + origin[0] + p.x, r[1] + origin[1] + p.y];
 }
 
@@ -380,6 +374,43 @@ export function travelTrack(from, to, ground, pose = REST) {
   return { track: join(A, ripple(route, 3.5, 46), B), len };
 }
 
+// Two tracks for the dive: down, where the line pours over into the hole and
+// on far below ground, and up, where it climbs back out and winds into the
+// bunny again. Below ground the line is hidden by the clip.
+export function diveTracks(spot, hole, ground, pose = REST) {
+  const A = bunnyPoints(pose, [spot.x, ground], spot.facing);
+  const B = bunnyPoints(REST, [spot.x, ground], spot.facing);
+  const len = measure(A).total;
+  const hx = hole.cx;
+  const top = ground - 64;
+  const mouth = ground + 12; // just below the hole's visible floor
+  const shaft = [];
+  for (let y = mouth; y <= mouth + len + 6; y += 3) shaft.push([hx, y]);
+  const out = exitOf(A);
+  const over = through([
+    out.at,
+    along(out.at, out.dir, 24),
+    [lerp(out.at[0], hx, 0.5), ground - 42],
+    [hx, top],
+    [hx, ground - 8],
+    [hx, mouth],
+  ]);
+  const into = entryOf(B);
+  const back = through([
+    [hx, mouth],
+    [hx, ground - 8],
+    [hx, top],
+    [lerp(hx, into.at[0], 0.5), ground - 42],
+    along(into.at, into.dir, -24),
+    into.at,
+  ]);
+  return {
+    len,
+    down: join(A, ripple(over, 3, 44), shaft),
+    up: join([...shaft].reverse(), ripple(back, 3, 44), B),
+  };
+}
+
 // The `d` of a thread `len` long whose back end sits `d` along the track,
 // drawn through `n` points.
 export function threadPath(track, d, len, n) {
@@ -399,115 +430,45 @@ export function threadPath(track, d, len, n) {
 }
 
 // How long a slide takes for a distance along the track, at a speed in units
-// per millisecond.
+// per millisecond. Travel is unhurried.
 export const slideMs = (dist, speed = 0.55) =>
   Math.min(2600, Math.max(900, dist / speed));
+
+// The dive is quick, it's a reward: a fixed time for each half.
+export const DIVE_MS = { pour: 760, climb: 820 };
+export const PEEK_MS = { rise: 180, duck: 150 };
+
+// The head peeking out of the hole after the dive. The bunny stands in the
+// shaft with its neck stretched, sunk so the ground cuts it just under the
+// chin, where it is narrow enough to fit the opening. While it pops up it is
+// stretched tall and thin, which also lets the wide head and ears pass the
+// rim without touching the ground either side.
+export const PEEK = { headDy: -12, earB: -4, earF: 6 };
+const PEEK_CUT = 90; // height on the bunny where the ground cuts it
+const PEEK_HIDE = 120; // how far down it sinks to be out of sight
+const PEEK_MID = 10; // middle of the neck at the cut
+const RISE = { sx: 0.78, sy: 1.1, mid: 16 }; // stretched, while popping up
+const smooth = (t) => t * t * (3 - 2 * t);
+
+// The peek pose `up` of the way out of the hole (0 hidden, 1 peeking),
+// centred on the hole. turn is 1 or -1 (which way it looks).
+export function peekPose(spot, hole, ground, up = 1, turn = 1, extra = {}) {
+  const w = smooth(Math.max(0, Math.min(1, (up - 0.8) / 0.2)));
+  const mid = lerp(RISE.mid, PEEK_MID, w);
+  return {
+    ...REST,
+    ...PEEK,
+    ...extra,
+    turn,
+    sx: lerp(RISE.sx, 1, w),
+    sy: lerp(RISE.sy, 1, w),
+    x: hole.cx - spot.x - mid * lerp(RISE.sx, 1, w) * spot.facing * turn,
+    y: hole.cy - ground + PEEK_CUT + PEEK_HIDE * (1 - up),
+  };
+}
+
 // Points in a thread: about one every 2.5 units of line.
 export const threadPoints = (len) => Math.max(60, Math.round(len / 2.5));
-
-// ---------------------------------------------------------------------------
-// The dive
-//
-// A real hop, the bunny keeping its shape: crouch, spring up in a gravity
-// arc toward the hole, tip head first on the way down and fall straight in,
-// body following. This tall bunny is far wider than the hole, so in the air
-// it shrinks a little and stretches long, as if hopping away from us into the
-// burrow, until it fits the opening; the clip hides what has gone below
-// ground. After a beat it pops back out nose first, facing home, hops back,
-// lands and turns round to face the hole again. The motion is a function of
-// time, so the same numbers drive the page and any rendered frames.
-
-const smooth = (t) => t * t * (3 - 2 * t);
-const clamp01 = (t) => Math.max(0, Math.min(1, t));
-
-// Where a pose sits around the bunny's origin: its horizontal middle and its
-// highest and lowest points.
-function extent(pose, facing) {
-  const pts = bunnyPoints(pose, [0, 0], facing);
-  const xs = pts.map((q) => q[0]);
-  const ys = pts.map((q) => q[1]);
-  return {
-    mid: (Math.min(...xs) + Math.max(...xs)) / 2,
-    top: Math.min(...ys),
-    low: Math.max(...ys),
-  };
-}
-
-const TUCK = { earB: -50, earF: -62, headRot: -6 }; // ears flat, chin in
-const SLIM = { sx: 0.8, sy: 0.6 }; // small and long enough for the hole
-const RISE_MS = 280; // takeoff to the top of the arc
-export const HOP_TURN = { turn: -1, y: -9, sx: 0.55, earB: 4, earF: 2 };
-
-// The dive for a bunny sitting at `spot`: { inMs, into(t), outMs, out(t) },
-// where into/out give the pose t ms into each half.
-export function diveMotion(spot, hole) {
-  const f = spot.facing;
-  const crouch = { ...REST, ...POSES.crouch };
-
-  // Going in: head down, centred over the hole.
-  const down = { ...REST, ...TUCK, ...SLIM, rot: 90 };
-  const dIn = extent(down, f);
-  const inX = hole.cx - spot.x - dIn.mid;
-  const entry = -dIn.low - 2; // origin height when the nose meets the ground
-  const gone = hole.ry + 4 - dIn.top; // and once it is all below the floor
-  const peak = Math.max(56, -entry + 20); // how high the origin rises
-  const reach = 1 + Math.sqrt(1 + entry / peak); // entry time, in rise times
-  const fall = 1 + Math.sqrt(1 + gone / peak); // gone time, in rise times
-  // y below the takeoff point after tau rise times: a plain gravity parabola.
-  const arc = (tau) => peak * (tau * tau - 2 * tau);
-
-  const into = (t) => {
-    const tau = t / RISE_MS;
-    const u = clamp01(tau / reach); // 0 at takeoff, 1 as the nose meets the hole
-    const k = smooth(u);
-    const air = Math.sin(Math.PI * u); // stretch most at the top
-    const ears = smooth(clamp01(u * 2));
-    return {
-      ...REST,
-      x: inX * u, // steady across, as a thrown body moves
-      y: arc(tau),
-      rot: 90 * smooth(clamp01((u - 0.08) / 0.92)),
-      sx: lerp(crouch.sx, SLIM.sx, k) + 0.1 * air,
-      sy: lerp(crouch.sy, SLIM.sy, k) - 0.03 * air,
-      earB: lerp(crouch.earB, TUCK.earB, ears),
-      earF: lerp(crouch.earF, TUCK.earF, ears),
-      headRot: lerp(0, TUCK.headRot, ears),
-      headDy: lerp(crouch.headDy, 0, k),
-    };
-  };
-
-  // Coming out: nose up, facing home, then a hop back to the spot.
-  const up = { ...REST, ...TUCK, ...SLIM, rot: -90, turn: -1 };
-  const dOut = extent(up, f);
-  const outX = hole.cx - spot.x - dOut.mid;
-  const start = hole.ry + 4 - dOut.top; // hidden below the floor
-  const clear = -dOut.low - 3; // tail end just out of the hole
-  const apex = clear - 24;
-  const g = (2 * (start - apex)) / 330 ** 2; // reach the apex in 330 ms
-  const tApex = 330;
-  const tClear = tApex - Math.sqrt((2 * (clear - apex)) / g);
-  const tLand = tApex + Math.sqrt((2 * -apex) / g);
-
-  const out = (t) => {
-    const y = apex + 0.5 * g * (t - tApex) ** 2;
-    const w = clamp01((t - tClear) / (tLand - tClear)); // 0 until clear of the hole
-    const k = smooth(w);
-    return {
-      ...REST,
-      turn: -1,
-      x: lerp(outX, 0, w),
-      y: t >= tLand ? 0 : y,
-      rot: lerp(-90, 0, k),
-      sx: lerp(SLIM.sx, 1, k),
-      sy: lerp(SLIM.sy, 1, k),
-      earB: lerp(TUCK.earB, 8, k),
-      earF: lerp(TUCK.earF, 6, k),
-      headRot: lerp(TUCK.headRot, 0, k),
-    };
-  };
-
-  return { inMs: fall * RISE_MS, into, outMs: tLand, out };
-}
 
 // ---------------------------------------------------------------------------
 // Moves
@@ -519,6 +480,11 @@ export const ease = {
   inOut: (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2),
   // Gentler curves for sliding the loose line, so it never whips past.
   glide: (t) => (1 - Math.cos(Math.PI * t)) / 2,
+  glideIn: (t) => 1 - Math.cos((Math.PI * t) / 2),
+  glideOut: (t) => Math.sin((Math.PI * t) / 2),
+  // Quick but not abrupt: for the dive's pour and climb.
+  snapIn: (t) => t * (0.4 + 0.6 * t),
+  snapOut: (t) => 1 - (1 - t) ** 2 * (1.6 - 0.6 * (1 - t)),
   back: (t) => {
     const c = 1.7;
     return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
@@ -533,7 +499,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 export function createBunny(svg, options = {}) {
   const ground = options.ground ?? 170;
   const width = options.width ?? 264;
-  const hole = { cx: options.holeX ?? 190, cy: ground + 1, rx: 48, ry: 11 };
+  const hole = { cx: options.holeX ?? 190, cy: ground + 1, rx: 40, ry: 10 };
   const faceHole = (x) => ({ x, facing: x > hole.cx ? -1 : 1 });
   const spots = [
     faceHole(options.homeX ?? 78),
@@ -580,7 +546,7 @@ export function createBunny(svg, options = {}) {
     line.style.opacity = String(pose.opacity);
     dust.setAttribute(
       'transform',
-      `translate(${spot.x + pose.x} ${ground + pose.y}) scale(${spot.facing * Math.sign(pose.turn || 1)} 1)`
+      `translate(${spot.x + pose.x} ${ground + pose.y}) scale(${spot.facing} 1)`
     );
   }
 
@@ -615,10 +581,10 @@ export function createBunny(svg, options = {}) {
   // Slide the loose line along a track, its back end going from d0 to d1.
   // The line is drawn in stage coordinates while it is loose; render() puts
   // the bunny's own transform back.
-  function slide(track, len, d0, d1, speed = 0.55, curve = 'glide') {
+  function slide(track, len, d0, d1, speed = 0.55, curve = 'glide', time) {
     const mine = token;
     const n = threadPoints(len);
-    const ms = slideMs(Math.abs(d1 - d0), speed);
+    const ms = time ?? slideMs(Math.abs(d1 - d0), speed);
     line.removeAttribute('transform');
     line.style.opacity = '1';
     return new Promise((resolve) => {
@@ -637,17 +603,17 @@ export function createBunny(svg, options = {}) {
     });
   }
 
-  // Play a pose-at-time function for `ms` milliseconds.
+  // Play a pose-at-time function, t going from 0 to 1 over `ms`.
   function play(at, ms) {
     const mine = token;
     return new Promise((resolve) => {
       const t0 = performance.now();
       const step = (now) => {
         if (mine !== token) return resolve();
-        const t = Math.min(ms, now - t0);
+        const t = Math.min(1, (now - t0) / ms);
         pose = at(t);
         render();
-        if (t < ms) requestAnimationFrame(step);
+        if (t < 1) requestAnimationFrame(step);
         else resolve();
       };
       requestAnimationFrame(step);
@@ -780,30 +746,47 @@ export function createBunny(svg, options = {}) {
         if (alive(m)) await goTo(start, m);
       }),
 
-    // Solved: a hop into the hole, a beat underground, then back out and home.
+    // Solved: the line pours into the hole, the head pops up to look around,
+    // ducks, and the line climbs back out and winds into the bunny again.
     dive: () =>
       run(async (m) => {
         if (reduced) {
           await fadeSwap(() => {}, 1000);
           return;
         }
-        await to(POSES.crouch, 150, 'out');
+        await to(POSES.crouch, 130, 'out');
         if (!alive(m)) return;
-        const { inMs, into, outMs, out } = diveMotion(spot, hole);
-        await play(into, inMs);
+        const { len, down, up } = diveTracks(spot, hole, ground, pose);
+        const end = (t) => t.total - len;
+        await slide(down, len, 0, end(down), 0, 'snapIn', DIVE_MS.pour);
         if (!alive(m)) return;
-        await wait(300);
+        await wait(80);
         if (!alive(m)) return;
-        await play(out, outMs);
+        // The head pops up, flicks an ear, looks back and forth, and ducks.
+        const peek = (up, turn, extra) =>
+          peekPose(spot, hole, ground, up, turn, extra);
+        await play((t) => peek(ease.out(t)), PEEK_MS.rise);
         if (!alive(m)) return;
-        puff();
-        await to({ ...POSES.crouch, turn: -1 }, 100, 'out');
+        await to(peek(1, 1, { earF: 18 }), 60, 'out');
         if (!alive(m)) return;
-        // A little hop on the spot to turn and face the hole again.
-        await to(HOP_TURN, 100, 'out');
+        await to(peek(1, 1, { earF: 0 }), 80, 'inOut');
         if (!alive(m)) return;
-        pose = { ...pose, turn: 1 };
-        await to({}, 130, 'in');
+        await to(peek(1), 60, 'out');
+        if (!alive(m)) return;
+        await to(peek(1, -1), 110, 'inOut');
+        if (!alive(m)) return;
+        await wait(150);
+        if (!alive(m)) return;
+        await to(peek(1), 110, 'inOut');
+        if (!alive(m)) return;
+        await wait(110);
+        if (!alive(m)) return;
+        await play((t) => peek(1 - ease.in(t)), PEEK_MS.duck);
+        if (!alive(m)) return;
+        await slide(up, len, 0, end(up), 0, 'snapOut', DIVE_MS.climb);
+        if (!alive(m)) return;
+        pose = { ...REST };
+        render();
       }),
   };
 
