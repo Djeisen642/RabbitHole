@@ -17,6 +17,12 @@ const NECK = [16, -98];
 // The hind foot hinges where it comes out from under the haunch, so a thump
 // lifts the toe clear of the thigh.
 const FOOT_PIVOT = [2, -1];
+// For an ear scratch the foot swings up from that hinge to the base of the
+// back ear, toe up. On the way it flips over (its height scales from 1 to -1)
+// so the top of the foot faces forward: the line then runs up the front of
+// the raised leg and back down behind it without crossing itself, and the
+// flip reads as the leg turning out. pose.kick blends rest (0) to raised (1).
+const KICK = { rot: -88, dx: 6, dy: -92 };
 // Ears lie swept back along the head; the far ear sits lower, behind the
 // near one.
 const EAR_BACK = { pivot: [15, -109], rest: -58, w: 15, len: 46 };
@@ -131,6 +137,7 @@ export const REST = {
   earF: 0,
   earLen: 1,
   foot: 0, // negative lifts the toe for a thump
+  kick: 0, // 1 raises the hind foot to the back ear for a scratch
   turn: 1, // -1 looks the other way (the head peeking out of the hole)
   opacity: 1,
 };
@@ -152,7 +159,12 @@ function headTransform(p, pose) {
 function place(point, pose) {
   const [x, y, tag] = point;
   if (tag === 'h') return headTransform([x, y], pose);
-  if (tag === 'f') return rotate([x, y], FOOT_PIVOT, pose.foot);
+  if (tag === 'f') {
+    const k = pose.kick;
+    const flipped = [x, FOOT_PIVOT[1] + (y - FOOT_PIVOT[1]) * (1 - 2 * k)];
+    const q = rotate(flipped, FOOT_PIVOT, pose.foot + KICK.rot * k);
+    return [q[0] + KICK.dx * k, q[1] + KICK.dy * k];
+  }
   if (tag === 'eb' || tag === 'ef') {
     const ear = tag === 'eb' ? EAR_BACK : EAR_FRONT;
     const extra = tag === 'eb' ? pose.earB : pose.earF;
@@ -231,7 +243,48 @@ export const POSES = {
     sx: 1.03,
   },
   crouch: { sy: 0.86, sx: 1.07, earB: -12, earF: -12, headDy: 3 },
+  // Hind foot up at the back ear, head tipped down to meet it.
+  scratch: { kick: 1, headRot: 12, headDy: 6, earB: -6, sy: 0.97 },
 };
+
+// The two ends of a scratching stroke, laid over POSES.scratch: the toe rakes
+// down the ear base and back up, and the ear bobs with it.
+export const SCRATCH_STROKE = {
+  up: { kick: 0.92, foot: 9, earB: 5 },
+  down: { kick: 1, foot: -7, earB: -16 },
+};
+
+// ---------------------------------------------------------------------------
+// Behaviour rules
+
+// Idle for this long and the bunny starts thumping.
+export const QUIET_MS = 15000;
+// Share of idle beats that are an ear scratch instead of a twitch.
+export const SCRATCH_CHANCE = 0.18;
+
+// Which idle move to play: scratches are occasional, twitches the norm.
+export function idleMove(quietFor, roll) {
+  if (quietFor > QUIET_MS) return 'thump';
+  return roll < SCRATCH_CHANCE ? 'scratch' : 'twitch';
+}
+
+// After a pet finishes, further taps are ignored for this long so that
+// repeated tapping can't spam the animation.
+export const PET_COOLDOWN_MS = 4000;
+
+// A tap counts unless a move is playing or the last pet is cooling down.
+export const canPet = (now, readyAt, busy) => !busy && now >= readyAt;
+
+// Once it has dived it stays in the hole: only climbing brings it out, and
+// nothing else plays there (petting has its own in-hole peek).
+export const movePlays = (name, inHole) =>
+  inHole ? name === 'climb' : name !== 'climb';
+
+export function inHoleAfter(name, inHole) {
+  if (name === 'dive') return true;
+  if (name === 'climb') return false;
+  return inHole;
+}
 
 // ---------------------------------------------------------------------------
 // Unravelling
@@ -561,7 +614,11 @@ export function createBunny(svg, options = {}) {
   const line = svg.querySelector('.rh-bunny');
   const dust = svg.querySelector('.rh-dust');
   let spot = { ...spots[0] };
-  let pose = { ...REST };
+  let inHole = options.inHole === true;
+  // Down the hole the line is posed below ground, where the clip hides it.
+  const hidden = () => peekPose(spot, hole, ground, 0);
+  let pose = inHole ? hidden() : { ...REST };
+  let petReadyAt = 0;
   let busy = false;
   let token = 0; // bumps to cancel a running move
 
@@ -707,6 +764,64 @@ export function createBunny(svg, options = {}) {
     render();
   }
 
+  const peek = (up, turn = 1, extra = {}) =>
+    peekPose(spot, hole, ground, up, turn, extra);
+
+  // The head rises slowly out of the hole: ear tips, then the eyes, a wary
+  // pause, the rest of the head and an ear flick. After the dive it also
+  // looks one way and back. Then it ducks down out of sight again.
+  async function peekOut(m, lookAround) {
+    await play((t) => peek(PEEK_EYES * ease.glideOut(t)), PEEK_MS.eyes);
+    if (!alive(m)) return;
+    await wait(PEEK_MS.wary);
+    if (!alive(m)) return;
+    await play((t) => peek(lerp(PEEK_EYES, 1, ease.glide(t))), PEEK_MS.rise);
+    if (!alive(m)) return;
+    await to(peek(1, 1, { earF: 18 }), 60, 'out');
+    if (!alive(m)) return;
+    await to(peek(1, 1, { earF: 0 }), 80, 'inOut');
+    if (!alive(m)) return;
+    await to(peek(1), 60, 'out');
+    if (!alive(m)) return;
+    if (lookAround) {
+      await to(peek(1, -1), 110, 'inOut');
+      if (!alive(m)) return;
+      await wait(150);
+      if (!alive(m)) return;
+      await to(peek(1), 110, 'inOut');
+      if (!alive(m)) return;
+    }
+    await wait(lookAround ? 110 : 260);
+    if (!alive(m)) return;
+    await play((t) => peek(1 - ease.in(t)), PEEK_MS.duck);
+    if (!alive(m)) return;
+    pose = hidden();
+    render();
+  }
+
+  // A tap. Reduced motion fades to the pose and back, like travel and dive.
+  async function petMove(m) {
+    if (reduced) {
+      await fadeSwap(() => {
+        pose = inHole ? peek(1) : { ...REST, ...POSES.perk };
+      });
+      await wait(1200);
+      if (!alive(m)) return;
+      await fadeSwap(() => {
+        pose = inHole ? hidden() : { ...REST };
+      });
+      return;
+    }
+    if (inHole) {
+      await peekOut(m, false);
+      return;
+    }
+    await to(POSES.perk, 160, 'back');
+    if (!alive(m)) return;
+    await wait(900);
+    if (alive(m)) await to({}, 380, 'inOut');
+  }
+
   const otherSpot = () =>
     Math.abs(spots[0].x - spot.x) > Math.abs(spots[1].x - spot.x)
       ? spots[0]
@@ -748,6 +863,34 @@ export function createBunny(svg, options = {}) {
         if (alive(m)) await to({}, 220, 'inOut');
       }),
 
+    // Hind foot up to the back ear, a few quick rakes, foot down, then the
+    // ear flicks as if shaking off the itch.
+    scratch: () =>
+      run(async (m) => {
+        if (reduced) {
+          await to(POSES.scratch, 0);
+          await wait(900);
+          if (alive(m)) await to({}, 0);
+          return;
+        }
+        await to(POSES.scratch, 280, 'out');
+        for (let i = 0; i < 4 && alive(m); i += 1) {
+          await to(SCRATCH_STROKE.up, 75, 'inOut', true);
+          if (!alive(m)) return;
+          await to(SCRATCH_STROKE.down, 75, 'inOut', true);
+        }
+        if (!alive(m)) return;
+        await to({ earB: -8 }, 260, 'inOut');
+        if (!alive(m)) return;
+        await to({ earB: 16 }, 70, 'out', true);
+        if (!alive(m)) return;
+        await to({ earB: -6 }, 90, 'inOut', true);
+        if (!alive(m)) return;
+        await to({ earB: 3 }, 80, 'inOut', true);
+        if (!alive(m)) return;
+        await to({}, 120, 'out');
+      }),
+
     perk: () =>
       run(async (m) => {
         await to(POSES.perk, 160, 'back');
@@ -774,51 +917,38 @@ export function createBunny(svg, options = {}) {
         if (alive(m)) await goTo(start, m);
       }),
 
-    // Solved: the line pours into the hole, the head pops up to look around,
-    // ducks, and the line climbs back out and winds into the bunny again.
+    // Solved: the line pours into the hole, the head slowly peeks out, looks
+    // around and ducks. It stays down there; only climb brings it back.
     dive: () =>
       run(async (m) => {
         if (reduced) {
-          await fadeSwap(() => {}, 1000);
+          await fadeSwap(() => {
+            pose = hidden();
+          }, 400);
           return;
         }
         await to(POSES.crouch, 130, 'out');
         if (!alive(m)) return;
-        const { len, down, up } = diveTracks(spot, hole, ground, pose);
-        const end = (t) => t.total - len;
-        await slide(down, len, 0, end(down), 0, 'snapIn', DIVE_MS.pour);
+        const { len, down } = diveTracks(spot, hole, ground, pose);
+        await slide(down, len, 0, down.total - len, 0, 'snapIn', DIVE_MS.pour);
         if (!alive(m)) return;
+        pose = hidden();
         await wait(150);
         if (!alive(m)) return;
-        // The head rises slowly, flicks an ear, looks back and forth, ducks.
-        const peek = (up, turn, extra) =>
-          peekPose(spot, hole, ground, up, turn, extra);
-        await play((t) => peek(PEEK_EYES * ease.glideOut(t)), PEEK_MS.eyes);
-        if (!alive(m)) return;
-        await wait(PEEK_MS.wary);
-        if (!alive(m)) return;
-        await play(
-          (t) => peek(lerp(PEEK_EYES, 1, ease.glide(t))),
-          PEEK_MS.rise
-        );
-        if (!alive(m)) return;
-        await to(peek(1, 1, { earF: 18 }), 60, 'out');
-        if (!alive(m)) return;
-        await to(peek(1, 1, { earF: 0 }), 80, 'inOut');
-        if (!alive(m)) return;
-        await to(peek(1), 60, 'out');
-        if (!alive(m)) return;
-        await to(peek(1, -1), 110, 'inOut');
-        if (!alive(m)) return;
-        await wait(150);
-        if (!alive(m)) return;
-        await to(peek(1), 110, 'inOut');
-        if (!alive(m)) return;
-        await wait(110);
-        if (!alive(m)) return;
-        await play((t) => peek(1 - ease.in(t)), PEEK_MS.duck);
-        if (!alive(m)) return;
-        await slide(up, len, 0, end(up), 0, 'snapOut', DIVE_MS.climb);
+        await peekOut(m, true);
+      }),
+
+    // Out of the hole again: the line climbs up and winds into the bunny.
+    climb: () =>
+      run(async (m) => {
+        if (reduced) {
+          await fadeSwap(() => {
+            pose = { ...REST };
+          });
+          return;
+        }
+        const { len, up } = diveTracks(spot, hole, ground);
+        await slide(up, len, 0, up.total - len, 0, 'snapOut', DIVE_MS.climb);
         if (!alive(m)) return;
         pose = { ...REST };
         render();
@@ -827,7 +957,7 @@ export function createBunny(svg, options = {}) {
 
   // Draw the line in, like a pen stroke.
   async function drawOn(ms = 1300) {
-    if (reduced) return;
+    if (reduced || inHole) return;
     const len = line.getTotalLength();
     line.style.strokeDasharray = `${len}`;
     line.style.strokeDashoffset = `${len}`;
@@ -840,8 +970,9 @@ export function createBunny(svg, options = {}) {
     line.style.strokeDashoffset = '';
   }
 
-  // Idle life: an ear twitch every few seconds; a thump if nobody has
-  // touched anything for a while.
+  // Idle life: an ear twitch every few seconds, now and then an ear scratch,
+  // and a thump if nobody has touched anything for a while. None of it down
+  // the hole.
   let idleTimer = 0;
   let lastAction = performance.now();
   function scheduleIdle() {
@@ -849,14 +980,10 @@ export function createBunny(svg, options = {}) {
     if (reduced || options.idle === false) return;
     idleTimer = setTimeout(
       () => {
-        if (!busy) {
-          const quiet = performance.now() - lastAction > 15000;
-          if (quiet) {
-            lastAction = performance.now();
-            void moves.thump();
-          } else {
-            void moves.twitch();
-          }
+        if (!busy && !inHole) {
+          const next = idleMove(performance.now() - lastAction, Math.random());
+          if (next === 'thump') lastAction = performance.now();
+          void moves[next]();
         }
         scheduleIdle();
       },
@@ -871,14 +998,36 @@ export function createBunny(svg, options = {}) {
     play(name) {
       lastAction = performance.now();
       const move = moves[name];
-      return move ? move() : Promise.resolve();
+      if (!move || !movePlays(name, inHole)) return Promise.resolve();
+      inHole = inHoleAfter(name, inHole);
+      return move();
     },
     // Unravel and wind up again at stage x, facing the hole unless told.
     travel(x, facing) {
       lastAction = performance.now();
+      if (inHole) return Promise.resolve();
       const target = { ...faceHole(x), ...(facing ? { facing } : {}) };
       return run((m) => goTo(target, m));
     },
+    // A tap: perks up, or peeks out of the hole and ducks back. Resolves
+    // false when the tap was ignored (mid-move or cooling down).
+    async pet() {
+      if (!canPet(performance.now(), petReadyAt, busy)) return false;
+      lastAction = performance.now();
+      await run(petMove);
+      petReadyAt = performance.now() + PET_COOLDOWN_MS;
+      return true;
+    },
+    // Put it down the hole at once, with no dive.
+    hide() {
+      if (inHole) return;
+      token += 1;
+      busy = false;
+      inHole = true;
+      pose = hidden();
+      render();
+    },
+    inHole: () => inHole,
     drawOn,
     pathFor: bunnyPath,
     destroy() {

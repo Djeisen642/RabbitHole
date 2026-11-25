@@ -96,6 +96,16 @@
         border-radius: 22px 16px 26px 14px / 16px 24px 14px 22px;
         padding: 12px 8px 4px;
       }
+      .pet {
+        display: block;
+        width: 100%;
+        min-height: 44px;
+        padding: 0;
+        border: 0;
+        background: none;
+        cursor: pointer;
+        border-radius: 14px;
+      }
       .scene svg {
         display: block;
         width: 100%;
@@ -167,6 +177,7 @@
         box-shadow: 0 0 0 var(--soil);
       }
       .move:focus-visible,
+      .pet:focus-visible,
       .toggle input:focus-visible,
       .link:focus-visible {
         outline: 3px solid var(--orange);
@@ -205,7 +216,7 @@
 
       .stills {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 10px;
       }
       .stills figure {
@@ -234,7 +245,7 @@
       }
       @media (max-width: 460px) {
         .stills {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
       }
 
@@ -255,17 +266,14 @@
         <h1>Meet the bunny</h1>
         <p>
           One unbroken line, redrawn every frame. Tap a move to see it the way
-          it would play during a round.
+          it would play during a round, or tap the bunny to pet it.
         </p>
       </header>
 
       <section class="scene" aria-label="The bunny next to its rabbit hole">
-        <svg
-          id="stage"
-          viewBox="0 -36 380 222"
-          role="img"
-          aria-label="A line-drawn bunny sitting beside a hole"
-        ></svg>
+        <button id="pet" class="pet" type="button" aria-label="Pet the bunny">
+          <svg id="stage" viewBox="0 -36 380 222" aria-hidden="true"></svg>
+        </button>
       </section>
 
       <section class="moves" aria-label="Animations">
@@ -274,6 +282,9 @@
         </button>
         <button class="move" type="button" data-move="thump">
           <b>Foot thump</b><span>Waiting on your guess</span>
+        </button>
+        <button class="move" type="button" data-move="scratch">
+          <b>Ear scratch</b><span>Idle, now and then</span>
         </button>
         <button class="move" type="button" data-move="perk">
           <b>Perk up</b><span>Close or right guess</span>
@@ -285,7 +296,10 @@
           <b>Travel</b><span>Unravels, crosses over and back</span>
         </button>
         <button class="move" type="button" data-move="dive">
-          <b>Dive</b><span>Solved: down the hole</span>
+          <b>Dive</b><span>Solved: down the hole, and stays</span>
+        </button>
+        <button class="move" type="button" data-move="climb">
+          <b>Climb out</b><span>Back up after a dive</span>
         </button>
       </section>
 
@@ -324,6 +338,12 @@
             </svg>
             <figcaption>Thump, toe up</figcaption>
           </figure>
+          <figure>
+            <svg data-still="scratch" viewBox="0 -34 150 214">
+              <line x1="8" x2="142" y1="172" y2="172"></line>
+            </svg>
+            <figcaption>Ear scratch</figcaption>
+          </figure>
         </div>
       </section>
 
@@ -340,7 +360,7 @@
         </li>
         <li>
           When the puzzle is solved the line pours into the hole, the head peeks
-          slowly out to look around, ducks, and the line climbs back out.
+          slowly out to look around and ducks, and the bunny stays down there.
         </li>
         <li>
           No animation library. About 16 KB of plain JavaScript (6 KB gzipped)
@@ -349,6 +369,14 @@
         <li>
           With reduced motion on, poses switch without movement, and travel and
           the dive become fades.
+        </li>
+        <li>
+          Now and then, while idle, it lifts a hind foot to scratch behind its
+          ear, then flicks the ear.
+        </li>
+        <li>
+          Tap it to pet it: it perks up, or, down the hole, peeks out and ducks
+          back. Taps are ignored mid-move and for 4 seconds after each pet.
         </li>
         <li>If you leave it alone for 15 seconds, it starts thumping.</li>
       </ul>

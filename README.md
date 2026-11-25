@@ -31,7 +31,7 @@ Reddit has hundreds of thousands of communities and most people only know a hand
 
 ## How content is picked
 
-A scheduled job runs nightly and picks the next day's post from a curated list of public, safe-for-work communities. It skips NSFW and quarantined communities, posts whose title gives the answer away, and posts that are too long to read quickly. Moderators of the r/abbitHole community can preview upcoming puzzles and swap out a bad pick. Posts that are deleted or removed on Reddit are dropped from the game.
+A scheduled job runs nightly and picks the day's post from a curated list of public, safe-for-work communities. Before using a community it checks that it still exists, isn't NSFW or quarantined, has at least 50,000 members and has enough text posts; a community that fails is skipped for the night. Only text posts are used (no images, links or videos, which could give the answer away in ways a filter can't see), and posts are skipped if they are NSFW, too short or too long to read quickly, or name the community in the title or text. For country communities, posts that read like news or politics are skipped too. A community isn't used again for 60 days. Moderators of the r/abbitHole community can pick today's puzzle on demand and check the whole list from the subreddit menu. Posts that are deleted or removed on Reddit are dropped from the game, and the day falls back to another post from the same community.
 
 ## Setup
 
@@ -58,6 +58,25 @@ npm install
 - `npm run format` fixes formatting; `npm run format:check` only reports it.
 - `npm test` runs the unit tests once; `npm run test:watch` reruns them on save.
 - `npm run build` builds the client and server into `dist/`.
+- `npm run dev:mock` plays the game locally on made-up data (see below).
+
+### Play it locally (mock mode)
+
+You can play the whole daily loop without Reddit or a Devvit login:
+
+```
+npm run dev:mock
+```
+
+This builds the client, then starts a small local server at http://localhost:5174 (set `PORT` to change it). Open `/splash.html` for the feed card or `/game.html` for the game. The server mounts the same API handlers the app uses on Reddit, but with made-up posts and communities from `src/server/core/mock/fixtures.ts`, an in-memory database and a fake player called `mock_player`. Nothing is saved between runs. Re-run the command after changing code.
+
+Handy extras while it runs:
+
+- `curl -X POST localhost:5174/mock/reset` clears your round and picks the puzzles again.
+- `curl -X POST "localhost:5174/mock/user?name=alice"` switches to another fake player, so the wrong-guess chart has more than one person in it.
+- `curl -X POST localhost:5174/mock/check-pool`, then `curl localhost:5174/api/pool-check`, runs the moderator pool check over the mock communities.
+
+On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE_SOURCE=mock` on the server swaps in the same made-up posts there too; everything else (Redis, the signed-in user) stays real.
 
 ### Run it on Reddit
 
@@ -74,7 +93,7 @@ npm install
 
 ### Layout
 
-`src/client` is the React web view (`splash.html` inline in the feed, `game.html` expanded). `src/server` is the Hono server, with `reddit`, `redis` and `context` from `@devvit/web/server`. `src/shared` holds code used by both, including the game rules in `src/shared/game`. App config lives in `devvit.json`. See `PLAN.md` for the build plan and `CLAUDE.md` for coding rules.
+`src/client` is the React web view (`splash.html` inline in the feed, `game.html` expanded), with the bunny mascot in `src/client/bunny`. `src/server` is the Hono server: `routes/` holds thin handlers and `core/` the puzzle picker, content filters and per-player state. Handlers get Reddit and Redis through a small `Deps` object (`core/deps.ts`), so the same code runs on Devvit (`core/devvit-deps.ts`) and locally (`core/mock/`). `src/shared` holds code used by both: the game rules in `src/shared/game`, the API types in `src/shared/api.ts` and the hidden answer pool (`pool.ts` for the type and lookups, `pool-data.ts` for the list). App config lives in `devvit.json`. See `PLAN.md` for the build plan and `CLAUDE.md` for coding rules.
 
 ## Credits
 

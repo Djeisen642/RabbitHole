@@ -1,0 +1,126 @@
+import type { ClueView } from '../../shared/api';
+import { CLUE_LABELS } from '../lib/clue-labels';
+import { compact, grouped } from '../lib/format';
+
+/**
+ * One revealed clue, as a layer of the burrow. Closed, it is a single line
+ * (the layer, what kind of clue, and the start of it); a tap opens it.
+ */
+export function Clue({
+  clue,
+  layer,
+  open,
+  fresh,
+  clearIcon = false,
+  onToggle,
+}: {
+  clue: ClueView;
+  layer: number;
+  open: boolean;
+  fresh: boolean;
+  clearIcon?: boolean;
+  onToggle: () => void;
+}) {
+  const bodyId = `rh-clue-${clue.kind}`;
+  return (
+    <section
+      className={`rh-clue${open ? ' open' : ''}${fresh ? ' fresh' : ''}`}
+    >
+      <button
+        type="button"
+        className="rh-clue-head"
+        aria-expanded={open}
+        aria-controls={bodyId}
+        onClick={onToggle}
+      >
+        <span className="rh-clue-label">
+          {layer} · {CLUE_LABELS[clue.kind]}
+        </span>
+        {open ? null : (
+          <span className="rh-clue-peek">{preview(clue, clearIcon)}</span>
+        )}
+        <svg className="rh-chevron" viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M3 4.5 6 7.5 9 4.5" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="rh-clue-body" id={bodyId}>
+          <ClueBody clue={clue} clearIcon={clearIcon} />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** The one-line preview of a closed clue. */
+function preview(clue: ClueView, clearIcon: boolean): string {
+  switch (clue.kind) {
+    case 'topComment':
+      return clue.body;
+    case 'rule':
+      return clue.title;
+    case 'jargon':
+      return clue.words.join(' · ');
+    case 'stats':
+      return `${compact(clue.subscribers)} members · ${clue.createdYear}`;
+    case 'icon':
+      return clearIcon ? 'Tap to see it' : 'Tap to see it, blurred';
+  }
+}
+
+function ClueBody({ clue, clearIcon }: { clue: ClueView; clearIcon: boolean }) {
+  switch (clue.kind) {
+    case 'topComment':
+      return (
+        <p className="quote">
+          {clue.body}{' '}
+          <span className="rh-muted" style={{ fontSize: 13 }}>
+            ({compact(clue.score)} points)
+          </span>
+        </p>
+      );
+    case 'rule':
+      return (
+        <p>
+          <strong>{clue.title}</strong>
+          {clue.description ? (
+            <>
+              <br />
+              <span className="rh-muted">{clue.description}</span>
+            </>
+          ) : null}
+        </p>
+      );
+    case 'jargon':
+      return (
+        <p className="rh-jargon">
+          {clue.words.map((word, i) => (
+            <span key={word} style={{ fontSize: 20 - Math.min(i, 6) * 1.2 }}>
+              {word}
+            </span>
+          ))}
+        </p>
+      );
+    case 'stats':
+      return (
+        <div className="rh-stats">
+          <p>
+            <b>{grouped(clue.subscribers)}</b>
+            <span className="rh-muted">members</span>
+          </p>
+          <p>
+            <b>{clue.createdYear}</b>
+            <span className="rh-muted">founded</span>
+          </p>
+        </div>
+      );
+    case 'icon':
+      return (
+        <img
+          className={`rh-icon-clue${clearIcon ? ' clear' : ''}`}
+          src={clue.url}
+          alt={clearIcon ? 'Community icon' : 'Community icon, blurred'}
+        />
+      );
+  }
+}

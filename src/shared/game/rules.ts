@@ -146,3 +146,14 @@ export function updateStreak(
   const current = streak.lastSolvedDay === day - 1 ? streak.current + 1 : 1;
   return { current, best: Math.max(streak.best, current), lastSolvedDay: day };
 }
+
+/**
+ * The streak to show on `day`: a streak whose last solve was before
+ * yesterday has already lapsed, even though it is only reset in storage on
+ * the next finished round.
+ */
+export function visibleStreak(streak: Streak, day: number): Streak {
+  if (streak.lastSolvedDay === null || streak.lastSolvedDay >= day - 1)
+    return streak;
+  return { ...streak, current: 0 };
+}
