@@ -6,7 +6,14 @@ import type {
 } from '../../shared/api';
 import { createMockDeps } from '../core/mock/mock-deps';
 import { findEntry, POOL } from '../../shared/pool';
-import { runDailyPick } from '../core/puzzle';
+import {
+  LIVE_CHECK_MS,
+  loadPuzzle,
+  runDailyPick,
+  savePuzzle,
+} from '../core/puzzle';
+import type { MockDeps } from '../core/mock/mock-deps';
+import { PLAYER_KEEP_DAYS } from '../core/round';
 import { createApi } from './api';
 
 const NOW = new Date('2026-11-25T15:00:00Z');
@@ -222,6 +229,89 @@ describe('concurrent guesses', () => {
     expect(
       await deps.store.hGet(`stats:${TODAY}`, 'players').then(Number)
     ).toBe(1);
+  });
+});
+
+/** Take down every post of a sub, so the day has to move to another. */
+async function takeDownSub(deps: MockDeps, sub: string): Promise<void> {
+  for (const p of await deps.source.topPosts(sub, 'month', 100))
+    deps.source.removePost(p.id);
+  deps.setNow(new Date(NOW.getTime() + LIVE_CHECK_MS));
+}
+
+describe('a mid-day repick', () => {
+  it('leaves a finished round as it ended', async () => {
+    const { deps, get, guess } = await setup();
+    const won = puzzle((await guess('Breadit')).body);
+    expect(won.status).toBe('solved');
+
+    await takeDownSub(deps, 'Breadit');
+    const after = puzzle((await get('/puzzle')).body);
+    const today = await loadPuzzle(deps, TODAY);
+    expect(today?.puzzle.answer).not.toBe('Breadit');
+    expect(after.status).toBe('solved');
+    expect(after.result?.answer).toBe('Breadit');
+    expect(after.result?.score).toBe(0);
+    expect(after.streak.current).toBe(1);
+    // The new community's post and clues aren't this player's.
+    expect(after.post.title).toMatch(/removed/);
+    expect(after.result?.clues).toEqual([]);
+
+    // The round stays closed, even to the new answer.
+    const again = await guess(today?.puzzle.answer ?? '');
+    expect(again.status).toBe(409);
+    expect(await deps.store.zScore(`scores:${TODAY}`, 't2_mockplayer')).toBe(0);
+  });
+
+  it('starts a round still in play over on the new community', async () => {
+    const { deps, get, guess } = await setup();
+    puzzle((await guess('Baking')).body);
+
+    await takeDownSub(deps, 'Breadit');
+    const fresh = puzzle((await get('/puzzle')).body);
+    expect(fresh.status).toBe('playing');
+    expect(fresh.guesses).toEqual([]);
+    const answer = (await loadPuzzle(deps, TODAY))?.puzzle.answer ?? '';
+    const done = puzzle((await guess(answer)).body);
+    expect(done.status).toBe('solved');
+    expect(done.result?.answer).toBe(answer);
+    expect(done.result?.score).toBe(0);
+    // Still one player for the day.
+    expect(done.result?.players).toBe(1);
+  });
+});
+
+describe('an answer that left the pool', () => {
+  it('is still accepted as a guess, and the win stands', async () => {
+    const { deps, get, guess } = await setup();
+    const loaded = await loadPuzzle(deps, TODAY);
+    if (!loaded) throw new Error('no puzzle');
+    // As if a deploy dropped the sub from the pool after it was picked.
+    await savePuzzle(deps, { ...loaded.puzzle, answer: 'RetiredSub' });
+    expect((await guess('definitely_not_a_sub')).status).toBe(400);
+    const done = puzzle((await guess('r/RetiredSub')).body);
+    expect(done.status).toBe('solved');
+    expect(done.result?.answer).toBe('RetiredSub');
+    expect(done.result?.wrongGuesses).toEqual([]);
+    expect(puzzle((await get('/puzzle')).body).status).toBe('solved');
+  });
+});
+
+describe('player data retention', () => {
+  it('expires rounds and scores after about a month', async () => {
+    const { deps, guess } = await setup();
+    await guess('Breadit');
+    const key = `round:${TODAY}:t2_mockplayer`;
+    expect(await deps.store.hGet(key, '0')).toBe('Breadit');
+    deps.setNow(new Date(NOW.getTime() + PLAYER_KEEP_DAYS * 86_400_000));
+    expect(await deps.store.hGet(key, '0')).toBeUndefined();
+    expect(
+      await deps.store.zScore(`scores:${TODAY}`, 't2_mockplayer')
+    ).toBeUndefined();
+    // The streak is the player's running record and stays.
+    expect(await deps.store.hGet('user:t2_mockplayer:streak', 'best')).toBe(
+      '1'
+    );
   });
 });
 
