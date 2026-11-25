@@ -50,3 +50,7 @@ It should look handcrafted, not AI-made, with one consistent theme across every 
 - `npm run login` with his Reddit account (developers.reddit.com).
 - Run `npx devvit upload` once; Devvit creates a private playtest subreddit automatically (playtest subs must stay under 200 members). Later, create the public r/abbitHole community if the name is free.
 - Upload and publish the app, and submit on Devpost.
+
+## Open questions
+
+- TODO: check whether a community's icon URL (from `getSubredditStyles`) can contain the subreddit's id or name. The icon clue sends that URL to the client, so if it does, the answer could be read from it before the round ends. Needs real data from a playtest to tell.
