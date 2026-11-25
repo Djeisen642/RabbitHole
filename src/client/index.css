@@ -61,14 +61,44 @@ body {
   overflow-x: hidden;
 }
 
-.rh-page {
-  min-height: 100dvh;
+/*
+ * Game shell: a fixed column the height of the visible screen, with the
+ * header (bunny, puzzle number, guess pips) pinned at the top, the guess box
+ * pinned at the bottom and only the middle scrolling. So the bunny never
+ * scrolls away, and when the keyboard opens the middle shrinks instead of
+ * the header or the input going under it. --vv-h and --vv-top come from the
+ * visual viewport (see lib/viewport.ts); 100dvh is the fallback.
+ */
+.rh-app {
+  position: fixed;
+  top: var(--vv-top, 0px);
+  left: 0;
+  right: 0;
+  height: var(--vv-h, 100dvh);
   max-width: 560px;
   margin: 0 auto;
-  padding: 12px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+.rh-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px 16px;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
+}
+.rh-dock {
+  flex: none;
+  display: grid;
+  gap: 6px;
+  padding: 8px 16px max(10px, env(safe-area-inset-bottom, 0px));
+  border-top: 2px dashed var(--soil-soft);
+  background: var(--paper);
 }
 
 .rh-display {
@@ -81,44 +111,59 @@ body {
   color: var(--muted);
 }
 
-/* Header ---------------------------------------------------------------- */
-.rh-header {
-  display: flex;
+/* Header: bunny, puzzle number and guess pips, always on screen ---------- */
+.rh-top {
+  flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  padding: 6px 16px 4px;
+  border-bottom: 2px dashed var(--soil-soft);
+}
+.rh-top-info {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  min-width: 0;
 }
 .rh-wordmark {
-  font: 600 26px/1 var(--display);
+  margin: 0;
+  font: 600 22px/1.1 var(--display);
   color: var(--ink);
 }
 .rh-wordmark b {
   color: var(--accent);
   font-weight: 600;
 }
-.rh-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px 4px;
-  border: 1.5px solid var(--soil);
-  border-radius: var(--wobble-sm);
+.rh-top-meta {
+  margin: 0;
   font-size: 14px;
-  color: var(--ink);
-  background: var(--card);
-  white-space: nowrap;
+  line-height: 1.3;
+  color: var(--muted);
 }
 
-/* Bunny stage ------------------------------------------------------------ */
+/* Bunny stage: also the button that pets it ------------------------------ */
 .rh-stage {
-  width: 100%;
-  max-width: 320px;
-  margin: -4px auto -6px;
+  display: block;
+  flex: none;
+  width: 96px;
+  height: 88px;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: var(--wobble-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rh-stage:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 .rh-stage svg {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   overflow: visible;
 }
 .rh-bunny {
@@ -148,24 +193,17 @@ body {
   stroke-linecap: round;
 }
 
-/* Tunnel progress ---------------------------------------------------------- */
+/* Guess pips: a small squiggly tunnel in the header ------------------------ */
 .rh-tunnel {
   display: block;
-  width: 100%;
-  height: 34px;
+  max-width: 100%;
+  margin-top: 2px;
 }
 .rh-tunnel .track {
   fill: none;
   stroke: var(--soil-soft);
-  stroke-width: 10;
+  stroke-width: 7;
   stroke-linecap: round;
-}
-.rh-tunnel .dug {
-  fill: none;
-  stroke: var(--soil);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 2 6;
 }
 .rh-tunnel .slot {
   fill: var(--paper);
@@ -185,16 +223,16 @@ body {
   background: var(--card);
   border: 2px solid var(--ink);
   border-radius: var(--wobble);
-  box-shadow: 4px 4px 0 var(--soil);
-  padding: 12px 14px 10px;
+  box-shadow: 3px 3px 0 var(--soil);
+  padding: 10px 14px 4px;
   display: grid;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
 .rh-post-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 13px;
   color: var(--muted);
 }
@@ -203,20 +241,9 @@ body {
   color: var(--ink);
   letter-spacing: 0.06em;
 }
-.rh-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--soil);
-  display: grid;
-  place-items: center;
-  font: 600 13px/1 var(--display);
-  color: var(--soil);
-  flex: none;
-}
 .rh-post h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.3;
   font-weight: 700;
   overflow-wrap: anywhere;
@@ -224,19 +251,22 @@ body {
 .rh-post-body {
   margin: 0;
   font-size: 15px;
+  line-height: 1.45;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
 .rh-post-body.clamped {
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .rh-post-actions {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
+  min-height: 30px;
   font-size: 13px;
   font-weight: 700;
   color: var(--muted);
@@ -255,47 +285,96 @@ body {
   stroke-linejoin: round;
   stroke-linecap: round;
 }
+/* A 44px target without making the row 44px tall: the negative margins let
+   the button's box spill into the card's padding. */
+.rh-more {
+  margin-left: auto;
+  min-height: 44px;
+  min-width: 44px;
+  margin-block: -7px;
+  padding: 0 4px;
+  font-size: 14px;
+}
 
-/* Clues ---------------------------------------------------------------- */
+/* Clues: the newest open, older ones a single line each ------------------ */
 .rh-clues {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 .rh-clue {
-  position: relative;
   background: var(--paper-deep);
   border: 2px solid var(--soil);
-  border-radius: var(--wobble);
-  padding: 10px 14px 12px;
+  border-radius: var(--wobble-sm);
   min-width: 0;
 }
 .rh-clue.fresh {
   animation: rh-dig 520ms cubic-bezier(0.3, 0.7, 0.3, 1.2) both;
 }
+.rh-clue-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rh-clue-head:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--wobble-sm);
+}
 .rh-clue-label {
+  flex: none;
   font: 600 15px/1.2 var(--display);
   color: var(--soil);
-  margin-bottom: 4px;
 }
-.rh-clue p {
+.rh-clue.open .rh-clue-label {
+  flex: 1 1 auto;
+}
+.rh-clue-peek {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rh-chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--soil);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 120ms ease;
+}
+.rh-clue.open .rh-chevron {
+  transform: rotate(180deg);
+}
+.rh-clue-body {
+  padding: 0 12px 10px;
+}
+.rh-clue-body p {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.rh-clue .quote {
+.rh-clue-body .quote {
   border-left: 3px solid var(--line);
   padding-left: 10px;
-}
-.rh-buried {
-  border: 2px dashed var(--soil-soft);
-  border-radius: var(--wobble);
-  padding: 8px 14px;
-  color: var(--muted);
-  font: 500 14px/1.3 var(--display);
 }
 .rh-jargon {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 4px 12px;
   align-items: baseline;
 }
 .rh-jargon span {
@@ -309,11 +388,11 @@ body {
 }
 .rh-stats b {
   display: block;
-  font: 600 22px/1.1 var(--display);
+  font: 600 20px/1.1 var(--display);
 }
 .rh-icon-clue {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: 2px solid var(--soil);
   object-fit: cover;
@@ -339,7 +418,7 @@ body {
 /* Guessing ---------------------------------------------------------------- */
 .rh-guess {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 .rh-guess-row {
   display: flex;
@@ -349,9 +428,11 @@ body {
 .rh-input {
   flex: 1;
   min-width: 0;
+  min-height: 46px;
   font: inherit;
+  /* 16px or more stops iOS zooming in when the input is focused. */
   font-size: 17px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: var(--card);
   color: var(--ink);
   border: 2px solid var(--ink);
@@ -360,12 +441,17 @@ body {
 .rh-input::placeholder {
   color: var(--muted);
 }
+/* Opens upward from the docked input, over the clues. Capped so it never
+   reaches the header: the visible height less the header and the dock. */
 .rh-suggest {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% + 4px);
+  bottom: calc(100% + 6px);
   z-index: 5;
+  max-height: min(240px, calc(var(--vv-h, 100dvh) - 200px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 0;
   padding: 4px;
   list-style: none;
@@ -375,14 +461,27 @@ body {
   box-shadow: 3px 3px 0 var(--soil);
 }
 .rh-suggest li {
-  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 10px;
   border-radius: 8px;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
 .rh-suggest li[aria-selected='true'],
 .rh-suggest li:hover {
   background: var(--paper-deep);
   color: var(--accent);
+}
+.rh-hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .rh-guesses {
   display: flex;
@@ -394,11 +493,12 @@ body {
 }
 .rh-guesses li {
   font-size: 14px;
-  padding: 2px 9px 3px;
+  padding: 1px 8px 2px;
   border-radius: var(--wobble-sm);
   border: 1.5px solid var(--bad);
   color: var(--bad);
   text-decoration: line-through;
+  overflow-wrap: anywhere;
 }
 .rh-guesses li.right {
   border-color: var(--good);
@@ -418,7 +518,9 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 18px 11px;
+  min-height: 46px;
+  min-width: 0;
+  padding: 8px 18px 9px;
   font: 600 18px/1 var(--display);
   color: var(--on-accent);
   background: var(--accent-bg);
@@ -443,6 +545,12 @@ body {
   background: var(--card);
   color: var(--ink);
 }
+.rh-ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .rh-button:focus-visible,
 .rh-input:focus-visible,
 .rh-link:focus-visible {
@@ -464,26 +572,33 @@ body {
 /* Result ----------------------------------------------------------------- */
 .rh-result {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   background: var(--card);
   border: 2px solid var(--ink);
   border-radius: var(--wobble);
-  box-shadow: 4px 4px 0 var(--soil);
-  padding: 14px 16px 16px;
+  box-shadow: 3px 3px 0 var(--soil);
+  padding: 12px 14px 14px;
+  min-width: 0;
 }
 .rh-result h2 {
   margin: 0;
-  font: 600 28px/1.1 var(--display);
+  font: 600 26px/1.1 var(--display);
   overflow-wrap: anywhere;
 }
 .rh-result h2 b {
   color: var(--accent);
   font-weight: 600;
 }
+.rh-result-line {
+  margin: 4px 0 0;
+}
 .rh-result-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
+}
+.rh-result-actions .rh-share {
+  grid-column: 1 / -1;
 }
 .rh-chart {
   display: grid;
@@ -525,7 +640,7 @@ body {
 }
 .rh-section-title {
   margin: 0;
-  font: 600 18px/1.2 var(--display);
+  font: 600 16px/1.2 var(--display);
   color: var(--soil);
 }
 
@@ -574,7 +689,8 @@ body {
   .rh-clue.fresh {
     animation: none;
   }
-  .rh-button {
+  .rh-button,
+  .rh-chevron {
     transition: none;
   }
 }

@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PostCard as Post } from '../../shared/api';
 import { ago, compact } from '../lib/format';
 
-/** Today's post, drawn like a Reddit post with the community hidden. */
+/**
+ * Today's post, drawn like a Reddit post with the community hidden. The body
+ * is clamped to a few lines so the clues and the guess box stay in view on a
+ * phone; a More button opens it up when it runs longer.
+ */
 export function PostCard({
   post,
   answer,
@@ -12,32 +16,36 @@ export function PostCard({
   answer: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const long = post.body.length > 320;
+  const [overflows, setOverflows] = useState(false);
+  const body = useRef<HTMLParagraphElement>(null);
+
+  // Only offer More when the clamp actually hides something. Measured on
+  // resize too, since the line count depends on the width.
+  useEffect(() => {
+    const el = body.current;
+    if (!el || open) return;
+    const measure = (): void => {
+      setOverflows(el.scrollHeight > el.clientHeight + 1);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, [open, post.body]);
+
   return (
     <article className="rh-post" aria-label="Today's post">
       <div className="rh-post-meta">
-        <span className="rh-avatar" aria-hidden="true">
-          ?
-        </span>
         <span className="sub">{answer ? `r/${answer}` : 'r/?????'}</span>
         <span aria-hidden="true">·</span>
         <span>{ago(post.createdAt)} ago</span>
       </div>
       <h2>{post.title}</h2>
-      <p className={`rh-post-body${long && !open ? ' clamped' : ''}`}>
-        {post.body}
-      </p>
-      {long ? (
-        <button
-          type="button"
-          className="rh-link"
-          style={{ justifySelf: 'start', fontSize: 14 }}
-          onClick={() => {
-            setOpen((o) => !o);
-          }}
-        >
-          {open ? 'Show less' : 'Read more'}
-        </button>
+      {post.body ? (
+        <p ref={body} className={`rh-post-body${open ? '' : ' clamped'}`}>
+          {post.body}
+        </p>
       ) : null}
       <div className="rh-post-actions">
         <span>
@@ -54,6 +62,18 @@ export function PostCard({
           {compact(post.comments)}
           <span className="rh-sr-only">comments</span>
         </span>
+        {overflows || open ? (
+          <button
+            type="button"
+            className="rh-link rh-more"
+            aria-expanded={open}
+            onClick={() => {
+              setOpen((o) => !o);
+            }}
+          >
+            {open ? 'Less' : 'More'}
+          </button>
+        ) : null}
       </div>
     </article>
   );

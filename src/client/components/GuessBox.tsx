@@ -4,18 +4,22 @@ import { normalizeSubreddit } from '../../shared/game/rules';
 import { fetchSuggestions } from '../lib/api';
 
 /**
- * The guess input. Suggests a few matching communities once two letters are
- * typed; the full list of answers is never shown.
+ * The guess input, docked at the bottom of the screen. Suggests a few
+ * matching communities once two letters are typed, in a list that opens
+ * upward over the clues; the full list of answers is never shown.
  */
 export function GuessBox({
   disabled,
   guessed,
   guessesLeft,
+  nextClue,
   onGuess,
 }: {
   disabled: boolean;
   guessed: readonly string[];
   guessesLeft: number;
+  /** What a wrong guess digs up next, or null on the last guess. */
+  nextClue: string | null;
   onGuess: (name: string) => Promise<boolean>;
 }) {
   const [value, setValue] = useState('');
@@ -150,11 +154,14 @@ export function GuessBox({
           </ul>
         ) : null}
       </div>
-      <p className="rh-muted" style={{ margin: 0, fontSize: 14 }}>
-        {guessesLeft === 1
+      <p className="rh-hint">
+        {guessesLeft === 1 || nextClue === null
           ? 'Last guess. Make it count.'
-          : `${guessesLeft} guesses left. A wrong one digs up a clue.`}
+          : `A miss digs up ${lowerFirst(nextClue)}.`}
       </p>
     </form>
   );
 }
+
+const lowerFirst = (text: string): string =>
+  text.charAt(0).toLowerCase() + text.slice(1);
