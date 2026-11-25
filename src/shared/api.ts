@@ -66,7 +66,11 @@ export type PuzzleResponse = {
   result: RoundResult | null;
 };
 
-export type GuessRequest = { guess: string };
+export type GuessRequest = {
+  guess: string;
+  /** The puzzle date the player is looking at (PuzzleResponse.date). */
+  date: string;
+};
 
 export type SuggestResponse = { type: 'suggest'; names: string[] };
 

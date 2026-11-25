@@ -1,5 +1,6 @@
 import type {
   ErrorResponse,
+  GuessRequest,
   PuzzleResponse,
   SuggestResponse,
 } from '../../shared/api';
@@ -30,12 +31,14 @@ export async function fetchPuzzle(): Promise<PuzzleResponse> {
   return read<PuzzleResponse>(await fetch('/api/puzzle'));
 }
 
-export async function sendGuess(guess: string): Promise<PuzzleResponse> {
+export async function sendGuess(
+  request: GuessRequest
+): Promise<PuzzleResponse> {
   return read<PuzzleResponse>(
     await fetch('/api/guess', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guess }),
+      body: JSON.stringify(request),
     })
   );
 }

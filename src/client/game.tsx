@@ -1,7 +1,14 @@
 import './fonts';
 import './index.css';
 
-import { StrictMode, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  StrictMode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import type { PuzzleResponse } from '../shared/api';
 import type { BunnyControls } from './bunny/bunny';
@@ -24,6 +31,12 @@ export const App = () => {
   const onBunny = useCallback((controls: BunnyControls | null) => {
     bunny.current = controls;
   }, []);
+  // Stable between renders so GuessBox doesn't refetch suggestions every
+  // time `busy` or `notice` changes.
+  const guessed = useMemo(
+    () => puzzle?.guesses.map((g) => g.name) ?? [],
+    [puzzle]
+  );
 
   useEffect(() => {
     fetchPuzzle()
@@ -39,7 +52,7 @@ export const App = () => {
       setBusy(true);
       setNotice(null);
       try {
-        const next = await sendGuess(name);
+        const next = await sendGuess({ guess: name, date: puzzle.date });
         const shownBefore = puzzle.result?.clues.length ?? puzzle.clues.length;
         setFreshFrom(shownBefore);
         setPuzzle(next);
@@ -55,10 +68,14 @@ export const App = () => {
         return true;
       } catch (e: unknown) {
         setNotice(
-          e instanceof ApiError || e instanceof Error
-            ? e.message
-            : 'That guess did not go through.'
+          e instanceof Error ? e.message : 'That guess did not go through.'
         );
+        // 409: the day rolled over or another tab guessed first. Either way
+        // the round on screen is stale, so show the server's copy.
+        if (e instanceof ApiError && e.status === 409)
+          void fetchPuzzle()
+            .then(setPuzzle)
+            .catch(() => undefined);
         void bunny.current?.play('thump');
         return false;
       } finally {
@@ -116,7 +133,7 @@ export const App = () => {
       ) : puzzle.username ? (
         <GuessBox
           disabled={busy}
-          guessed={puzzle.guesses.map((g) => g.name)}
+          guessed={guessed}
           guessesLeft={puzzle.guessesLeft}
           onGuess={onGuess}
         />

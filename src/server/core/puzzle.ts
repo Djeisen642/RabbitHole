@@ -64,6 +64,9 @@ export type StoredPuzzle = {
 
 export type PuzzleContent = Omit<StoredPuzzle, 'date'>;
 
+/** Today's puzzle with the candidate post currently being shown. */
+export type Served = { puzzle: StoredPuzzle; candidate: StoredCandidate };
+
 export const puzzleKey = (date: PuzzleDate): string => `puzzle:${date}`;
 const USED_KEY = 'used-subs';
 
@@ -386,7 +389,7 @@ export async function runDailyPick(
 export async function servePuzzle(
   deps: Deps,
   date: PuzzleDate
-): Promise<{ puzzle: StoredPuzzle; candidate: StoredCandidate } | null> {
+): Promise<Served | null> {
   let loaded = await loadPuzzle(deps, date);
   if (!loaded) {
     const lockKey = `pick-lock:${date}`;

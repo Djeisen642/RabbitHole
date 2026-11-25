@@ -5,12 +5,13 @@ import type {
   PuzzleResponse,
   SuggestResponse,
 } from '../../shared/api';
-import { dayNumber, puzzleDateAt } from '../../shared/game/day';
+import { dayNumber, isPuzzleDate, puzzleDateAt } from '../../shared/game/day';
 import { suggest } from '../../shared/pool';
 import type { Deps } from '../core/deps';
 import { readPoolCheck } from '../core/pool-check';
 import type { PoolCheckReport } from '../core/pool-check';
 import { servePuzzle } from '../core/puzzle';
+import type { Served } from '../core/puzzle';
 import {
   loadRound,
   loadStreak,
@@ -37,7 +38,7 @@ export function createApi(deps: Deps): Hono {
     user: User | null,
     round: Round,
     streak: Streak,
-    served: NonNullable<Awaited<ReturnType<typeof servePuzzle>>>
+    served: Served
   ): Promise<PuzzleResponse> {
     const chart =
       round.status === 'playing' ? null : await wrongGuessChart(deps, date);
@@ -52,16 +53,14 @@ export function createApi(deps: Deps): Hono {
     });
   }
 
+  const notReady = (c: Context) =>
+    fail(c, 503, 'Today’s puzzle is still being dug up. Try again soon.');
+
   api.get('/puzzle', async (c) => {
     try {
       const date = puzzleDateAt(deps.now());
       const served = await servePuzzle(deps, date);
-      if (!served)
-        return fail(
-          c,
-          503,
-          'Today’s puzzle is still being dug up. Try again soon.'
-        );
+      if (!served) return notReady(c);
       const user = await deps.user();
       const [round, streak] = await Promise.all([
         loadRound(deps, served.puzzle, user),
@@ -83,13 +82,13 @@ export function createApi(deps: Deps): Hono {
       if (guess === '' || guess.length > 64)
         return fail(c, 400, 'Type a community to guess.');
       const date = puzzleDateAt(deps.now());
+      // The client says which day's post it is looking at. A guess sent
+      // after midnight from a page loaded before it would otherwise land on
+      // a puzzle the player has never seen.
+      if (asString(body?.date) !== date)
+        return fail(c, 409, 'A new puzzle is out. Reload to play it.');
       const served = await servePuzzle(deps, date);
-      if (!served)
-        return fail(
-          c,
-          503,
-          'Today’s puzzle is still being dug up. Try again soon.'
-        );
+      if (!served) return notReady(c);
       const user = await deps.user();
       const outcome = await submitGuess(deps, served.puzzle, user, guess);
       if (!outcome.ok) return fail(c, outcome.status, outcome.message);
@@ -116,8 +115,7 @@ export function createApi(deps: Deps): Hono {
       if (!(await deps.isModerator()))
         return fail(c, 403, 'Only moderators can see the pool check.');
       const date = c.req.query('date') ?? puzzleDateAt(deps.now());
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
-        return fail(c, 400, 'Use a YYYY-MM-DD date.');
+      if (!isPuzzleDate(date)) return fail(c, 400, 'Use a YYYY-MM-DD date.');
       return c.json<PoolCheckReport>(await readPoolCheck(deps, date));
     } catch (error) {
       console.error('GET /api/pool-check failed', error);

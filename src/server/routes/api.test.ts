@@ -50,12 +50,13 @@ async function setup(answer = 'Breadit') {
     return { status: res.status, body };
   };
   const guess = async (
-    text: string
+    text: string,
+    date: string = TODAY
   ): Promise<{ status: number; body: Json }> => {
     const res = await app.request('/guess', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guess: text }),
+      body: JSON.stringify({ guess: text, date }),
     });
     const body = await readJson(res);
     return { status: res.status, body };
@@ -222,6 +223,20 @@ describe('concurrent guesses', () => {
     expect(
       await deps.store.hGet(`stats:${TODAY}`, 'players').then(Number)
     ).toBe(1);
+  });
+});
+
+describe('the daily rollover', () => {
+  it('does not spend a guess on a puzzle the player has not seen', async () => {
+    const { deps, get, guess } = await setup();
+    // The page was loaded for today's puzzle; midnight in New York passes
+    // before the guess is sent.
+    deps.setNow(new Date('2026-11-26T05:01:00Z'));
+    const stale = await guess('Baking', TODAY);
+    expect(stale.status).toBe(409);
+    const tomorrow = puzzle((await get('/puzzle')).body);
+    expect(tomorrow.date).toBe('2026-11-26');
+    expect(tomorrow.guesses).toEqual([]);
   });
 });
 
