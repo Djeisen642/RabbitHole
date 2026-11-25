@@ -1,6 +1,7 @@
 /**
  * Deps for tests and the local mock server: the fixture source, an
- * in-memory store, a fixed player and a clock you can set.
+ * in-memory store, a fixed player, a fixed pick salt and a clock you can
+ * set.
  */
 import type { Deps, User } from '../deps';
 import { MemoryStore } from '../store';
@@ -16,8 +17,16 @@ export type MockDeps = Deps & {
   logs: string[];
 };
 
+/** The pick salt in tests, so the same date always picks the same sub. */
+export const MOCK_SALT = 'mock-salt';
+
 export function createMockDeps(
-  options: { now?: Date; user?: User | null; quiet?: boolean } = {}
+  options: {
+    now?: Date;
+    user?: User | null;
+    quiet?: boolean;
+    salt?: string;
+  } = {}
 ): MockDeps {
   let user: User | null =
     options.user === undefined
@@ -26,12 +35,14 @@ export function createMockDeps(
   let now = options.now ?? new Date();
   const logs: string[] = [];
   const deps: MockDeps = {
-    store: new MemoryStore(),
+    // Keys expire by the mock clock, so tests can move time past a TTL.
+    store: new MemoryStore(() => now),
     source: createMockSource(),
     pool: MOCK_POOL,
     logs,
     user: () => Promise.resolve(user),
     isModerator: () => Promise.resolve(user !== null),
+    newSalt: () => options.salt ?? MOCK_SALT,
     // Tests and the mock server run the next batch themselves.
     scheduleNextPoolCheck: () => Promise.resolve(),
     now: () => now,

@@ -7,9 +7,17 @@
 
 export type ZMember = { member: string; score: number };
 
+/**
+ * Options for `set`, a subset of Devvit's SetOptions. With `nx` the key is
+ * only written if it is missing; `expiration` gives it a TTL in the same
+ * call, so a lock can't be left without one if the request dies between two
+ * commands.
+ */
+export type SetOptions = { nx?: boolean; expiration?: Date };
+
 export type Store = {
   get(key: string): Promise<string | undefined>;
-  set(key: string, value: string): Promise<string>;
+  set(key: string, value: string, options?: SetOptions): Promise<string>;
   del(...keys: string[]): Promise<void>;
   incrBy(key: string, value: number): Promise<number>;
   expire(key: string, seconds: number): Promise<void>;
@@ -30,23 +38,47 @@ export type Store = {
   ): Promise<ZMember[]>;
 };
 
-type Entry =
+type Value =
   | { kind: 'string'; value: string }
   | { kind: 'hash'; value: Map<string, string> }
   | { kind: 'zset'; value: Map<string, number> };
 
-/** An in-memory Store. Expiry is accepted and ignored. */
+/** A stored value and, if it has a TTL, when it expires (ms). */
+type Entry = Value & { expiresAt?: number };
+
+/**
+ * An in-memory Store. Expiry follows the clock it is given (the test or
+ * mock clock by default), so tests can move time past a TTL.
+ */
 export class MemoryStore implements Store {
   readonly #data = new Map<string, Entry>();
+  readonly #now: () => Date;
+
+  constructor(now: () => Date = () => new Date()) {
+    this.#now = now;
+  }
+
+  /** The live entry for a key, dropping it first if it has expired. */
+  #entry(key: string): Entry | undefined {
+    const entry = this.#data.get(key);
+    if (
+      entry?.expiresAt !== undefined &&
+      entry.expiresAt <= this.#now().getTime()
+    ) {
+      this.#data.delete(key);
+      return undefined;
+    }
+    return entry;
+  }
 
   #string(key: string): string | undefined {
-    const entry = this.#data.get(key);
+    const entry = this.#entry(key);
     if (entry && entry.kind !== 'string') throw new Error(`WRONGTYPE ${key}`);
     return entry?.value;
   }
 
   #hash(key: string): Map<string, string> {
-    const entry = this.#data.get(key);
+    const entry = this.#entry(key);
     if (!entry) {
       const value = new Map<string, string>();
       this.#data.set(key, { kind: 'hash', value });
@@ -57,7 +89,7 @@ export class MemoryStore implements Store {
   }
 
   #zset(key: string): Map<string, number> {
-    const entry = this.#data.get(key);
+    const entry = this.#entry(key);
     if (!entry) {
       const value = new Map<string, number>();
       this.#data.set(key, { kind: 'zset', value });
@@ -71,8 +103,12 @@ export class MemoryStore implements Store {
     return Promise.resolve(this.#string(key));
   }
 
-  set(key: string, value: string): Promise<string> {
-    this.#data.set(key, { kind: 'string', value });
+  /** Like Redis SET: 'OK' when written, '' when `nx` found the key. */
+  set(key: string, value: string, options: SetOptions = {}): Promise<string> {
+    if (options.nx && this.#entry(key)) return Promise.resolve('');
+    const entry: Entry = { kind: 'string', value };
+    if (options.expiration) entry.expiresAt = options.expiration.getTime();
+    this.#data.set(key, entry);
     return Promise.resolve('OK');
   }
 
@@ -83,22 +119,28 @@ export class MemoryStore implements Store {
 
   incrBy(key: string, value: number): Promise<number> {
     const next = Number(this.#string(key) ?? '0') + value;
-    this.#data.set(key, { kind: 'string', value: String(next) });
+    // Like Redis INCRBY, keep the key's TTL.
+    const expiresAt = this.#data.get(key)?.expiresAt;
+    const entry: Entry = { kind: 'string', value: String(next) };
+    if (expiresAt !== undefined) entry.expiresAt = expiresAt;
+    this.#data.set(key, entry);
     return Promise.resolve(next);
   }
 
-  expire(_key: string, _seconds: number): Promise<void> {
+  expire(key: string, seconds: number): Promise<void> {
+    const entry = this.#entry(key);
+    if (entry) entry.expiresAt = this.#now().getTime() + seconds * 1000;
     return Promise.resolve();
   }
 
   hGet(key: string, field: string): Promise<string | undefined> {
-    const entry = this.#data.get(key);
+    const entry = this.#entry(key);
     if (entry && entry.kind !== 'hash') throw new Error(`WRONGTYPE ${key}`);
     return Promise.resolve(entry?.value.get(field));
   }
 
   hGetAll(key: string): Promise<Record<string, string>> {
-    const entry = this.#data.get(key);
+    const entry = this.#entry(key);
     if (entry && entry.kind !== 'hash') throw new Error(`WRONGTYPE ${key}`);
     return Promise.resolve(Object.fromEntries(entry?.value ?? []));
   }
@@ -145,7 +187,7 @@ export class MemoryStore implements Store {
   }
 
   zScore(key: string, member: string): Promise<number | undefined> {
-    const entry = this.#data.get(key);
+    const entry = this.#entry(key);
     if (entry && entry.kind !== 'zset') throw new Error(`WRONGTYPE ${key}`);
     return Promise.resolve(entry?.value.get(member));
   }
@@ -156,7 +198,7 @@ export class MemoryStore implements Store {
     stop: number,
     options: { by: 'score' | 'rank'; reverse?: boolean }
   ): Promise<ZMember[]> {
-    const entry = this.#data.get(key);
+    const entry = this.#entry(key);
     if (entry && entry.kind !== 'zset') throw new Error(`WRONGTYPE ${key}`);
     const all = [...(entry?.value ?? new Map<string, number>())]
       .map(([member, score]) => ({ member, score }))

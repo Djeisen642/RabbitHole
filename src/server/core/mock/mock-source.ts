@@ -1,6 +1,6 @@
 /**
  * PuzzleSource backed by the made-up fixtures, for tests and local play.
- * `removePost` simulates a post being deleted on Reddit.
+ * `removePost` and `removeComment` simulate content deleted on Reddit.
  */
 import { normalizeSubreddit } from '../../../shared/game/rules';
 import { POOL, findEntry } from '../../../shared/pool';
@@ -13,6 +13,7 @@ const DAY_MS = 86_400_000;
 
 export type MockSource = PuzzleSource & {
   removePost(postId: string): void;
+  removeComment(commentId: string): void;
   /** How many calls each method received, for tests that count API use. */
   calls: Record<keyof PuzzleSource, number>;
 };
@@ -45,6 +46,7 @@ export function createMockSource(
     rules: 0,
     subredditFacts: 0,
     isPostLive: 0,
+    isCommentLive: 0,
   };
   const sub = (name: string): FixtureSub | undefined =>
     fixtures.find(
@@ -52,11 +54,23 @@ export function createMockSource(
     );
   const post = (id: string): FixturePost | undefined =>
     fixtures.flatMap((f) => f.posts).find((p) => p.id === id);
+  // Comment ids are made up from the post id and the comment's place.
+  const commentId = (postId: string, index: number): string =>
+    `t1_${postId.slice(3)}c${String(index)}`;
+  const commentExists = (id: string): boolean =>
+    fixtures
+      .flatMap((f) => f.posts)
+      .some((p) =>
+        (p.topComments ?? []).some((_, i) => commentId(p.id, i) === id)
+      );
 
   return {
     calls,
     removePost(postId) {
       removed.add(postId);
+    },
+    removeComment(id) {
+      removed.add(id);
     },
     topPosts(subreddit, timeframe, limit) {
       calls.topPosts += 1;
@@ -73,14 +87,15 @@ export function createMockSource(
       const comments = (post(postId)?.topComments ?? [])
         .slice(0, limit)
         .map((c, i) => ({
-          id: `t1_${postId.slice(3)}c${i}`,
+          id: commentId(postId, i),
           body: c.body,
           author: c.author,
           score: c.score,
           stickied: c.stickied ?? false,
           removed: false,
           distinguished: c.distinguished ?? false,
-        }));
+        }))
+        .filter((c) => !removed.has(c.id));
       return Promise.resolve(comments);
     },
     rules(subreddit) {
@@ -105,6 +120,10 @@ export function createMockSource(
       return Promise.resolve(
         post(postId) !== undefined && !removed.has(postId)
       );
+    },
+    isCommentLive(id) {
+      calls.isCommentLive += 1;
+      return Promise.resolve(commentExists(id) && !removed.has(id));
     },
   };
 }

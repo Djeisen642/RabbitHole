@@ -62,4 +62,6 @@ export type PuzzleSource = {
   subredditFacts(subreddit: string): Promise<SubredditFacts | null>;
   /** False once a post is removed or deleted. */
   isPostLive(postId: string): Promise<boolean>;
+  /** False once a comment is removed or deleted. */
+  isCommentLive(commentId: string): Promise<boolean>;
 };

@@ -9,6 +9,7 @@ import { POOL } from '../../shared/pool';
 import type { Deps } from './deps';
 import { devvitSource } from './devvit-source';
 import { MOCK_POOL, mockSource } from './mock/mock-source';
+import { randomSalt } from './puzzle';
 
 export type SourceMode = 'devvit' | 'mock';
 
@@ -37,6 +38,7 @@ export function createDevvitDeps(mode: SourceMode): Deps {
         (m) => m.username.toLowerCase() === username.toLowerCase()
       );
     },
+    newSalt: randomSalt,
     async scheduleNextPoolCheck(date) {
       await scheduler.runJob({
         name: 'pool-check',

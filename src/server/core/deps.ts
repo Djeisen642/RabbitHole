@@ -21,6 +21,11 @@ export type Deps = {
   user(): Promise<User | null>;
   /** Whether the current user moderates the community the app runs in. */
   isModerator(): Promise<boolean>;
+  /**
+   * A fresh secret for the pick order (see pickSalt). Random on Reddit;
+   * fixed in tests so picks there are repeatable.
+   */
+  newSalt(): string;
   /** Queue the next batch of a pool check (a no-op where there's no scheduler). */
   scheduleNextPoolCheck(date: string): Promise<void>;
   now(): Date;
