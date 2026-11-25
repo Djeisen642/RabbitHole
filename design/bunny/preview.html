@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Rabbit Hole Bunny</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Gluten:wght@500;700&display=swap"
+    />
+    <style>
+      /* Layout: one paper card holding the burrow scene, moves underneath as
+         hand-drawn buttons, still poses in a strip below. */
+      :root {
+        --paper: #f7f0e3;
+        --paper-deep: #efe4d0;
+        --ink: #3b2719;
+        --soil: #7a4f2e;
+        --hole: #2a1a0f;
+        --orange: #ff4500;
+        --muted: #7d6750;
+        --display: 'Gluten', 'Comic Neue', 'Trebuchet MS', cursive;
+        --body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --paper: #1d1510;
+          --paper-deep: #261c15;
+          --ink: #f1e4d2;
+          --soil: #b0825a;
+          --hole: #0a0604;
+          --orange: #ff5a1f;
+          --muted: #b49c82;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --paper: #1d1510;
+        --paper-deep: #261c15;
+        --ink: #f1e4d2;
+        --soil: #b0825a;
+        --hole: #0a0604;
+        --orange: #ff5a1f;
+        --muted: #b49c82;
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font: 16px/1.5 var(--body);
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding-block: 28px 56px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 22px;
+      }
+      header p {
+        margin: 6px 0 0;
+        max-width: 60ch;
+        color: var(--muted);
+      }
+      .eyebrow {
+        font: 700 13px/1 var(--body);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--orange);
+      }
+      h1 {
+        margin: 6px 0 0;
+        font: 700 clamp(34px, 7vw, 52px) / 1.05 var(--display);
+        text-wrap: balance;
+      }
+      h2 {
+        margin: 0;
+        font: 500 22px/1.2 var(--display);
+      }
+
+      .scene {
+        background: var(--paper-deep);
+        border: 2px solid var(--soil);
+        border-radius: 22px 16px 26px 14px / 16px 24px 14px 22px;
+        padding: 12px 8px 4px;
+      }
+      .scene svg {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+
+      .rh-bunny {
+        fill: none;
+        stroke: var(--orange);
+        stroke-width: 4.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .rh-ground {
+        fill: none;
+        stroke: var(--soil);
+        stroke-width: 2.2;
+        stroke-linecap: round;
+      }
+      .rh-mound {
+        fill: var(--soil);
+        opacity: 0.45;
+      }
+      .rh-hole {
+        fill: var(--hole);
+      }
+      .rh-dust path {
+        fill: none;
+        stroke: var(--soil);
+        stroke-width: 2;
+        stroke-linecap: round;
+      }
+
+      .moves {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+      }
+      .move {
+        display: grid;
+        gap: 2px;
+        text-align: left;
+        padding: 10px 14px 11px;
+        background: var(--paper);
+        color: var(--ink);
+        border: 2px solid var(--ink);
+        border-radius: 14px 9px 15px 10px / 10px 14px 9px 15px;
+        box-shadow: 3px 3px 0 var(--soil);
+        cursor: pointer;
+        font: inherit;
+        transition:
+          transform 80ms ease,
+          box-shadow 80ms ease;
+      }
+      .move b {
+        font: 500 19px/1.15 var(--display);
+      }
+      .move span {
+        font-size: 13.5px;
+        color: var(--muted);
+      }
+      .move:hover {
+        border-color: var(--orange);
+      }
+      .move:active {
+        transform: translate(3px, 3px);
+        box-shadow: 0 0 0 var(--soil);
+      }
+      .move:focus-visible,
+      .toggle input:focus-visible,
+      .link:focus-visible {
+        outline: 3px solid var(--orange);
+        outline-offset: 3px;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 20px;
+        font-size: 15px;
+        color: var(--muted);
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+      .toggle input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--orange);
+      }
+      .link {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--ink);
+        font: inherit;
+        text-decoration: underline wavy var(--orange) 1.5px;
+        text-underline-offset: 4px;
+        cursor: pointer;
+      }
+
+      .stills {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .stills figure {
+        margin: 0;
+        display: grid;
+        gap: 4px;
+        justify-items: center;
+      }
+      .stills svg {
+        width: 100%;
+        max-width: 140px;
+        height: auto;
+        overflow: visible;
+      }
+      .stills .rh-bunny {
+        stroke-width: 4.4;
+      }
+      .stills figcaption {
+        font-size: 13.5px;
+        color: var(--muted);
+      }
+      .stills line {
+        stroke: var(--soil);
+        stroke-width: 2.4;
+        stroke-linecap: round;
+      }
+      @media (max-width: 460px) {
+        .stills {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      .notes {
+        margin: 0;
+        padding-left: 1.1em;
+        color: var(--muted);
+        max-width: 62ch;
+        display: grid;
+        gap: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">r/abbitHole · mascot study</div>
+        <h1>Meet the bunny</h1>
+        <p>
+          One unbroken line, redrawn every frame. Tap a move to see it the way
+          it would play during a round.
+        </p>
+      </header>
+
+      <section class="scene" aria-label="The bunny next to its rabbit hole">
+        <svg
+          id="stage"
+          viewBox="0 -36 380 222"
+          role="img"
+          aria-label="A line-drawn bunny sitting beside a hole"
+        ></svg>
+      </section>
+
+      <section class="moves" aria-label="Animations">
+        <button class="move" type="button" data-move="twitch">
+          <b>Ear twitch</b><span>Idle, every few seconds</span>
+        </button>
+        <button class="move" type="button" data-move="thump">
+          <b>Foot thump</b><span>Waiting on your guess</span>
+        </button>
+        <button class="move" type="button" data-move="perk">
+          <b>Perk up</b><span>Close or right guess</span>
+        </button>
+        <button class="move" type="button" data-move="droop">
+          <b>Droop</b><span>Wrong guess</span>
+        </button>
+        <button class="move" type="button" data-move="travel">
+          <b>Travel</b><span>Unravels, crosses over and back</span>
+        </button>
+        <button class="move" type="button" data-move="dive">
+          <b>Dive</b><span>Solved: down the hole</span>
+        </button>
+      </section>
+
+      <div class="controls">
+        <label class="toggle" for="reduced">
+          <input id="reduced" type="checkbox" />
+          Preview reduced motion
+        </label>
+        <button id="redraw" class="link" type="button">Redraw the line</button>
+      </div>
+
+      <section aria-labelledby="stills-title" style="display: grid; gap: 12px">
+        <h2 id="stills-title">Key poses</h2>
+        <div class="stills">
+          <figure>
+            <svg data-still="rest" viewBox="0 -34 150 214">
+              <line x1="8" x2="142" y1="172" y2="172"></line>
+            </svg>
+            <figcaption>Rest</figcaption>
+          </figure>
+          <figure>
+            <svg data-still="perk" viewBox="0 -34 150 214">
+              <line x1="8" x2="142" y1="172" y2="172"></line>
+            </svg>
+            <figcaption>Perk</figcaption>
+          </figure>
+          <figure>
+            <svg data-still="droop" viewBox="0 -34 150 214">
+              <line x1="8" x2="142" y1="172" y2="172"></line>
+            </svg>
+            <figcaption>Droop</figcaption>
+          </figure>
+          <figure>
+            <svg data-still="thump" viewBox="0 -34 150 214">
+              <line x1="8" x2="142" y1="172" y2="172"></line>
+            </svg>
+            <figcaption>Thump, toe up</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <ul class="notes">
+        <li>
+          The whole bunny is one SVG path drawn as a single line, eye included:
+          the eye is a curl of that same line. Ears and foot move by bending it,
+          so it never splits into pieces.
+        </li>
+        <li>
+          To go anywhere the bunny unravels: the line pulls loose into one
+          string, slides across the stage (or down the hole) and winds back up
+          into the bunny where it stops.
+        </li>
+        <li>
+          When the puzzle is solved the line pours into the hole, the head peeks
+          slowly out to look around, ducks, and the line climbs back out.
+        </li>
+        <li>
+          No animation library. About 16 KB of plain JavaScript (6 KB gzipped)
+          drives every move.
+        </li>
+        <li>
+          With reduced motion on, poses switch without movement, and travel and
+          the dive become fades.
+        </li>
+        <li>If you leave it alone for 15 seconds, it starts thumping.</li>
+      </ul>
+    </main>
+    <script type="module" src="./preview.js"></script>
+  </body>
+</html>
