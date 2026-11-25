@@ -664,18 +664,6 @@ body {
 .rh-splash .teaser q {
   font-weight: 700;
 }
-.rh-splash-bunny {
-  width: 64px;
-  height: 64px;
-}
-.rh-splash-bunny path {
-  fill: none;
-  stroke: var(--line);
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .rh-sr-only {
   position: absolute;
   width: 1px;

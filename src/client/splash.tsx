@@ -6,11 +6,13 @@ import type { MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { PuzzleResponse } from '../shared/api';
 import { solvedWith } from '../shared/game/share';
-import { bunnyPath } from './bunny/bunny';
+import { BunnyStage } from './components/BunnyStage';
 import { fetchPuzzle } from './lib/api';
 import { openGame } from './lib/platform';
 
-const BUNNY = bunnyPath();
+// The splash has no game events to drive the bunny, so it never needs its
+// controls; a module-level no-op keeps BunnyStage's effect from re-running.
+const ignoreControls = (): void => undefined;
 
 function statusLine(p: PuzzleResponse): string {
   if (p.status === 'solved')
@@ -50,13 +52,13 @@ export const Splash = () => {
             : 'Guess the community'}
         </p>
       </div>
-      <svg
-        className="rh-splash-bunny"
-        viewBox="-60 -182 125 186"
-        aria-hidden="true"
-      >
-        <path d={BUNNY} />
-      </svg>
+      {/* Same live, tappable bunny as the game header. Wait for the puzzle so a
+          player who already solved today sees it down the hole. */}
+      <BunnyStage
+        onReady={ignoreControls}
+        ready={puzzle !== null || failed}
+        inHole={puzzle?.status === 'solved'}
+      />
       <p className="teaser">
         {puzzle ? (
           <>
