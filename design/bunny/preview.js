@@ -12,7 +12,10 @@ let bunny = null;
 
 function mount() {
   if (bunny) bunny.destroy();
-  bunny = createBunny(stage, { reducedMotion: reducedToggle.checked });
+  bunny = createBunny(stage, {
+    reducedMotion: reducedToggle.checked,
+    width: 380,
+  });
   void bunny.drawOn();
 }
 

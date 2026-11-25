@@ -262,7 +262,7 @@
       <section class="scene" aria-label="The bunny next to its rabbit hole">
         <svg
           id="stage"
-          viewBox="0 -36 264 222"
+          viewBox="0 -36 380 222"
           role="img"
           aria-label="A line-drawn bunny sitting beside a hole"
         ></svg>
@@ -280,6 +280,9 @@
         </button>
         <button class="move" type="button" data-move="droop">
           <b>Droop</b><span>Wrong guess</span>
+        </button>
+        <button class="move" type="button" data-move="travel">
+          <b>Travel</b><span>Unravels, crosses over and back</span>
         </button>
         <button class="move" type="button" data-move="dive">
           <b>Dive</b><span>Solved: down the hole</span>
@@ -326,17 +329,22 @@
 
       <ul class="notes">
         <li>
-          The whole bunny is one SVG path: a single line plus a dot for the eye.
-          Ears and foot move by bending that line, so it never splits into
-          pieces.
+          The whole bunny is one SVG path drawn as a single line, eye included:
+          the eye is a curl of that same line. Ears and foot move by bending it,
+          so it never splits into pieces.
+        </li>
+        <li>
+          To go anywhere the bunny unravels: the line pulls loose into one
+          string, slides across the stage (or down the hole) and winds back up
+          into the bunny where it stops.
         </li>
         <li>
           No animation library. About 16 KB of plain JavaScript (6 KB gzipped)
           drives every move.
         </li>
         <li>
-          With reduced motion on, poses switch without movement and the dive
-          becomes a fade.
+          With reduced motion on, poses switch without movement, and travel and
+          the dive become fades.
         </li>
         <li>If you leave it alone for 15 seconds, it starts thumping.</li>
       </ul>

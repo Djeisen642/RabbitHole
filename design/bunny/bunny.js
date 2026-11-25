@@ -1,5 +1,5 @@
-// r/abbitHole mascot: one continuous line (plus a dot for the eye), posed by
-// a handful of numbers.
+// r/abbitHole mascot: one continuous line, posed by a handful of numbers, that
+// can unravel into a loose string to travel and wind back up.
 //
 // The bunny is a single SVG <path>. Its shape is built from anchor points
 // tagged with the part they belong to (body, head, back ear, front ear, hind
@@ -53,9 +53,10 @@ function earPoints(w, len, tag) {
 }
 
 // The drawing, in pen order. 'b' body, 'h' head, 'eb'/'ef' ears (in ear
-// frame), 'f' hind foot. Each C entry is three points. An upright, sitting
-// bunny: big round head, ears swept back, a dipped nape, thin front legs and
-// a big round haunch with a puff of tail behind it.
+// frame), 'f' hind foot. Each C entry is three points and there is only one
+// M: the eye is a curl of the same line. An upright, sitting bunny: big round
+// head, ears swept back, a dipped nape, thin front legs and a big round
+// haunch with a puff of tail behind it.
 function buildSpec() {
   const eb = earPoints(EAR_BACK.w, EAR_BACK.len, 'eb');
   const ef = earPoints(EAR_FRONT.w, EAR_FRONT.len, 'ef');
@@ -88,12 +89,16 @@ function buildSpec() {
     ['C', [17, -110, 'h'], [18, -111, 'h'], ef.start],
     ['C', ef.curves[0], ef.curves[1], ef.curves[2]],
     ['C', ef.curves[3], ef.curves[4], ef.curves[5]],
-    // A full forehead down to the nose.
-    ['C', [44, -117, 'h'], [55, -105, 'h'], [55, -93, 'h']],
-    // Nose bump, a small smile, a round cheek and chin.
-    ['C', [58.5, -92, 'h'], [58.5, -86.5, 'h'], [54.5, -86.5, 'h']],
-    ['C', [53.5, -82.5, 'h'], [49.5, -81.5, 'h'], [47, -83.5, 'h']],
-    ['C', [46, -77, 'h'], [41, -72.5, 'h'], [34, -73, 'h']],
+    // Down the forehead, then the line dips in and curls round on itself to
+    // make the eye before it runs on to the nose.
+    ['C', [42, -117.5, 'h'], [50.5, -112, 'h'], [52.5, -105, 'h']],
+    ['C', [52, -101, 'h'], [49, -96.5, 'h'], [45.5, -96.5, 'h']],
+    ['C', [42, -96.5, 'h'], [41.5, -102.5, 'h'], [45, -102.5, 'h']],
+    ['C', [48.5, -102.5, 'h'], [52.5, -99, 'h'], [55, -96.5, 'h']],
+    // A small round nose, then a soft muzzle rounding back to the chin.
+    ['C', [56.5, -95.5, 'h'], [58, -94, 'h'], [58, -91, 'h']],
+    ['C', [58, -88, 'h'], [55.5, -87, 'h'], [54, -86, 'h']],
+    ['C', [52, -79.5, 'h'], [44.5, -73.5, 'h'], [34, -73, 'h']],
     // A full chest down a sturdy front leg to the paw.
     ['C', [43, -74, 'b'], [45.5, -54.5, 'b'], [43.5, -41, 'b']],
     ['C', [42, -28, 'b'], [42, -14, 'b'], [44.5, -6, 'b']],
@@ -106,10 +111,6 @@ function buildSpec() {
     ['C', [18, -32.5, 'b'], [9.5, -40, 'b'], [3.5, -40, 'b']],
     ['C', [0, -50, 'b'], [-7.5, -60, 'b'], [-18.5, -60, 'b']],
     ['C', [-29, -60, 'b'], [-36.5, -53.5, 'b'], [-42.5, -46.5, 'b']],
-    // The one pen lift: a big round eye.
-    ['M', [43, -97, 'h']],
-    ['C', [43, -94.2, 'h'], [38.6, -94.2, 'h'], [38.6, -97, 'h']],
-    ['C', [38.6, -99.8, 'h'], [43, -99.8, 'h'], [43, -97, 'h']],
   ];
 }
 
@@ -166,29 +167,43 @@ function place(point, pose) {
 
 const fmt = (n) => Math.round(n * 10) / 10;
 
-export function bunnyPath(pose = REST) {
+// The posed drawing as numbers: each entry is [cmd, ...placed points].
+function posed(pose) {
   const p = { ...REST, ...pose };
-  return SPEC.map(([cmd, ...pts]) => {
-    const coords = pts.map((pt) => place(pt, p).map(fmt).join(' '));
-    return `${cmd}${coords.join(' ')}`;
-  }).join(' ');
+  return SPEC.map(([cmd, ...pts]) => [cmd, ...pts.map((pt) => place(pt, p))]);
+}
+
+export function bunnyPath(pose = REST) {
+  return posed(pose)
+    .map(
+      ([cmd, ...pts]) =>
+        `${cmd}${pts.map((q) => q.map(fmt).join(' ')).join(' ')}`
+    )
+    .join(' ');
 }
 
 // The rotation pivot for the whole body sits around its middle.
 const BODY_CENTRE = [0, -48];
 
-export function bunnyTransform(pose, origin) {
+// facing is 1 to look right, -1 to look left (a mirror image).
+export function bunnyTransform(pose, origin, facing = 1) {
   const p = { ...REST, ...pose };
   const [ox, oy] = origin;
   return (
     `translate(${fmt(ox + p.x)} ${fmt(oy + p.y)}) ` +
     `rotate(${fmt(p.rot)} ${BODY_CENTRE[0]} ${BODY_CENTRE[1]}) ` +
-    `scale(${p.sx} ${p.sy})`
+    `scale(${p.sx * facing} ${p.sy})`
   );
 }
 
+// bunnyTransform applied to a single point.
+function toWorld([x, y], p, origin, facing) {
+  const r = rotate([x * p.sx * facing, y * p.sy], BODY_CENTRE, p.rot);
+  return [r[0] + origin[0] + p.x, r[1] + origin[1] + p.y];
+}
+
 // ---------------------------------------------------------------------------
-// Poses and moves
+// Poses
 
 export const POSES = {
   rest: {},
@@ -213,67 +228,242 @@ export const POSES = {
   crouch: { sy: 0.86, sx: 1.07, earB: -12, earF: -12, headDy: 3 },
 };
 
-// Keyframes for the dive, given the distance from home to the hole centre.
-// The bunny turns nose-down while it is still in the air above the hole and
-// squeezes narrower than the opening, then drops straight in, so nothing
-// crosses the rim on the way down. rot 90 is nose straight down; the ears lie
-// back so they trail upward.
-export function diveFrames(dx) {
-  const over = dx + 14; // centres the nose-down bunny on the hole
+// ---------------------------------------------------------------------------
+// Unravelling
+//
+// To get anywhere, the bunny comes undone. We lay out one long track: the
+// bunny's own outline in pen order, then a route across the stage, then the
+// outline of the bunny where it is going. The line becomes a thread exactly as
+// long as the outline and slides along that track like a train on rails. It
+// starts lying on the bunny; its front end runs out along the route while its
+// back end unpicks the drawing; it ends lying on the new bunny, its front end
+// having drawn it in like a pen. The track is sampled once per move from the
+// curves themselves (no DOM measuring), so each frame is plain arithmetic and
+// one `d` update.
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+function cubic(a, b, c, d, t) {
+  const u = 1 - t;
+  const k = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+  return [0, 1].map(
+    (i) => k[0] * a[i] + k[1] * b[i] + k[2] * c[i] + k[3] * d[i]
+  );
+}
+
+const unit = (from, to) => {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const l = Math.hypot(dx, dy) || 1;
+  return [dx / l, dy / l];
+};
+const along = (p, dir, k) => [p[0] + dir[0] * k, p[1] + dir[1] * k];
+
+// A polyline with its running length, ready to be walked along.
+function measure(points) {
+  const cum = [0];
+  for (let i = 1; i < points.length; i += 1) {
+    const [ax, ay] = points[i - 1];
+    const [bx, by] = points[i];
+    cum.push(cum[i - 1] + Math.hypot(bx - ax, by - ay));
+  }
+  return { points, cum, total: cum[cum.length - 1] };
+}
+
+// The posed bunny as world-space points, in pen order.
+export function bunnyPoints(pose, origin, facing = 1) {
+  const p = { ...REST, ...pose };
+  const out = [];
+  let pen = [0, 0];
+  for (const [cmd, ...pts] of posed(p)) {
+    if (cmd === 'M') {
+      pen = pts[0];
+      out.push(toWorld(pen, p, origin, facing));
+      continue;
+    }
+    const [b, c, d] = pts;
+    for (let i = 1; i <= 16; i += 1) {
+      out.push(toWorld(cubic(pen, b, c, d, i / 16), p, origin, facing));
+    }
+    pen = d;
+  }
+  return out;
+}
+
+// A smooth curve through the waypoints (Catmull-Rom), finely sampled.
+function through(way) {
+  const out = [way[0]];
+  for (let i = 0; i < way.length - 1; i += 1) {
+    const p0 = way[Math.max(0, i - 1)];
+    const p1 = way[i];
+    const p2 = way[i + 1];
+    const p3 = way[Math.min(way.length - 1, i + 2)];
+    const b = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    const steps = Math.max(
+      4,
+      Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 3)
+    );
+    for (let s = 1; s <= steps; s += 1)
+      out.push(cubic(p1, b, c, p2, s / steps));
+  }
+  return out;
+}
+
+// A gentle sideways wave along a route, so the loose line slithers like a
+// ribbon. It fades out at both ends to meet the bunny cleanly.
+function ripple(points, amp, wave) {
+  const { cum, total } = measure(points);
+  return points.map(([x, y], i) => {
+    const prev = points[Math.max(0, i - 1)];
+    const next = points[Math.min(points.length - 1, i + 1)];
+    const [tx, ty] = unit(prev, next);
+    const s = cum[i];
+    const fade = Math.max(0, Math.min(1, s / 50, (total - s) / 50));
+    const off = amp * fade * Math.sin((s / wave) * 2 * Math.PI);
+    return [x - ty * off, y + tx * off];
+  });
+}
+
+function join(...parts) {
+  const pts = [];
+  for (const part of parts) {
+    for (const q of part) {
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(q[0] - last[0], q[1] - last[1]) > 0.01)
+        pts.push(q);
+    }
+  }
+  return measure(pts);
+}
+
+// Where the line leaves a bunny (its last point, heading on) and where it
+// enters one (its first point, heading in).
+function exitOf(pts) {
+  const a = pts[pts.length - 1];
+  return { at: a, dir: unit(pts[pts.length - 4], a) };
+}
+function entryOf(pts) {
+  return { at: pts[0], dir: unit(pts[0], pts[3]) };
+}
+
+// The track for moving from one spot ({x, facing}) to another. The loose line
+// swings out behind the bunny, arcs high over the middle of the stage (and
+// the hole) and curls into the new bunny.
+export function travelTrack(from, to, ground, pose = REST) {
+  const A = bunnyPoints(pose, [from.x, ground], from.facing);
+  const B = bunnyPoints(REST, [to.x, ground], to.facing);
+  const out = exitOf(A);
+  const into = entryOf(B);
+  const mid = (out.at[0] + into.at[0]) / 2;
+  const route = through([
+    out.at,
+    along(out.at, out.dir, 24),
+    [lerp(out.at[0], mid, 0.4), ground - 26],
+    [mid, ground - 74],
+    [lerp(mid, into.at[0], 0.6), ground - 26],
+    along(into.at, into.dir, -24),
+    into.at,
+  ]);
+  const len = measure(A).total;
+  return { track: join(A, ripple(route, 3.5, 46), B), len };
+}
+
+// Two tracks for the dive: down, where the line pours over into the hole and
+// on far below ground, and up, where it climbs back out and winds into the
+// bunny again. Below ground the line is hidden by the clip.
+export function diveTracks(spot, hole, ground, pose = REST) {
+  const A = bunnyPoints(pose, [spot.x, ground], spot.facing);
+  const B = bunnyPoints(REST, [spot.x, ground], spot.facing);
+  const len = measure(A).total;
+  const hx = hole.cx;
+  const top = ground - 64;
+  const mouth = ground + 12; // just below the hole's visible floor
+  const shaft = [];
+  for (let y = mouth; y <= mouth + len + 6; y += 3) shaft.push([hx, y]);
+  const out = exitOf(A);
+  const over = through([
+    out.at,
+    along(out.at, out.dir, 24),
+    [lerp(out.at[0], hx, 0.5), ground - 42],
+    [hx, top],
+    [hx, ground - 8],
+    [hx, mouth],
+  ]);
+  const into = entryOf(B);
+  const back = through([
+    [hx, mouth],
+    [hx, ground - 8],
+    [hx, top],
+    [lerp(hx, into.at[0], 0.5), ground - 42],
+    along(into.at, into.dir, -24),
+    into.at,
+  ]);
   return {
-    crouch: POSES.crouch,
-    rise: {
-      x: dx * 0.62,
-      y: -40,
-      rot: 40,
-      sx: 1.04,
-      sy: 0.82,
-      earB: -30,
-      earF: -40,
-    },
-    over: {
-      x: over,
-      y: -52,
-      rot: 90,
-      sx: 1.12,
-      sy: 0.46,
-      earB: -38,
-      earF: -48,
-      headRot: 6,
-    },
-    gone: {
-      x: over,
-      y: 170,
-      rot: 90,
-      sx: 1.12,
-      sy: 0.46,
-      earB: -38,
-      earF: -48,
-      headRot: 6,
-    },
-    peek: { x: dx - 26, y: 104, earB: 46, earF: 40, headRot: -4 },
+    len,
+    down: join(A, ripple(over, 3, 44), shaft),
+    up: join([...shaft].reverse(), ripple(back, 3, 44), B),
   };
 }
 
-const ease = {
+// The `d` of a thread `len` long whose back end sits `d` along the track,
+// drawn through `n` points.
+export function threadPath(track, d, len, n) {
+  const { points, cum, total } = track;
+  const out = [];
+  let j = 0;
+  for (let i = 0; i < n; i += 1) {
+    const s = Math.min(total, Math.max(0, d + (len * i) / (n - 1)));
+    while (j < cum.length - 2 && cum[j + 1] < s) j += 1;
+    const span = cum[j + 1] - cum[j] || 1;
+    const t = (s - cum[j]) / span;
+    const a = points[j];
+    const b = points[j + 1];
+    out.push(`${fmt(lerp(a[0], b[0], t))} ${fmt(lerp(a[1], b[1], t))}`);
+  }
+  return `M${out.join(' L')}`;
+}
+
+// How long a slide takes for a distance along the track, at a speed in units
+// per millisecond. Travel is unhurried; the dive is quicker, it's a reward.
+export const slideMs = (dist, speed = 0.55) =>
+  Math.min(2600, Math.max(900, dist / speed));
+export const DIVE_SPEED = 0.95;
+// Points in a thread: about one every 2.5 units of line.
+export const threadPoints = (len) => Math.max(60, Math.round(len / 2.5));
+
+// ---------------------------------------------------------------------------
+// Moves
+
+export const ease = {
   linear: (t) => t,
   out: (t) => 1 - (1 - t) ** 3,
   in: (t) => t ** 3,
   inOut: (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2),
+  // Gentler curves for sliding the loose line, so it never whips past.
+  glide: (t) => (1 - Math.cos(Math.PI * t)) / 2,
+  glideIn: (t) => 1 - Math.cos((Math.PI * t) / 2),
+  glideOut: (t) => Math.sin((Math.PI * t) / 2),
   back: (t) => {
     const c = 1.7;
     return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
   },
 };
 
-const lerp = (a, b, t) => a + (b - a) * t;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Builds the drawing inside an <svg> and returns controls for it.
+// options: ground (y of the ground line), width (of the stage), homeX and
+// awayX (the two places it sits, either side of the hole), holeX.
 export function createBunny(svg, options = {}) {
   const ground = options.ground ?? 170;
-  const home = [options.homeX ?? 78, ground];
+  const width = options.width ?? 264;
   const hole = { cx: options.holeX ?? 190, cy: ground + 1, rx: 40, ry: 10 };
+  const faceHole = (x) => ({ x, facing: x > hole.cx ? -1 : 1 });
+  const spots = [
+    faceHole(options.homeX ?? 78),
+    faceHole(options.awayX ?? width - 78),
+  ];
   const reduced =
     options.reducedMotion ??
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -282,13 +472,13 @@ export function createBunny(svg, options = {}) {
   svg.innerHTML = `
     <defs>
       <clipPath id="${id}-clip">
-        <rect x="-400" y="-400" width="1200" height="${400 + ground + 2}"></rect>
+        <rect x="-400" y="-400" width="${width + 800}" height="${400 + ground + 2}"></rect>
         <ellipse cx="${hole.cx}" cy="${hole.cy}" rx="${hole.rx - 1}" ry="${hole.ry - 0.5}"></ellipse>
       </clipPath>
     </defs>
     <path class="rh-ground" d="M14 ${ground} C40 ${ground - 1.5} 70 ${ground + 1.2} 104 ${ground}
       S140 ${ground - 1} ${hole.cx - hole.rx - 6} ${ground}
-      M${hole.cx + hole.rx + 5} ${ground} C${hole.cx + 52} ${ground - 1} ${hole.cx + 62} ${ground + 1} 252 ${ground}"></path>
+      M${hole.cx + hole.rx + 5} ${ground} C${hole.cx + 52} ${ground - 1} ${hole.cx + 62} ${ground + 1} ${width - 12} ${ground}"></path>
     <path class="rh-mound" d="M${hole.cx - hole.rx - 4} ${ground}
       C${hole.cx - 28} ${ground - 15} ${hole.cx + 26} ${ground - 17} ${hole.cx + hole.rx + 4} ${ground}"></path>
     <ellipse class="rh-hole" cx="${hole.cx}" cy="${hole.cy}" rx="${hole.rx}" ry="${hole.ry}"></ellipse>
@@ -301,17 +491,21 @@ export function createBunny(svg, options = {}) {
 
   const line = svg.querySelector('.rh-bunny');
   const dust = svg.querySelector('.rh-dust');
+  let spot = { ...spots[0] };
   let pose = { ...REST };
   let busy = false;
   let token = 0; // bumps to cancel a running move
 
   function render() {
     line.setAttribute('d', bunnyPath(pose));
-    line.setAttribute('transform', bunnyTransform(pose, home));
+    line.setAttribute(
+      'transform',
+      bunnyTransform(pose, [spot.x, ground], spot.facing)
+    );
     line.style.opacity = String(pose.opacity);
     dust.setAttribute(
       'transform',
-      `translate(${home[0] + pose.x} ${home[1] + pose.y})`
+      `translate(${spot.x + pose.x} ${ground + pose.y}) scale(${spot.facing} 1)`
     );
   }
 
@@ -343,6 +537,50 @@ export function createBunny(svg, options = {}) {
     });
   }
 
+  // Slide the loose line along a track, its back end going from d0 to d1.
+  // The line is drawn in stage coordinates while it is loose; render() puts
+  // the bunny's own transform back.
+  function slide(track, len, d0, d1, speed = 0.55, curve = 'glide') {
+    const mine = token;
+    const n = threadPoints(len);
+    const ms = slideMs(Math.abs(d1 - d0), speed);
+    line.removeAttribute('transform');
+    line.style.opacity = '1';
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const step = (now) => {
+        if (mine !== token) return resolve();
+        const t = Math.min(1, (now - t0) / ms);
+        line.setAttribute(
+          'd',
+          threadPath(track, lerp(d0, d1, ease[curve](t)), len, n)
+        );
+        if (t < 1) requestAnimationFrame(step);
+        else resolve();
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  // Reduced motion: fade out, change, fade back in.
+  async function fadeSwap(change, hold = 0) {
+    const out = line.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 220,
+      easing: 'ease-out',
+      fill: 'forwards',
+    });
+    await out.finished;
+    if (hold) await wait(hold);
+    change();
+    render();
+    const back = line.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 260,
+      easing: 'ease-in',
+    });
+    out.cancel();
+    await back.finished;
+  }
+
   async function run(move) {
     token += 1;
     busy = true;
@@ -364,18 +602,41 @@ export function createBunny(svg, options = {}) {
     });
   }
 
+  // Unravel, travel along the route and wind up again at `target`.
+  async function goTo(target, m) {
+    if (reduced) {
+      await fadeSwap(() => {
+        spot = { ...target };
+        pose = { ...REST };
+      });
+      return;
+    }
+    await to(POSES.crouch, 160, 'out');
+    if (!alive(m)) return;
+    const { track, len } = travelTrack(spot, target, ground, pose);
+    await slide(track, len, 0, track.total - len);
+    if (!alive(m)) return;
+    spot = { ...target };
+    pose = { ...REST };
+    render();
+  }
+
+  const otherSpot = () =>
+    Math.abs(spots[0].x - spot.x) > Math.abs(spots[1].x - spot.x)
+      ? spots[0]
+      : spots[1];
+
   const moves = {
     // A quick flick of one ear, the way a real rabbit checks a sound.
     twitch: () =>
       run(async (m) => {
         const front = Math.random() < 0.65;
         const key = front ? 'earF' : 'earB';
-        const base = 0;
-        await to({ [key]: base + 11 }, 70, 'out', true);
+        await to({ [key]: 11 }, 70, 'out', true);
         if (!alive(m)) return;
-        await to({ [key]: base - 5 }, 90, 'inOut', true);
+        await to({ [key]: -5 }, 90, 'inOut', true);
         if (!alive(m)) return;
-        await to({ [key]: base + 3 }, 80, 'inOut', true);
+        await to({ [key]: 3 }, 80, 'inOut', true);
         if (!alive(m)) return;
         await to({}, 120, 'out');
       }),
@@ -417,42 +678,35 @@ export function createBunny(svg, options = {}) {
         if (alive(m)) await to({}, 420, 'out');
       }),
 
-    // Solved: crouch, hop into the hole, peek out, then come back.
+    // Over to the far side of the hole and back again.
+    travel: () =>
+      run(async (m) => {
+        const start = spot;
+        await goTo(otherSpot(), m);
+        if (!alive(m)) return;
+        await wait(700);
+        if (alive(m)) await goTo(start, m);
+      }),
+
+    // Solved: the line pours into the hole, then climbs back out and winds
+    // into the bunny again.
     dive: () =>
       run(async (m) => {
-        const dx = hole.cx - home[0];
         if (reduced) {
-          await to({ opacity: 0 }, 0);
-          await wait(1200);
-          await to({}, 0);
+          await fadeSwap(() => {}, 1000);
           return;
         }
-        const f = diveFrames(dx);
-        await to(f.crouch, 200, 'out');
+        await to(POSES.crouch, 180, 'out');
         if (!alive(m)) return;
-        await to(f.rise, 230, 'out');
-        if (!alive(m)) return;
-        await to(f.over, 190, 'inOut');
-        if (!alive(m)) return;
-        await to(f.gone, 300, 'in');
-        if (!alive(m)) return;
-        await wait(450);
-        // Peek: the head comes back up just far enough to look around.
-        await to({ ...f.peek, y: 168 }, 0);
-        await to(f.peek, 320, 'out');
-        if (!alive(m)) return;
-        await wait(200);
-        await to({ ...f.peek, earF: 18 }, 80, 'out');
-        await to({ ...f.peek, earF: -3 }, 110, 'inOut');
-        await to(f.peek, 120, 'out');
-        await wait(450);
-        if (!alive(m)) return;
-        await to({ ...f.peek, y: 168, earB: -40, earF: -40 }, 200, 'in');
+        const { len, down, up } = diveTracks(spot, hole, ground, pose);
+        await slide(down, len, 0, down.total - len, DIVE_SPEED, 'glideIn');
         if (!alive(m)) return;
         await wait(350);
+        if (!alive(m)) return;
+        await slide(up, len, 0, up.total - len, DIVE_SPEED, 'glideOut');
+        if (!alive(m)) return;
         pose = { ...REST };
         render();
-        await drawOn(900);
       }),
   };
 
@@ -503,6 +757,12 @@ export function createBunny(svg, options = {}) {
       lastAction = performance.now();
       const move = moves[name];
       return move ? move() : Promise.resolve();
+    },
+    // Unravel and wind up again at stage x, facing the hole unless told.
+    travel(x, facing) {
+      lastAction = performance.now();
+      const target = { ...faceHole(x), ...(facing ? { facing } : {}) };
+      return run((m) => goTo(target, m));
     },
     drawOn,
     pathFor: bunnyPath,
