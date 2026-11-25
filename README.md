@@ -83,7 +83,19 @@ On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE
 1. `npm run login` logs the Devvit CLI into your Reddit account (opens a browser).
 2. `npm run deploy` runs `npm run check`, then uploads the app. The first upload creates a private playtest subreddit for you. Playtest subreddits must stay under 200 members.
 3. `npm run dev` starts a playtest: it prints the playtest subreddit link and pushes code changes to it live as you save.
-4. `npm run launch` uploads and submits the app for Reddit's review. Only do this when it's ready to go public.
+4. Don't run `npm run launch` for the hackathon. It submits the app for Reddit's review, and the hackathon rules ask entrants not to submit for publishing; a private app still qualifies.
+
+### Submitting to the hackathon
+
+Reddit's Game of the Day Hackathon closes Tue Dec 8, 2026, 6:00 PM PT (9:00 PM ET). Checklist, from the [official rules](https://redditgameofday2026.devpost.com/rules):
+
+1. Set `FIRST_PUZZLE_DATE` in `src/shared/game/day.ts` to the launch day, so the first public puzzle is #1.
+2. `npm run login`, then `npm run deploy`. The first upload creates the app link, developers.reddit.com/apps/rabbit-hole, which goes on the Devpost form.
+3. In the test subreddit, use the "Post today's r/abbitHole puzzle" menu item to make a post running the game. Judges must be able to reach it: either make the subreddit public (it must stay under 200 members) or install the [devvit-dev-bot](https://developers.reddit.com/apps/devvit-dev-bot) app there.
+4. Keep this README current. The rules require one in the repo root that describes the game and how to play.
+5. Fill in the Devpost submission: a text description of the features and how it works, the app link and the link to the game post.
+6. Optional: a demo video under one minute, public on YouTube or Vimeo, showing the game running on Reddit; a link to the repo if it's public; and the developer satisfaction survey, which enters the feedback prize.
+7. Keep the game running and free to play until judging ends, Wed Dec 16, 2026, 6:00 PM PT.
 
 ### Workflow
 
