@@ -11,14 +11,12 @@ export function Clue({
   layer,
   open,
   fresh,
-  clearIcon = false,
   onToggle,
 }: {
   clue: ClueView;
   layer: number;
   open: boolean;
   fresh: boolean;
-  clearIcon?: boolean;
   onToggle: () => void;
 }) {
   const bodyId = `rh-clue-${clue.kind}`;
@@ -36,16 +34,14 @@ export function Clue({
         <span className="rh-clue-label">
           {layer} · {CLUE_LABELS[clue.kind]}
         </span>
-        {open ? null : (
-          <span className="rh-clue-peek">{preview(clue, clearIcon)}</span>
-        )}
+        {open ? null : <span className="rh-clue-peek">{preview(clue)}</span>}
         <svg className="rh-chevron" viewBox="0 0 12 12" aria-hidden="true">
           <path d="M3 4.5 6 7.5 9 4.5" />
         </svg>
       </button>
       {open ? (
         <div className="rh-clue-body" id={bodyId}>
-          <ClueBody clue={clue} clearIcon={clearIcon} />
+          <ClueBody clue={clue} />
         </div>
       ) : null}
     </section>
@@ -53,7 +49,7 @@ export function Clue({
 }
 
 /** The one-line preview of a closed clue. */
-function preview(clue: ClueView, clearIcon: boolean): string {
+function preview(clue: ClueView): string {
   switch (clue.kind) {
     case 'topComment':
       return clue.body;
@@ -64,11 +60,11 @@ function preview(clue: ClueView, clearIcon: boolean): string {
     case 'stats':
       return `${compact(clue.subscribers)} members · ${clue.createdYear}`;
     case 'icon':
-      return clearIcon ? 'Tap to see it' : 'Tap to see it, blurred';
+      return 'Tap to see it';
   }
 }
 
-function ClueBody({ clue, clearIcon }: { clue: ClueView; clearIcon: boolean }) {
+function ClueBody({ clue }: { clue: ClueView }) {
   switch (clue.kind) {
     case 'topComment':
       return (
@@ -116,11 +112,7 @@ function ClueBody({ clue, clearIcon }: { clue: ClueView; clearIcon: boolean }) {
       );
     case 'icon':
       return (
-        <img
-          className={`rh-icon-clue${clearIcon ? ' clear' : ''}`}
-          src={clue.url}
-          alt={clearIcon ? 'Community icon' : 'Community icon, blurred'}
-        />
+        <img className="rh-icon-clue" src={clue.url} alt="Community icon" />
       );
   }
 }

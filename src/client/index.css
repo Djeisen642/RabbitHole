@@ -396,10 +396,6 @@ body {
   border-radius: 50%;
   border: 2px solid var(--soil);
   object-fit: cover;
-  filter: blur(6px) saturate(0.8);
-}
-.rh-icon-clue.clear {
-  filter: none;
 }
 
 @keyframes rh-dig {
