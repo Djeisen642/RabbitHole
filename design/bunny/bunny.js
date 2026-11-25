@@ -436,36 +436,64 @@ export const slideMs = (dist, speed = 0.55) =>
 
 // The dive is quick, it's a reward: a fixed time for each half.
 export const DIVE_MS = { pour: 760, climb: 820 };
-export const PEEK_MS = { rise: 180, duck: 150 };
+export const PEEK_MS = { eyes: 550, wary: 180, rise: 320, duck: 150 };
 
 // The head peeking out of the hole after the dive. The bunny stands in the
 // shaft with its neck stretched, sunk so the ground cuts it just under the
-// chin, where it is narrow enough to fit the opening. While it pops up it is
-// stretched tall and thin, which also lets the wide head and ears pass the
-// rim without touching the ground either side.
+// chin, where it is narrow enough to fit the opening. On the way up the head
+// and ears are a little wider than the hole, so the bunny is drawn slightly
+// narrower and leans a touch to keep whatever is crossing the ground inside
+// the hole: ears first, then the eyes, then the neck.
 export const PEEK = { headDy: -12, earB: -4, earF: 6 };
 const PEEK_CUT = 90; // height on the bunny where the ground cuts it
 const PEEK_HIDE = 120; // how far down it sinks to be out of sight
-const PEEK_MID = 10; // middle of the neck at the cut
-const RISE = { sx: 0.78, sy: 1.1, mid: 16 }; // stretched, while popping up
+// [cut height, middle of the bunny there] while rising, read off the outline.
+const PEEK_MIDS = [
+  [96, 10],
+  [100, 12],
+  [104, 14],
+  [108, 17],
+  [112, 20],
+  [116, 22],
+  [120, 24],
+  [140, 20],
+  [144, 16],
+  [148, 12],
+  [152, 8],
+  [156, 6],
+];
 const smooth = (t) => t * t * (3 - 2 * t);
+
+function peekMid(cut) {
+  const m = PEEK_MIDS;
+  if (cut <= m[0][0]) return m[0][1];
+  for (let i = 1; i < m.length; i += 1) {
+    if (cut <= m[i][0]) {
+      const t = (cut - m[i - 1][0]) / (m[i][0] - m[i - 1][0]);
+      return lerp(m[i - 1][1], m[i][1], smooth(t));
+    }
+  }
+  return m[m.length - 1][1];
+}
 
 // The peek pose `up` of the way out of the hole (0 hidden, 1 peeking),
 // centred on the hole. turn is 1 or -1 (which way it looks).
 export function peekPose(spot, hole, ground, up = 1, turn = 1, extra = {}) {
-  const w = smooth(Math.max(0, Math.min(1, (up - 0.8) / 0.2)));
-  const mid = lerp(RISE.mid, PEEK_MID, w);
+  const cut = PEEK_CUT + PEEK_HIDE * (1 - up);
+  const sx = 0.9 + 0.1 * smooth(Math.max(0, Math.min(1, (110 - cut) / 14)));
   return {
     ...REST,
     ...PEEK,
     ...extra,
     turn,
-    sx: lerp(RISE.sx, 1, w),
-    sy: lerp(RISE.sy, 1, w),
-    x: hole.cx - spot.x - mid * lerp(RISE.sx, 1, w) * spot.facing * turn,
-    y: hole.cy - ground + PEEK_CUT + PEEK_HIDE * (1 - up),
+    sx,
+    x: hole.cx - spot.x - peekMid(cut) * sx * spot.facing * turn,
+    y: hole.cy - ground + cut,
   };
 }
+
+// The slow, careful rise: up to the eyes, a wary pause, then the rest.
+export const PEEK_EYES = 1 - 28 / PEEK_HIDE;
 
 // Points in a thread: about one every 2.5 units of line.
 export const threadPoints = (len) => Math.max(60, Math.round(len / 2.5));
@@ -760,12 +788,19 @@ export function createBunny(svg, options = {}) {
         const end = (t) => t.total - len;
         await slide(down, len, 0, end(down), 0, 'snapIn', DIVE_MS.pour);
         if (!alive(m)) return;
-        await wait(80);
+        await wait(150);
         if (!alive(m)) return;
-        // The head pops up, flicks an ear, looks back and forth, and ducks.
+        // The head rises slowly, flicks an ear, looks back and forth, ducks.
         const peek = (up, turn, extra) =>
           peekPose(spot, hole, ground, up, turn, extra);
-        await play((t) => peek(ease.out(t)), PEEK_MS.rise);
+        await play((t) => peek(PEEK_EYES * ease.glideOut(t)), PEEK_MS.eyes);
+        if (!alive(m)) return;
+        await wait(PEEK_MS.wary);
+        if (!alive(m)) return;
+        await play(
+          (t) => peek(lerp(PEEK_EYES, 1, ease.glide(t))),
+          PEEK_MS.rise
+        );
         if (!alive(m)) return;
         await to(peek(1, 1, { earF: 18 }), 60, 'out');
         if (!alive(m)) return;
