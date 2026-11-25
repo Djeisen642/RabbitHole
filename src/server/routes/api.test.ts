@@ -14,6 +14,8 @@ import {
 } from '../core/puzzle';
 import type { MockDeps } from '../core/mock/mock-deps';
 import { PLAYER_KEEP_DAYS } from '../core/round';
+import { addDays } from '../../shared/game/day';
+import { normalizeSubreddit } from '../../shared/game/rules';
 import { createApi } from './api';
 
 const NOW = new Date('2026-11-25T15:00:00Z');
@@ -39,8 +41,31 @@ async function readJson(res: Response): Promise<Json> {
   return value;
 }
 
-async function setup(answer = 'Breadit') {
+/**
+ * Give a player a learner record of someone who knows the game, so their
+ * rounds are typed. Most tests are about typed guessing; the first-timer
+ * tests start from a brand-new player instead.
+ */
+async function knowsTheGame(
+  deps: MockDeps,
+  userId = 't2_mockplayer',
+  record: Record<string, string> = {}
+): Promise<void> {
+  await deps.store.hSet(`user:${userId}:learn`, {
+    finished: '10',
+    losses: '0',
+    wheels: '0',
+    wheelWins: '0',
+    ...record,
+  });
+}
+
+async function setup(
+  answer = 'Breadit',
+  options: { newPlayer?: boolean } = {}
+) {
   const deps = createMockDeps({ now: NOW, quiet: true });
+  if (!options.newPlayer) await knowsTheGame(deps);
   const entry = findEntry(answer, POOL);
   if (!entry) throw new Error('missing entry');
   // Pin the answer so the test knows it; guesses still resolve against the
@@ -67,9 +92,21 @@ async function setup(answer = 'Breadit') {
     const body = await readJson(res);
     return { status: res.status, body };
   };
+  const choices = async (
+    accept: boolean,
+    date: string = TODAY
+  ): Promise<{ status: number; body: Json }> => {
+    const res = await app.request('/choices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accept, date }),
+    });
+    const body = await readJson(res);
+    return { status: res.status, body };
+  };
   const statusOf = async (path: string): Promise<number> =>
     (await app.request(path)).status;
-  return { deps, get, guess, statusOf };
+  return { deps, get, guess, choices, statusOf };
 }
 
 function puzzle(body: Json): PuzzleResponse {
@@ -196,6 +233,7 @@ describe('a full round', () => {
     await guess('Baking');
     await guess('Breadit');
     deps.setUser({ id: 't2_second', username: 'second_player' });
+    await knowsTheGame(deps, 't2_second');
     await guess('Baking');
     await guess('Cooking');
     const done = puzzle((await guess('Breadit')).body);
@@ -359,5 +397,237 @@ describe('GET /pool-check', () => {
     expect(await statusOf('/pool-check')).toBe(200);
     deps.isModerator = () => Promise.resolve(false);
     expect(await statusOf('/pool-check')).toBe(403);
+  });
+});
+
+type Setup = Awaited<ReturnType<typeof setup>>;
+
+/** Move the clock to `days` after TODAY and return that day's answer. */
+async function dayAfter(
+  deps: MockDeps,
+  days: number
+): Promise<{ date: string; answer: string }> {
+  const date = addDays(TODAY, days);
+  deps.setNow(new Date(`${date}T15:00:00Z`));
+  await runDailyPick(deps, date);
+  const answer = (await loadPuzzle(deps, date))?.puzzle.answer;
+  if (!answer) throw new Error(`no puzzle for ${date}`);
+  return { date, answer };
+}
+
+/** Fail the round by typing pool subs that aren't the answer. */
+async function loseTyping(
+  t: Setup,
+  date: string,
+  answer: string
+): Promise<PuzzleResponse> {
+  const wrong = POOL.map((e) => e.name).filter(
+    (n) => normalizeSubreddit(n) !== normalizeSubreddit(answer)
+  );
+  for (const name of wrong) {
+    const view = puzzle((await t.guess(name, date)).body);
+    if (view.status !== 'playing') return view;
+  }
+  throw new Error('round never ended');
+}
+
+/** The view's options, failing the test if it isn't multiple choice. */
+function optionsOf(view: PuzzleResponse): string[] {
+  if (!view.choices) throw new Error('not a multiple-choice round');
+  return view.choices;
+}
+
+describe('a first-timer', () => {
+  it('sees how to play and five options, the same on every reload', async () => {
+    const t = await setup('Breadit', { newPlayer: true });
+    const view = puzzle((await t.get('/puzzle')).body);
+    expect(view.firstTime).toBe(true);
+    expect(view.offer).toBe(false);
+    const options = optionsOf(view);
+    expect(options).toHaveLength(5);
+    expect(options).toContain('Breadit');
+    // Nothing else is given away: no clue, no result.
+    expect(view.clues).toEqual([]);
+    expect(view.result).toBeNull();
+    expect(JSON.stringify(view)).not.toContain('scoring angle');
+
+    // The options are stored with the round, so a change to what the
+    // options are drawn from (here, another day claiming one of them)
+    // doesn't change them on reload.
+    const other = options.find((o) => o !== 'Breadit') ?? '';
+    await t.deps.store.zAdd('used-subs', {
+      member: normalizeSubreddit(other),
+      score: 99_999,
+    });
+    const reload = puzzle((await t.get('/puzzle')).body);
+    expect(reload.choices).toEqual(options);
+  });
+
+  it('spends a guess and a clue on a wrong pick, and must pick an option', async () => {
+    const t = await setup('Breadit', { newPlayer: true });
+    const options = optionsOf(puzzle((await t.get('/puzzle')).body));
+    const wrong = options.find((o) => o !== 'Breadit') ?? '';
+    const miss = puzzle((await t.guess(wrong)).body);
+    expect(miss.status).toBe('playing');
+    expect(miss.guesses).toEqual([{ name: wrong, correct: false }]);
+    expect(miss.clues.map((c) => c.kind)).toEqual(['topComment']);
+    expect(miss.guessesLeft).toBe(miss.maxGuesses - 1);
+
+    // A real community that isn't one of the options is refused.
+    const outside =
+      POOL.find((e) => !options.includes(e.name))?.name ?? 'castiron';
+    const refused = await t.guess(outside);
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ message: 'Pick one of the options.' });
+
+    const done = puzzle((await t.guess('Breadit')).body);
+    expect(done.status).toBe('solved');
+    expect(done.result?.score).toBe(1);
+    expect(done.firstTime).toBe(false);
+  });
+
+  it('gets ten options on rounds two and three, then types', async () => {
+    const t = await setup('Breadit', { newPlayer: true });
+    expect(optionsOf(puzzle((await t.get('/puzzle')).body))).toHaveLength(5);
+    await t.guess('Breadit');
+    for (const days of [1, 2]) {
+      const { date, answer } = await dayAfter(t.deps, days);
+      const view = puzzle((await t.get('/puzzle')).body);
+      expect(view.firstTime).toBe(false);
+      expect(optionsOf(view)).toHaveLength(10);
+      expect(optionsOf(view)).toContain(answer);
+      expect(puzzle((await t.guess(answer, date)).body).status).toBe('solved');
+    }
+    await dayAfter(t.deps, 3);
+    const typing = puzzle((await t.get('/puzzle')).body);
+    expect(typing.choices).toBeNull();
+    expect(typing.offer).toBe(false);
+  });
+
+  it('is not a player who finished rounds before this was kept', async () => {
+    const t = await setup('Breadit', { newPlayer: true });
+    await t.deps.store.hSet('user:t2_mockplayer:streak', {
+      current: '0',
+      best: '2',
+      lastSolvedDay: '',
+    });
+    const view = puzzle((await t.get('/puzzle')).body);
+    expect(view.firstTime).toBe(false);
+    expect(view.choices).toBeNull();
+  });
+
+  it('is left out of the wrong-guess chart while picking', async () => {
+    const t = await setup('Breadit', { newPlayer: true });
+    const options = optionsOf(puzzle((await t.get('/puzzle')).body));
+    const picked = options.find((o) => o !== 'Breadit' && o !== 'Baking');
+    await t.guess(picked ?? '');
+    await t.guess('Breadit');
+    t.deps.setUser({ id: 't2_second', username: 'second_player' });
+    await knowsTheGame(t.deps, 't2_second');
+    await t.guess('Baking');
+    const done = puzzle((await t.guess('Breadit')).body);
+    expect(done.result?.players).toBe(2);
+    // Only the typed wrong guess, as a share of the one player who typed.
+    expect(done.result?.wrongGuesses).toEqual([
+      { name: 'Baking', count: 1, percent: 100 },
+    ]);
+  });
+});
+
+describe('training wheels', () => {
+  it('are offered after three losses in a row, and yes gives ten options', async () => {
+    const t = await setup('Breadit');
+    await loseTyping(t, TODAY, 'Breadit');
+    for (const days of [1, 2]) {
+      const { date, answer } = await dayAfter(t.deps, days);
+      expect(puzzle((await t.get('/puzzle')).body).offer).toBe(false);
+      await loseTyping(t, date, answer);
+    }
+    const { date, answer } = await dayAfter(t.deps, 3);
+    const offered = puzzle((await t.get('/puzzle')).body);
+    expect(offered.offer).toBe(true);
+    // The options stay on the server until the player says yes.
+    expect(offered.choices).toBeNull();
+    expect(JSON.stringify(offered).toLowerCase()).not.toContain(
+      answer.toLowerCase()
+    );
+
+    const yes = puzzle((await t.choices(true, date)).body);
+    expect(yes.offer).toBe(false);
+    const options = optionsOf(yes);
+    expect(options).toHaveLength(10);
+    expect(options).toContain(answer);
+    expect(puzzle((await t.get('/puzzle')).body).choices).toEqual(options);
+    // A double tap of yes changes nothing.
+    expect(puzzle((await t.choices(true, date)).body).choices).toEqual(options);
+  });
+
+  it('can only be taken before the first guess', async () => {
+    const t = await setup('Breadit');
+    await knowsTheGame(t.deps, 't2_mockplayer', { losses: '3' });
+    expect(puzzle((await t.get('/puzzle')).body).offer).toBe(true);
+    const typed = puzzle((await t.guess('Baking')).body);
+    expect(typed.offer).toBe(false);
+    expect(typed.choices).toBeNull();
+    const late = await t.choices(true);
+    expect(late.status).toBe(409);
+    expect(late.body).toMatchObject({
+      message: 'Options can only be switched on before your first guess.',
+    });
+    expect(puzzle((await t.get('/puzzle')).body).choices).toBeNull();
+  });
+
+  it('are refused when not on offer, logged out, or for another day', async () => {
+    const t = await setup('Breadit');
+    const none = await t.choices(true);
+    expect(none.status).toBe(400);
+    expect(none.body).toMatchObject({
+      message: 'This round has no offer of options.',
+    });
+    await knowsTheGame(t.deps, 't2_mockplayer', { losses: '3' });
+    expect((await t.choices(true, '2026-11-24')).status).toBe(409);
+    t.deps.setUser(null);
+    expect((await t.choices(true)).status).toBe(401);
+  });
+
+  it('turned down keep the round typed and are offered again next round', async () => {
+    const t = await setup('Breadit');
+    await knowsTheGame(t.deps, 't2_mockplayer', { losses: '3' });
+    const no = puzzle((await t.choices(false)).body);
+    expect(no.offer).toBe(false);
+    expect(no.choices).toBeNull();
+    expect(puzzle((await t.get('/puzzle')).body).offer).toBe(false);
+    expect((await t.choices(true)).status).toBe(409);
+    await loseTyping(t, TODAY, 'Breadit');
+    await dayAfter(t.deps, 1);
+    expect(puzzle((await t.get('/puzzle')).body).offer).toBe(true);
+  });
+
+  it('come off after two wins with options', async () => {
+    const t = await setup('Breadit');
+    await knowsTheGame(t.deps, 't2_mockplayer', { losses: '3' });
+    await t.choices(true);
+    expect(puzzle((await t.guess('Breadit')).body).status).toBe('solved');
+
+    const second = await dayAfter(t.deps, 1);
+    const view = puzzle((await t.get('/puzzle')).body);
+    expect(view.offer).toBe(false);
+    expect(optionsOf(view)).toHaveLength(10);
+    await t.guess(second.answer, second.date);
+
+    await dayAfter(t.deps, 2);
+    const typing = puzzle((await t.get('/puzzle')).body);
+    expect(typing.choices).toBeNull();
+    expect(typing.offer).toBe(false);
+  });
+
+  it('keep their record about a month, like rounds', async () => {
+    const t = await setup('Breadit', { newPlayer: true });
+    await t.get('/puzzle');
+    await t.guess('Breadit');
+    const key = 'user:t2_mockplayer:learn';
+    expect(await t.deps.store.hGet(key, 'finished')).toBe('1');
+    t.deps.setNow(new Date(NOW.getTime() + PLAYER_KEEP_DAYS * 86_400_000));
+    expect(await t.deps.store.hGet(key, 'finished')).toBeUndefined();
   });
 });

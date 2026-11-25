@@ -13,15 +13,17 @@ import type { PoolCheckReport } from '../core/pool-check';
 import { servePuzzle } from '../core/puzzle';
 import type { Served } from '../core/puzzle';
 import {
+  answerOffer,
   loadRound,
   loadStreak,
   puzzleView,
   submitGuess,
   wrongGuessChart,
 } from '../core/round';
-import type { Round, Streak } from '../../shared/game/rules';
+import type { PlayerRound } from '../core/round';
+import type { Streak } from '../../shared/game/rules';
 import type { User } from '../core/deps';
-import { asRecord, asString } from '../core/json';
+import { asBoolean, asRecord, asString } from '../core/json';
 
 const fail = (
   c: Context,
@@ -29,23 +31,28 @@ const fail = (
   message: string
 ) => c.json<ErrorResponse>({ type: 'error', message }, status);
 
-/** The player-facing API: today's puzzle, guessing and autocomplete. */
+/**
+ * The player-facing API: today's puzzle, guessing, the training-wheels
+ * offer and autocomplete.
+ */
 export function createApi(deps: Deps): Hono {
   const api = new Hono();
 
   async function view(
     date: string,
     user: User | null,
-    round: Round,
+    player: PlayerRound,
     streak: Streak,
     served: Served
   ): Promise<PuzzleResponse> {
     const chart =
-      round.status === 'playing' ? null : await wrongGuessChart(deps, date);
+      player.round.status === 'playing'
+        ? null
+        : await wrongGuessChart(deps, date);
     return puzzleView({
       puzzle: served.puzzle,
       candidate: served.candidate,
-      round,
+      player,
       streak,
       day: dayNumber(date),
       username: user?.username ?? null,
@@ -62,12 +69,12 @@ export function createApi(deps: Deps): Hono {
       const served = await servePuzzle(deps, date);
       if (!served) return notReady(c);
       const user = await deps.user();
-      const [round, streak] = await Promise.all([
+      const [player, streak] = await Promise.all([
         loadRound(deps, served.puzzle, user),
         loadStreak(deps, user),
       ]);
       return c.json<PuzzleResponse>(
-        await view(date, user, round, streak, served)
+        await view(date, user, player, streak, served)
       );
     } catch (error) {
       console.error('GET /api/puzzle failed', error);
@@ -93,11 +100,35 @@ export function createApi(deps: Deps): Hono {
       const outcome = await submitGuess(deps, served.puzzle, user, guess);
       if (!outcome.ok) return fail(c, outcome.status, outcome.message);
       return c.json<PuzzleResponse>(
-        await view(date, user, outcome.round, outcome.streak, served)
+        await view(date, user, outcome.player, outcome.streak, served)
       );
     } catch (error) {
       console.error('POST /api/guess failed', error);
       return fail(c, 500, 'Something went wrong with that guess.');
+    }
+  });
+
+  // The answer to "Want some options?" (PuzzleResponse.offer).
+  api.post('/choices', async (c) => {
+    try {
+      const body = asRecord(await c.req.json<unknown>().catch(() => null));
+      const accept = asBoolean(body?.accept);
+      if (accept === null) return fail(c, 400, 'Say yes or no to the options.');
+      const date = puzzleDateAt(deps.now());
+      if (asString(body?.date) !== date)
+        return fail(c, 409, 'A new puzzle is out. Reload to play it.');
+      const served = await servePuzzle(deps, date);
+      if (!served) return notReady(c);
+      const user = await deps.user();
+      const outcome = await answerOffer(deps, served.puzzle, user, accept);
+      if (!outcome.ok) return fail(c, outcome.status, outcome.message);
+      const streak = await loadStreak(deps, user);
+      return c.json<PuzzleResponse>(
+        await view(date, user, outcome.player, streak, served)
+      );
+    } catch (error) {
+      console.error('POST /api/choices failed', error);
+      return fail(c, 500, 'Something went wrong. Try again.');
     }
   });
 

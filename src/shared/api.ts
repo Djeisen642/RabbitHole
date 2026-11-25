@@ -30,7 +30,7 @@ export type Streak = { current: number; best: number };
 export type WrongGuessBar = {
   name: string;
   count: number;
-  /** Share of today's players who made this guess, 0 to 100. */
+  /** Share of today's players who typed their guesses that made this one, 0 to 100. */
   percent: number;
 };
 
@@ -64,10 +64,29 @@ export type PuzzleResponse = {
   /** Null when the player is logged out; they can look but not guess. */
   username: string | null;
   result: RoundResult | null;
+  /** The player has never finished a round: show them how to play. */
+  firstTime: boolean;
+  /**
+   * The options to pick from when this round is multiple choice (a new
+   * player, or training wheels), or null when the player types a guess.
+   */
+  choices: string[] | null;
+  /**
+   * Offer this round some options ("Want some options?"), after a run of
+   * losses. Answer with POST /api/choices before the first guess.
+   */
+  offer: boolean;
 };
 
 export type GuessRequest = {
   guess: string;
+  /** The puzzle date the player is looking at (PuzzleResponse.date). */
+  date: string;
+};
+
+/** The answer to the training-wheels offer (PuzzleResponse.offer). */
+export type ChoicesRequest = {
+  accept: boolean;
   /** The puzzle date the player is looking at (PuzzleResponse.date). */
   date: string;
 };

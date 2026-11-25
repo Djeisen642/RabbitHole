@@ -7,6 +7,9 @@
  * Extra routes, for local play only:
  * - POST /mock/reset clears your round (and everything else) and re-picks.
  * - POST /mock/user?name=alice switches to another fake player.
+ * - POST /mock/next-day moves the clock a day on and picks that day's
+ *   puzzle, so a player can be taken through several rounds (the first
+ *   rounds with options, a run of losses) without waiting for midnight.
  * - POST /mock/check-pool runs the moderator pool check over the fixture
  *   subs; read it at GET /api/pool-check.
  */
@@ -52,6 +55,11 @@ app.post('/mock/user', (c) => {
   const name = (c.req.query('name') ?? 'mock_player').replace(/[^\w-]/g, '');
   deps.setUser({ id: `t2_${name}`, username: name });
   return c.json({ ok: true, username: name });
+});
+app.post('/mock/next-day', async (c) => {
+  deps.setNow(new Date(deps.now().getTime() + 86_400_000));
+  await seed();
+  return c.json({ ok: true, date: puzzleDateAt(deps.now()) });
 });
 app.post('/mock/check-pool', async (c) =>
   c.json(await startPoolCheck(deps, puzzleDateAt(deps.now())))
