@@ -13,6 +13,7 @@ import {
   pickOrder,
   pickPuzzle,
   runDailyPick,
+  savePuzzle,
   servePuzzle,
 } from './puzzle';
 
@@ -173,6 +174,41 @@ describe('runDailyPick and servePuzzle', () => {
       't3_mockbr2'
     );
     expect((await loadPuzzle(deps, '2026-11-25'))?.active).toBe(1);
+  });
+
+  it('keeps the same community when every stored post is gone', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    deps.pool = [entry('Breadit')];
+    await runDailyPick(deps, '2026-11-25');
+    deps.pool = MOCK_POOL;
+    // Keep one stored candidate, then take it down on Reddit.
+    const loaded = await loadPuzzle(deps, '2026-11-25');
+    if (!loaded) throw new Error('no puzzle');
+    await savePuzzle(deps, {
+      ...loaded.puzzle,
+      candidates: loaded.puzzle.candidates.slice(0, 1),
+    });
+    deps.source.removePost('t3_mockbr1');
+    deps.setNow(new Date(NOW.getTime() + LIVE_CHECK_MS));
+
+    const served = await servePuzzle(deps, '2026-11-25');
+    // Players mid-round keep the same answer; only the post changes.
+    expect(served?.puzzle.answer).toBe('Breadit');
+    expect(served?.candidate.postId).toBe('t3_mockbr2');
+    expect(served?.puzzle.rule).toEqual(loaded.puzzle.rule);
+  });
+
+  it('picks another community when the old one has no posts left', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    deps.pool = [entry('Breadit')];
+    await runDailyPick(deps, '2026-11-25');
+    deps.pool = MOCK_POOL;
+    deps.source.removePost('t3_mockbr1');
+    deps.source.removePost('t3_mockbr2');
+    deps.setNow(new Date(NOW.getTime() + LIVE_CHECK_MS));
+    const served = await servePuzzle(deps, '2026-11-25');
+    expect(served?.puzzle.answer).toBeDefined();
+    expect(served?.puzzle.answer).not.toBe('Breadit');
   });
 
   it('picks on demand when the nightly job has not run', async () => {

@@ -6,13 +6,14 @@
  *   `active` (index of the candidate post being served), `checkedAt` (ms of
  *   the last check that the post is still live).
  * - `used-subs` sorted set: sub name scored by the day number it was used.
- * - `pick-lock:YYYY-MM-DD` counter guarding an on-demand pick.
+ * - `pick-lock:YYYY-MM-DD` counter guarding an on-demand pick or refill.
  */
 import { addDays, dayNumber } from '../../shared/game/day';
 import type { PuzzleDate } from '../../shared/game/day';
 import { normalizeSubreddit } from '../../shared/game/rules';
 import type { ClueKind } from '../../shared/game/rules';
 import type { ClueView, PostCard } from '../../shared/api';
+import { POOL, findEntry } from '../../shared/pool';
 import type { PoolEntry } from '../../shared/pool';
 import type { Deps } from './deps';
 import {
@@ -148,20 +149,26 @@ export async function checkSub(
   };
 }
 
+type Built = { puzzle: PuzzleContent } | { problem: string };
+
 /**
  * Build a puzzle from one sub, or explain why it can't make one. Reads the
  * sub's facts and month of top posts, then the comments of passing posts
- * until MAX_CANDIDATES posts with a good top comment are found.
+ * until MAX_CANDIDATES posts with a good top comment are found. Posts in
+ * `exclude` are never used.
  */
 export async function buildPuzzle(
   source: PuzzleSource,
-  entry: PoolEntry
-): Promise<{ puzzle: PuzzleContent } | { problem: string }> {
+  entry: PoolEntry,
+  exclude: ReadonlySet<string> = new Set()
+): Promise<Built> {
   const { facts, posts } = await readSub(source, entry);
   const problem = subredditProblem(facts, posts);
   if (problem || !facts) return { problem: problem ?? 'not found' };
 
-  const passing = posts.filter((p) => postProblem(p, entry) === null);
+  const passing = posts.filter(
+    (p) => !exclude.has(p.id) && postProblem(p, entry) === null
+  );
   if (passing.length === 0) return { problem: 'no usable text posts' };
 
   const candidates: StoredCandidate[] = [];
@@ -235,12 +242,7 @@ export async function pickPuzzle(
 ): Promise<StoredPuzzle | null> {
   const order = pickOrder(deps.pool, date, await recentlyUsed(deps, date));
   for (const entry of order.slice(0, MAX_SUB_ATTEMPTS)) {
-    let built: Awaited<ReturnType<typeof buildPuzzle>>;
-    try {
-      built = await buildPuzzle(deps.source, entry);
-    } catch (error) {
-      built = { problem: `error: ${String(error)}` };
-    }
+    const built = await tryBuild(deps.source, entry);
     if ('problem' in built) {
       deps.log(`pick ${date}: skipped r/${entry.name} (${built.problem})`);
       continue;
@@ -252,6 +254,19 @@ export async function pickPuzzle(
   }
   deps.log(`pick ${date}: no sub worked`);
   return null;
+}
+
+/** buildPuzzle, with a Reddit error turned into a problem to log and skip. */
+async function tryBuild(
+  source: PuzzleSource,
+  entry: PoolEntry,
+  exclude?: ReadonlySet<string>
+): Promise<Built> {
+  try {
+    return await buildPuzzle(source, entry, exclude);
+  } catch (error) {
+    return { problem: `error: ${String(error)}` };
+  }
 }
 
 export async function savePuzzle(
@@ -379,30 +394,83 @@ export async function runDailyPick(
   return out;
 }
 
+/** How long an on-demand pick or refill holds the lock if it fails or dies. */
+const PICK_LOCK_SECONDS = 120;
+
+/**
+ * Run an on-demand pick or refill for a date unless another request already
+ * is.
+ * Players' requests trigger these, so without the lock every player who
+ * arrives while Reddit is being read would start the same reads. Returns
+ * null without running when the lock is taken. A failed pick leaves the lock
+ * to expire, so retries hit Reddit at most every PICK_LOCK_SECONDS.
+ */
+async function withPickLock<T>(
+  deps: Deps,
+  date: PuzzleDate,
+  run: () => Promise<T | null>
+): Promise<T | null> {
+  const lockKey = `pick-lock:${date}`;
+  if ((await deps.store.incrBy(lockKey, 1)) !== 1) return null;
+  await deps.store.expire(lockKey, PICK_LOCK_SECONDS);
+  const result = await run();
+  if (result !== null) await deps.store.del(lockKey);
+  return result;
+}
+
+const firstCandidate = (puzzle: StoredPuzzle | null): Served | null => {
+  const candidate = puzzle?.candidates[0];
+  return puzzle && candidate ? { puzzle, candidate } : null;
+};
+
+/**
+ * Every stored post of the day is gone. Rounds already in progress are
+ * replayed against the stored answer, so the day is refilled with fresh
+ * posts from the same community, keeping the other clues. Only if that
+ * community has nothing usable left is a new one picked; rounds in progress
+ * then replay their guesses against the new answer.
+ */
+async function replaceGonePosts(
+  deps: Deps,
+  puzzle: StoredPuzzle
+): Promise<Served | null> {
+  const { date } = puzzle;
+  return withPickLock(deps, date, async () => {
+    const entry = findEntry(puzzle.answer, POOL);
+    // Top listings can lag behind a removal, so never reuse a gone post.
+    const gone = new Set(puzzle.candidates.map((c) => c.postId));
+    const rebuilt: Built = entry
+      ? await tryBuild(deps.source, entry, gone)
+      : { problem: 'not in the pool' };
+    if ('puzzle' in rebuilt) {
+      const refilled = { ...puzzle, candidates: rebuilt.puzzle.candidates };
+      await savePuzzle(deps, refilled);
+      deps.log(`serve ${date}: posts gone, refilled from r/${puzzle.answer}`);
+      return firstCandidate(refilled);
+    }
+    deps.log(
+      `serve ${date}: posts gone and r/${puzzle.answer} has no more (${rebuilt.problem}), picking again`
+    );
+    await deps.store.del(puzzleKey(date));
+    return firstCandidate(await pickPuzzle(deps, date));
+  });
+}
+
 /**
  * Today's puzzle and the candidate post to serve, re-checking at most every
  * LIVE_CHECK_MS that the post is still on Reddit. A removed or deleted post
- * falls back to the next stored candidate; if none is left the day is
- * picked again. Picks on demand (once, behind a lock) if the nightly job
- * hasn't run.
+ * falls back to the next stored candidate, then to fresh posts (see
+ * replaceGonePosts). Picks on demand if the nightly job hasn't run.
  */
 export async function servePuzzle(
   deps: Deps,
   date: PuzzleDate
 ): Promise<Served | null> {
-  let loaded = await loadPuzzle(deps, date);
-  if (!loaded) {
-    const lockKey = `pick-lock:${date}`;
-    const mine = (await deps.store.incrBy(lockKey, 1)) === 1;
-    if (!mine) return null;
-    await deps.store.expire(lockKey, 120);
-    // On failure the lock is left to expire, so players' requests can't
-    // retry the Reddit reads more than every couple of minutes.
-    if (!(await pickPuzzle(deps, date))) return null;
-    await deps.store.del(lockKey);
-    loaded = await loadPuzzle(deps, date);
-    if (!loaded) return null;
-  }
+  const loaded = await loadPuzzle(deps, date);
+  if (!loaded)
+    return firstCandidate(
+      await withPickLock(deps, date, () => pickPuzzle(deps, date))
+    );
 
   const { puzzle, checkedAt } = loaded;
   let active = Math.min(loaded.active, puzzle.candidates.length - 1);
@@ -416,13 +484,7 @@ export async function servePuzzle(
         break;
       }
     }
-    if (found < 0) {
-      deps.log(`serve ${date}: every candidate post is gone, picking again`);
-      await deps.store.del(puzzleKey(date));
-      const again = await pickPuzzle(deps, date);
-      const first = again?.candidates[0];
-      return again && first ? { puzzle: again, candidate: first } : null;
-    }
+    if (found < 0) return replaceGonePosts(deps, puzzle);
     active = found;
     await deps.store.hSet(puzzleKey(date), {
       active: String(active),
