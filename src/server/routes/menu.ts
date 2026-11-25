@@ -61,20 +61,5 @@ export function createMenu(deps: Deps, options: MenuOptions): Hono {
     }
   });
 
-  menu.post('/example-form', (c) => {
-    return c.json<UiResponse>(
-      {
-        showForm: {
-          name: 'exampleForm',
-          form: {
-            title: 'Example form',
-            fields: [{ name: 'message', label: 'Message', type: 'string' }],
-          },
-        },
-      },
-      200
-    );
-  });
-
   return menu;
 }
