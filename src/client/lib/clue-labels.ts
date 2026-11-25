@@ -6,5 +6,5 @@ export const CLUE_LABELS: Record<ClueKind, string> = {
   rule: 'One of its rules',
   jargon: 'Words the regulars use',
   stats: 'Members and birthday',
-  icon: 'Its icon, blurred',
+  icon: 'Its icon',
 };

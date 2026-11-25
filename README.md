@@ -13,7 +13,7 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
    2. One of the community's rules
    3. A cloud of the community's in-jokes and jargon
    4. Member count and the year it was founded
-   5. The community icon, blurred (only when the community has a custom icon)
+   5. The community icon (only when the community has a custom icon)
 4. You get one guess on the post alone, then one after each clue: six guesses, or five when there's no icon clue. Solve it and you can jump straight to the community to join it.
 
 ### Scoring

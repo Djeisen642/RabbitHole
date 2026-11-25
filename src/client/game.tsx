@@ -189,7 +189,6 @@ export const App = () => {
                     layer={i + 1}
                     open={toggled[clue.kind] ?? (!done && clue.kind === newest)}
                     fresh={i >= freshFrom}
-                    clearIcon={done}
                     onToggle={() => {
                       setToggled((t) => ({
                         ...t,
