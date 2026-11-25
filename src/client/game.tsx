@@ -14,12 +14,15 @@ import type { PuzzleResponse } from '../shared/api';
 import type { ClueKind } from '../shared/game/rules';
 import type { BunnyControls } from './bunny/bunny';
 import { BunnyStage } from './components/BunnyStage';
+import { ChoiceBox } from './components/ChoiceBox';
 import { Clue } from './components/Clue';
 import { GuessBox } from './components/GuessBox';
+import { HowToPlay } from './components/HowToPlay';
+import { Offer } from './components/Offer';
 import { PostCard } from './components/PostCard';
 import { Result, ResultActions } from './components/Result';
 import { Tunnel } from './components/Tunnel';
-import { ApiError, fetchPuzzle, sendGuess } from './lib/api';
+import { ApiError, fetchPuzzle, sendChoices, sendGuess } from './lib/api';
 import { CLUE_LABELS } from './lib/clue-labels';
 import { trackVisualViewport } from './lib/viewport';
 
@@ -37,6 +40,11 @@ export const App = () => {
   // A round already solved when it loaded starts with the bunny down the
   // hole. Only loads set this; a live solve dives in on its own.
   const [solvedOnLoad, setSolvedOnLoad] = useState(false);
+  const [howTo, setHowTo] = useState(false);
+  // The how-to card opens by itself once per page load at most, so a
+  // reload after a 409 doesn't pop it up again.
+  const howToShown = useRef(false);
+  const helpButton = useRef<HTMLButtonElement>(null);
   const bunny = useRef<BunnyControls | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLElement>(null);
@@ -54,6 +62,22 @@ export const App = () => {
   const load = useCallback((next: PuzzleResponse) => {
     setPuzzle(next);
     setSolvedOnLoad(next.status === 'solved');
+    // A first-timer who has already guessed (and reloaded) knows the
+    // basics; they can still open the card from the "?".
+    if (
+      !howToShown.current &&
+      next.firstTime &&
+      next.status === 'playing' &&
+      next.guesses.length === 0
+    ) {
+      howToShown.current = true;
+      setHowTo(true);
+    }
+  }, []);
+
+  const closeHowTo = useCallback(() => {
+    setHowTo(false);
+    helpButton.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -121,6 +145,26 @@ export const App = () => {
     [puzzle, load]
   );
 
+  const onOffer = useCallback(
+    async (accept: boolean): Promise<void> => {
+      if (!puzzle) return;
+      setBusy(true);
+      setNotice(null);
+      try {
+        setPuzzle(await sendChoices({ accept, date: puzzle.date }));
+      } catch (e: unknown) {
+        setNotice(e instanceof Error ? e.message : 'That did not go through.');
+        if (e instanceof ApiError && e.status === 409)
+          void fetchPuzzle()
+            .then(load)
+            .catch(() => undefined);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [puzzle, load]
+  );
+
   const done = puzzle !== null && puzzle.status !== 'playing';
   const clues = puzzle ? (puzzle.result?.clues ?? puzzle.clues) : [];
   const wonAt = puzzle ? puzzle.guesses.findIndex((g) => g.correct) : -1;
@@ -136,9 +180,23 @@ export const App = () => {
           inHole={solvedOnLoad}
         />
         <div className="rh-top-info">
-          <h1 className="rh-wordmark">
-            <b>r/</b>abbitHole
-          </h1>
+          <div className="rh-title-row">
+            <h1 className="rh-wordmark">
+              <b>r/</b>abbitHole
+            </h1>
+            <button
+              ref={helpButton}
+              type="button"
+              className="rh-help"
+              aria-label="How to play"
+              aria-haspopup="dialog"
+              onClick={() => {
+                setHowTo(true);
+              }}
+            >
+              ?
+            </button>
+          </div>
           {puzzle ? (
             <>
               <p className="rh-top-meta">
@@ -160,86 +218,110 @@ export const App = () => {
         </div>
       </header>
 
-      <main className="rh-scroll" ref={scroller}>
-        {error ? (
-          <p className="rh-error" role="alert">
-            {error}
-          </p>
-        ) : !puzzle ? (
-          <p className="rh-muted">Digging up today’s post…</p>
-        ) : (
-          <>
-            {done && puzzle.result ? (
-              <Result
-                result={puzzle.result}
-                solved={puzzle.status === 'solved'}
-                clueCount={puzzle.clueKinds.length}
+      <div className="rh-body">
+        <main className="rh-scroll" ref={scroller} inert={howTo}>
+          {error ? (
+            <p className="rh-error" role="alert">
+              {error}
+            </p>
+          ) : !puzzle ? (
+            <p className="rh-muted">Digging up today’s post…</p>
+          ) : (
+            <>
+              {done && puzzle.result ? (
+                <Result
+                  result={puzzle.result}
+                  solved={puzzle.status === 'solved'}
+                  clueCount={puzzle.clueKinds.length}
+                />
+              ) : null}
+              <PostCard
+                post={puzzle.post}
+                answer={puzzle.result?.answer ?? null}
               />
+              {clues.length > 0 ? (
+                <div className="rh-clues" aria-live="polite">
+                  {clues.map((clue, i) => (
+                    <Clue
+                      key={clue.kind}
+                      clue={clue}
+                      layer={i + 1}
+                      open={
+                        toggled[clue.kind] ?? (!done && clue.kind === newest)
+                      }
+                      fresh={i >= freshFrom}
+                      onToggle={() => {
+                        setToggled((t) => ({
+                          ...t,
+                          [clue.kind]: !(
+                            t[clue.kind] ??
+                            (!done && clue.kind === newest)
+                          ),
+                        }));
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              {puzzle.guesses.length > 0 ? (
+                <ul className="rh-guesses" aria-label="Your guesses">
+                  {puzzle.guesses.map((g) => (
+                    <li key={g.name} className={g.correct ? 'right' : ''}>
+                      r/{g.name}
+                      <span className="rh-sr-only">
+                        {g.correct ? ', right' : ', wrong'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          )}
+        </main>
+
+        {puzzle ? (
+          <footer className="rh-dock" inert={howTo}>
+            {notice ? (
+              <p className="rh-error" role="alert">
+                {notice}
+              </p>
             ) : null}
-            <PostCard
-              post={puzzle.post}
-              answer={puzzle.result?.answer ?? null}
-            />
-            {clues.length > 0 ? (
-              <div className="rh-clues" aria-live="polite">
-                {clues.map((clue, i) => (
-                  <Clue
-                    key={clue.kind}
-                    clue={clue}
-                    layer={i + 1}
-                    open={toggled[clue.kind] ?? (!done && clue.kind === newest)}
-                    fresh={i >= freshFrom}
-                    onToggle={() => {
-                      setToggled((t) => ({
-                        ...t,
-                        [clue.kind]: !(
-                          t[clue.kind] ??
-                          (!done && clue.kind === newest)
-                        ),
-                      }));
+            {done && puzzle.result ? (
+              <ResultActions result={puzzle.result} />
+            ) : !puzzle.username ? (
+              <p className="rh-hint">Log in to Reddit to make a guess.</p>
+            ) : puzzle.choices ? (
+              <ChoiceBox
+                options={puzzle.choices}
+                guesses={puzzle.guesses}
+                disabled={busy}
+                guessesLeft={puzzle.guessesLeft}
+                nextClue={nextKind ? CLUE_LABELS[nextKind] : null}
+                onGuess={onGuess}
+              />
+            ) : (
+              <>
+                {puzzle.offer ? (
+                  <Offer
+                    disabled={busy}
+                    onAnswer={(accept) => {
+                      void onOffer(accept);
                     }}
                   />
-                ))}
-              </div>
-            ) : null}
-            {puzzle.guesses.length > 0 ? (
-              <ul className="rh-guesses" aria-label="Your guesses">
-                {puzzle.guesses.map((g) => (
-                  <li key={g.name} className={g.correct ? 'right' : ''}>
-                    r/{g.name}
-                    <span className="rh-sr-only">
-                      {g.correct ? ', right' : ', wrong'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </>
-        )}
-      </main>
-
-      {puzzle ? (
-        <footer className="rh-dock">
-          {notice ? (
-            <p className="rh-error" role="alert">
-              {notice}
-            </p>
-          ) : null}
-          {done && puzzle.result ? (
-            <ResultActions result={puzzle.result} />
-          ) : puzzle.username ? (
-            <GuessBox
-              disabled={busy}
-              guessed={guessed}
-              guessesLeft={puzzle.guessesLeft}
-              nextClue={nextKind ? CLUE_LABELS[nextKind] : null}
-              onGuess={onGuess}
-            />
-          ) : (
-            <p className="rh-hint">Log in to Reddit to make a guess.</p>
-          )}
-        </footer>
-      ) : null}
+                ) : null}
+                <GuessBox
+                  disabled={busy}
+                  guessed={guessed}
+                  guessesLeft={puzzle.guessesLeft}
+                  nextClue={nextKind ? CLUE_LABELS[nextKind] : null}
+                  onGuess={onGuess}
+                />
+              </>
+            )}
+          </footer>
+        ) : null}
+        {howTo ? <HowToPlay onClose={closeHowTo} /> : null}
+      </div>
     </div>
   );
 };
