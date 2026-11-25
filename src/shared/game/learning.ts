@@ -10,6 +10,9 @@
  *   CHOICES options. Saying yes keeps choices on until the player wins
  *   WHEELS_WINS_TO_END rounds with them.
  *
+ * - The first typing round after a multiple-choice one shows a line on how
+ *   typing works, since the player has only ever picked from a list.
+ *
  * Scoring never changes: a wrong pick is a wrong guess and reveals a clue.
  */
 
@@ -29,6 +32,8 @@ export type Learner = {
   wheels: boolean;
   /** Rounds won with choices since the training wheels went on. */
   wheelWins: number;
+  /** The last finished round was multiple choice. */
+  lastWithChoices: boolean;
 };
 
 export const NEW_LEARNER: Learner = {
@@ -36,6 +41,7 @@ export const NEW_LEARNER: Learner = {
   losses: 0,
   wheels: false,
   wheelWins: 0,
+  lastWithChoices: false,
 };
 
 /**
@@ -55,6 +61,14 @@ export function choiceCount(learner: Learner): number {
   return 0;
 }
 
+/**
+ * A typing round right after a multiple-choice one: the player has never
+ * typed a guess, so show them how.
+ */
+export function needsTypingIntro(learner: Learner): boolean {
+  return choiceCount(learner) === 0 && learner.lastWithChoices;
+}
+
 /** Whether a new round should offer the player some options. */
 export function offersWheels(learner: Learner): boolean {
   return choiceCount(learner) === 0 && learner.losses >= WHEELS_AFTER_LOSSES;
@@ -71,11 +85,17 @@ export function afterRound(
   round: { solved: boolean; withChoices: boolean }
 ): Learner {
   const finished = learner.finished + 1;
+  const lastWithChoices = round.withChoices;
   if (!round.solved)
-    return { ...learner, finished, losses: learner.losses + 1 };
+    return {
+      ...learner,
+      finished,
+      losses: learner.losses + 1,
+      lastWithChoices,
+    };
   const counts = learner.wheels && round.withChoices;
   const wheelWins = counts ? learner.wheelWins + 1 : learner.wheelWins;
   return wheelWins >= WHEELS_WINS_TO_END
-    ? { finished, losses: 0, wheels: false, wheelWins: 0 }
-    : { ...learner, finished, losses: 0, wheelWins };
+    ? { finished, losses: 0, wheels: false, wheelWins: 0, lastWithChoices }
+    : { ...learner, finished, losses: 0, wheelWins, lastWithChoices };
 }

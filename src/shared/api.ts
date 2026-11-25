@@ -67,6 +67,11 @@ export type PuzzleResponse = {
   /** The player has never finished a round: show them how to play. */
   firstTime: boolean;
   /**
+   * This is the player's first typing round after picking from a list:
+   * show them how typing a guess works.
+   */
+  typingIntro: boolean;
+  /**
    * The options to pick from when this round is multiple choice (a new
    * player, or training wheels), or null when the player types a guess.
    */

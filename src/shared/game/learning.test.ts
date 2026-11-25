@@ -7,6 +7,7 @@ import {
   acceptWheels,
   afterRound,
   choiceCount,
+  needsTypingIntro,
   offersWheels,
 } from './learning';
 import type { Learner } from './learning';
@@ -83,5 +84,28 @@ describe('training wheels', () => {
     expect(learner.wheels).toBe(false);
     expect(learner.wheelWins).toBe(0);
     expect(learner.finished).toBe(2);
+  });
+});
+
+describe('needsTypingIntro', () => {
+  const picked = { solved: true, withChoices: true };
+
+  it('is shown on the first typing round after picking from a list', () => {
+    const learnt = play(NEW_LEARNER, [picked, picked, picked]);
+    expect(needsTypingIntro(learnt)).toBe(true);
+    expect(needsTypingIntro(play(learnt, [won]))).toBe(false);
+  });
+
+  it('is not shown while the player still has choices', () => {
+    expect(needsTypingIntro(play(NEW_LEARNER, [picked]))).toBe(false);
+  });
+
+  it('is shown again when training wheels come off', () => {
+    const on = acceptWheels(play(RETURNING_LEARNER, [lost, lost, lost]));
+    expect(needsTypingIntro(play(on, [picked, picked]))).toBe(true);
+  });
+
+  it('is never shown to a player who has only typed', () => {
+    expect(needsTypingIntro(RETURNING_LEARNER)).toBe(false);
   });
 });

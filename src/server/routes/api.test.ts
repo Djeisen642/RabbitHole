@@ -494,6 +494,7 @@ describe('a first-timer', () => {
       const { date, answer } = await dayAfter(t.deps, days);
       const view = puzzle((await t.get('/puzzle')).body);
       expect(view.firstTime).toBe(false);
+      expect(view.typingIntro).toBe(false);
       expect(optionsOf(view)).toHaveLength(10);
       expect(optionsOf(view)).toContain(answer);
       expect(puzzle((await t.guess(answer, date)).body).status).toBe('solved');
@@ -502,6 +503,13 @@ describe('a first-timer', () => {
     const typing = puzzle((await t.get('/puzzle')).body);
     expect(typing.choices).toBeNull();
     expect(typing.offer).toBe(false);
+    // First round typing after picking from a list: explain typing.
+    expect(typing.typingIntro).toBe(true);
+
+    const { date, answer } = await dayAfter(t.deps, 4);
+    await t.guess(answer, date);
+    await dayAfter(t.deps, 5);
+    expect(puzzle((await t.get('/puzzle')).body).typingIntro).toBe(false);
   });
 
   it('is not a player who finished rounds before this was kept', async () => {
@@ -514,6 +522,7 @@ describe('a first-timer', () => {
     const view = puzzle((await t.get('/puzzle')).body);
     expect(view.firstTime).toBe(false);
     expect(view.choices).toBeNull();
+    expect(view.typingIntro).toBe(false);
   });
 
   it('is left out of the wrong-guess chart while picking', async () => {

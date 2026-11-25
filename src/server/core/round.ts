@@ -53,6 +53,7 @@ import {
   RETURNING_LEARNER,
   acceptWheels,
   afterRound,
+  needsTypingIntro,
   choiceCount,
   offersWheels,
 } from '../../shared/game/learning';
@@ -230,6 +231,8 @@ export async function loadLearner(deps: Deps, user: User): Promise<Learner> {
     losses: count(l.losses),
     wheels: l.wheels === '1',
     wheelWins: count(l.wheelWins),
+    // Missing on records saved before this field existed: no intro.
+    lastWithChoices: l.lastChoices === '1',
   };
 }
 
@@ -244,6 +247,7 @@ async function saveLearner(
     losses: String(learner.losses),
     wheels: learner.wheels ? '1' : '0',
     wheelWins: String(learner.wheelWins),
+    lastChoices: learner.lastWithChoices ? '1' : '0',
   });
   await deps.store.expire(key, PLAYER_KEEP_SECONDS);
 }
@@ -677,6 +681,7 @@ export function puzzleView(args: {
     username,
     result,
     firstTime: player.learner.finished === 0,
+    typingIntro: player.choices === null && needsTypingIntro(player.learner),
     choices: player.choices,
     offer: player.offer,
   };

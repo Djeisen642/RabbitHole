@@ -20,7 +20,7 @@ The first time you open the game, a short "How to play" card explains this; the 
 
 ### New players and training wheels
 
-New players pick from a list instead of typing: 5 communities on your first round, 10 on your second and third, then you type. If you lose 3 rounds in a row, the next round asks "Missed the last few? Want to pick from a list?" before your first guess. Say yes and you get 10 options, and keep getting them until you win 2 rounds that way. Picking works exactly like typing: a wrong pick uses a guess and shows the next clue, and scoring is the same. Everyone with options on a given day sees the same ones, and they never include another day's answer.
+New players pick from a list instead of typing: 5 communities on your first round, 10 on your second and third, then you type. The first round you type shows a short line on how typing works. If you lose 3 rounds in a row, the next round asks "Missed the last few? Want to pick from a list?" before your first guess. Say yes and you get 10 options, and keep getting them until you win 2 rounds that way. Picking works exactly like typing: a wrong pick uses a guess and shows the next clue, and scoring is the same. Everyone with options on a given day sees the same ones, and they never include another day's answer.
 
 ### Scoring
 

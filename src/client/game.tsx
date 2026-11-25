@@ -308,6 +308,13 @@ export const App = () => {
                       void onOffer(accept);
                     }}
                   />
+                ) : puzzle.typingIntro && puzzle.guesses.length === 0 ? (
+                  // Shown until the first guess; the offer goes first
+                  // because saying no to it leads here anyway.
+                  <p className="rh-typing-intro">
+                    No more list from here. Start typing a subreddit name, then
+                    tap it in the suggestions.
+                  </p>
                 ) : null}
                 <GuessBox
                   disabled={busy}

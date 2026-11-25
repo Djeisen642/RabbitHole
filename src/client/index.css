@@ -616,6 +616,12 @@ body {
   font-size: 16px;
 }
 
+.rh-typing-intro {
+  margin: 0;
+  font: 600 16px/1.25 var(--display);
+  color: var(--soil);
+}
+
 /* How to play: covers the post and dock, never the header ------------------ */
 .rh-howto-shade {
   position: absolute;
