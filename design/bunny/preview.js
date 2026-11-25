@@ -1,4 +1,4 @@
-import { bunnyPath, createBunny, POSES } from './bunny.js';
+import { bunnyPath, createBunny, POSES, SCRATCH_STROKE } from './bunny.js';
 
 const stage = document.getElementById('stage');
 const reducedToggle = document.getElementById('reduced');
@@ -11,10 +11,13 @@ reducedToggle.checked = systemReduced;
 let bunny = null;
 
 function mount() {
+  // Keep it down the hole across a remount, as a reloaded solved round does.
+  const inHole = bunny ? bunny.inHole() : false;
   if (bunny) bunny.destroy();
   bunny = createBunny(stage, {
     reducedMotion: reducedToggle.checked,
     width: 380,
+    inHole,
   });
   void bunny.drawOn();
 }
@@ -28,6 +31,11 @@ for (const button of document.querySelectorAll('[data-move]')) {
   });
 }
 
+// Enter and Space come free with the button.
+document.getElementById('pet').addEventListener('click', () => {
+  void bunny.pet();
+});
+
 document.getElementById('redraw').addEventListener('click', () => {
   void bunny.drawOn();
 });
@@ -38,6 +46,7 @@ const stills = {
   perk: POSES.perk,
   droop: POSES.droop,
   thump: { foot: -26, sy: 0.97, earB: -6, earF: -4 },
+  scratch: { ...POSES.scratch, ...SCRATCH_STROKE.down },
 };
 for (const [name, pose] of Object.entries(stills)) {
   const svg = document.querySelector(`[data-still="${name}"]`);
