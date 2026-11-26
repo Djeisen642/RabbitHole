@@ -261,7 +261,7 @@ export const FIXTURES: readonly FixtureSub[] = [
     ],
   },
   {
-    name: 'whatisthisthing',
+    name: 'tipofmytongue',
     subscribers: 2_600_000,
     createdYear: 2010,
     iconUrl: svgIcon(
@@ -347,7 +347,7 @@ export const FIXTURES: readonly FixtureSub[] = [
     ],
   },
   {
-    name: 'bicycletouring',
+    name: 'Ultralight',
     subscribers: 310_000,
     createdYear: 2009,
     iconUrl: null,
@@ -442,12 +442,12 @@ export const FIXTURES: readonly FixtureSub[] = [
   {
     // Too small for the minimum member count, so the picker and the pool
     // check skip it.
-    name: 'Lighthouses',
+    name: 'Lightbulb',
     subscribers: 8_000,
     createdYear: 2012,
     iconUrl: null,
     description:
-      'Photos, history and visits to lighthouses around the world, from Cape Cod to the coast of Brittany.',
+      'Share your bright ideas for inventions, apps and gadgets that should exist, and see if anyone has already built them.',
     posts: [
       filler('t3_mocklh1', 'A foggy morning at the point', 2),
       filler('t3_mocklh2', 'Climbed all 200 steps today', 9),

@@ -155,7 +155,7 @@ describe('GET /puzzle', () => {
     const { deps, get, guess } = await setup();
     deps.setUser(null);
     expect(puzzle((await get('/puzzle')).body).username).toBeNull();
-    expect((await guess('Baking')).status).toBe(401);
+    expect((await guess('AskBaking')).status).toBe(401);
   });
 });
 
@@ -163,14 +163,14 @@ describe('a full round', () => {
   it('wrong, wrong, right: reveals clues one by one, then the answer', async () => {
     const { get, guess } = await setup();
 
-    const first = puzzle((await guess('r/Baking')).body);
+    const first = puzzle((await guess('r/AskBaking')).body);
     expect(first.status).toBe('playing');
     expect(first.clues.map((c) => c.kind)).toEqual(['topComment']);
     expect(first.guessesLeft).toBe(5);
     expect(first.result).toBeNull();
     expect(JSON.stringify(first).toLowerCase()).not.toContain('breadit');
 
-    const second = puzzle((await guess('sourdough')).body);
+    const second = puzzle((await guess('AskCulinary')).body);
     expect(second.clues.map((c) => c.kind)).toEqual(['topComment', 'about']);
     expect(JSON.stringify(second)).not.toContain('"words"');
     expect(JSON.stringify(second).toLowerCase()).not.toContain('breadit');
@@ -194,8 +194,8 @@ describe('a full round', () => {
     ]);
     expect(result.visitUrl).toBe('https://www.reddit.com/r/Breadit/');
     expect(result.wrongGuesses.map((w) => w.name).sort()).toEqual([
-      'Baking',
-      'Sourdough',
+      'AskBaking',
+      'AskCulinary',
     ]);
     expect(result.wrongGuesses[0]?.percent).toBe(100);
     expect(result.players).toBe(1);
@@ -224,7 +224,7 @@ describe('a full round', () => {
       expect(view.result).toBeNull();
       expect(JSON.stringify(view).toLowerCase()).not.toContain('houseplants');
     }
-    const last = puzzle((await guess('whatisthisthing')).body);
+    const last = puzzle((await guess('tipofmytongue')).body);
     expect(last.maxGuesses).toBe(5); // no custom icon, so four clues
     expect(last.status).toBe('failed');
     expect(last.result?.answer).toBe('houseplants');
@@ -240,16 +240,16 @@ describe('a full round', () => {
 
   it('counts wrong guesses across players for the chart', async () => {
     const { deps, guess } = await setup();
-    await guess('Baking');
+    await guess('AskBaking');
     await guess('Breadit');
     deps.setUser({ id: 't2_second', username: 'second_player' });
     await knowsTheGame(deps, 't2_second');
-    await guess('Baking');
+    await guess('AskBaking');
     await guess('Cooking');
     const done = puzzle((await guess('Breadit')).body);
     expect(done.result?.players).toBe(2);
     expect(done.result?.wrongGuesses[0]).toEqual({
-      name: 'Baking',
+      name: 'AskBaking',
       count: 2,
       percent: 100,
     });
@@ -264,7 +264,7 @@ describe('concurrent guesses', () => {
   it('cannot solve for free by sending several guesses at once', async () => {
     const { deps, get, guess } = await setup();
     const sent = await Promise.all(
-      ['Baking', 'Cooking', 'Breadit'].map((name) => guess(name))
+      ['AskBaking', 'Cooking', 'Breadit'].map((name) => guess(name))
     );
     // Only one guess can take the first slot; the rest are turned away.
     expect(sent.filter((r) => r.status === 200)).toHaveLength(1);
@@ -302,7 +302,7 @@ describe('a mid-day repick', () => {
     expect(after.result?.score).toBe(0);
     expect(after.streak.current).toBe(1);
     // The new community's post and clues aren't this player's.
-    expect(after.post.title).toMatch(/removed/);
+    expect(after.post.title).toMatch(/changed after you finished/);
     expect(after.result?.clues).toEqual([]);
 
     // The round stays closed, even to the new answer.
@@ -313,7 +313,7 @@ describe('a mid-day repick', () => {
 
   it('starts a round still in play over on the new community', async () => {
     const { deps, get, guess } = await setup();
-    puzzle((await guess('Baking')).body);
+    puzzle((await guess('AskBaking')).body);
 
     await takeDownSub(deps, 'Breadit');
     const fresh = puzzle((await get('/puzzle')).body);
@@ -369,7 +369,7 @@ describe('the daily rollover', () => {
     // The page was loaded for today's puzzle; midnight in New York passes
     // before the guess is sent.
     deps.setNow(new Date('2026-11-26T05:01:00Z'));
-    const stale = await guess('Baking', TODAY);
+    const stale = await guess('AskBaking', TODAY);
     expect(stale.status).toBe(409);
     const tomorrow = puzzle((await get('/puzzle')).body);
     expect(tomorrow.date).toBe('2026-11-26');
@@ -382,8 +382,8 @@ describe('POST /guess validation', () => {
     const { guess } = await setup();
     expect((await guess('   ')).status).toBe(400);
     expect((await guess('definitely_not_a_sub')).status).toBe(400);
-    puzzle((await guess('Baking')).body);
-    const repeat = puzzle((await guess('r/baking')).body);
+    puzzle((await guess('AskBaking')).body);
+    const repeat = puzzle((await guess('r/askbaking')).body);
     expect(repeat.guesses).toHaveLength(1);
   });
 });
@@ -538,17 +538,17 @@ describe('a first-timer', () => {
   it('is left out of the wrong-guess chart while picking', async () => {
     const t = await setup('Breadit', { newPlayer: true });
     const options = optionsOf(puzzle((await t.get('/puzzle')).body));
-    const picked = options.find((o) => o !== 'Breadit' && o !== 'Baking');
+    const picked = options.find((o) => o !== 'Breadit' && o !== 'AskBaking');
     await t.guess(picked ?? '');
     await t.guess('Breadit');
     t.deps.setUser({ id: 't2_second', username: 'second_player' });
     await knowsTheGame(t.deps, 't2_second');
-    await t.guess('Baking');
+    await t.guess('AskBaking');
     const done = puzzle((await t.guess('Breadit')).body);
     expect(done.result?.players).toBe(2);
     // Only the typed wrong guess, as a share of the one player who typed.
     expect(done.result?.wrongGuesses).toEqual([
-      { name: 'Baking', count: 1, percent: 100 },
+      { name: 'AskBaking', count: 1, percent: 100 },
     ]);
   });
 });
@@ -585,7 +585,7 @@ describe('training wheels', () => {
     const t = await setup('Breadit');
     await knowsTheGame(t.deps, 't2_mockplayer', { losses: '3' });
     expect(puzzle((await t.get('/puzzle')).body).offer).toBe(true);
-    const typed = puzzle((await t.guess('Baking')).body);
+    const typed = puzzle((await t.guess('AskBaking')).body);
     expect(typed.offer).toBe(false);
     expect(typed.choices).toBeNull();
     const late = await t.choices(true);
