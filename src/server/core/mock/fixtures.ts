@@ -520,7 +520,7 @@ export const FIXTURES: readonly FixtureSub[] = [
     // Too small for the minimum member count, so the picker and the pool
     // check skip it.
     name: 'Lighthouses',
-    subscribers: 12_400,
+    subscribers: 8_000,
     createdYear: 2012,
     iconUrl: null,
     rules: [
