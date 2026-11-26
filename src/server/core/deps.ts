@@ -19,6 +19,11 @@ export type Deps = {
   pool: readonly PoolEntry[];
   /** The signed-in player, or null when logged out. */
   user(): Promise<User | null>;
+  /**
+   * The link to the post the request came from, for the share text, or
+   * null when the request didn't come from a post.
+   */
+  postUrl(): string | null;
   /** Whether the current user moderates the community the app runs in. */
   isModerator(): Promise<boolean>;
   /**

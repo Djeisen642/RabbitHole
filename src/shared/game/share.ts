@@ -1,15 +1,20 @@
 /**
- * Spoiler-free share text for a finished round: the puzzle number, how many
- * clues it took and one square per guess. Never names the answer.
+ * Spoiler-free share text for a finished round, Wordle style: the puzzle
+ * number and how it went, a row of squares for the guesses, and a link to
+ * the post. It is built from counts only, never from the answer, the clue
+ * text or the post, so it can't give the puzzle away however it is used.
  */
-import type { RoundStatus } from './rules';
 
 export type ShareInput = {
   puzzleNumber: number;
-  status: RoundStatus;
   /** Whether each guess was right, in order. */
   guesses: readonly boolean[];
   maxGuesses: number;
+  /**
+   * The post the round was played in, or null when there isn't one (a
+   * request made outside a post), in which case the link line is left out.
+   */
+  postUrl: string | null;
 };
 
 const WRONG = '🟫';
@@ -23,14 +28,23 @@ export function solvedWith(clues: number): string {
     : `solved with ${clues} ${clues === 1 ? 'clue' : 'clues'}`;
 }
 
+/** "with no clues", "with 1 clue", "with 3 clues". */
+function withClues(clues: number): string {
+  if (clues === 0) return 'with no clues';
+  return `with ${clues} ${clues === 1 ? 'clue' : 'clues'}`;
+}
+
+/**
+ * The share text of a finished round. A round is solved when its last
+ * guess was right; every wrong guess before it revealed one clue.
+ */
 export function shareText(input: ShareInput): string {
-  const { puzzleNumber, status, guesses, maxGuesses } = input;
-  const headline =
-    status === 'solved'
-      ? solvedWith(guesses.filter((g) => !g).length)
-      : status === 'failed'
-        ? 'stumped this time'
-        : 'still digging';
+  const { puzzleNumber, guesses, maxGuesses, postUrl } = input;
+  const solved = guesses.at(-1) === true;
+  const clues = guesses.filter((g) => !g).length;
+  const headline = solved
+    ? `dug it up ${withClues(clues)} 🐇`
+    : 'stayed buried 🕳️';
   const squares = [
     ...guesses.map((g) => (g ? RIGHT : WRONG)),
     ...Array.from(
@@ -38,5 +52,17 @@ export function shareText(input: ShareInput): string {
       () => UNUSED
     ),
   ].join('');
-  return `r/abbitHole #${puzzleNumber}: ${headline}\n${squares}`;
+  const lines = [`r/abbitHole #${puzzleNumber}: ${headline}`, squares];
+  if (postUrl !== null) lines.push(postUrl);
+  return lines.join('\n');
+}
+
+/**
+ * The link to a post, from its subreddit and its id with or without the
+ * `t3_` prefix. Reddit's permalinks use the bare id; the title slug is
+ * optional, so it is left off.
+ */
+export function postLink(subreddit: string, postId: string): string {
+  const id = postId.startsWith('t3_') ? postId.slice(3) : postId;
+  return `https://www.reddit.com/r/${subreddit}/comments/${id}/`;
 }

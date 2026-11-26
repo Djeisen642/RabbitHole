@@ -631,8 +631,11 @@ export function puzzleView(args: {
   day: number;
   username: string | null;
   chart: { bars: WrongGuessBar[]; players: number } | null;
+  /** The post the round is played in, for the share text's link. */
+  postUrl: string | null;
 }): PuzzleResponse {
-  const { puzzle, candidate, player, streak, day, username, chart } = args;
+  const { puzzle, candidate, player, streak, day, username, chart, postUrl } =
+    args;
   const { round } = player;
   // A finished round keeps the answer it was played against. If the day
   // has since moved to another community, today's post and clues aren't
@@ -660,9 +663,9 @@ export function puzzleView(args: {
           visitUrl: `https://www.reddit.com/r/${round.answer}/`,
           shareText: shareText({
             puzzleNumber: number,
-            status: round.status,
             guesses: guesses.map((g) => g.correct),
             maxGuesses: maxGuesses(round),
+            postUrl,
           }),
         }
       : null;

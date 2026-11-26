@@ -29,6 +29,18 @@ New players pick from a list instead of typing: 5 communities on your first roun
 - Time doesn't count, and there is no tiebreak: players with the same score share a rank. Unsolved rounds rank last.
 - Solving on consecutive days builds your streak. Missing a day or failing a round resets it.
 
+### Sharing your result
+
+When a round ends, "Copy result" copies a short line you can paste in the post's comments or anywhere else, like this:
+
+```
+r/abbitHole #12: dug it up with 2 clues 🐇
+🟫🟫🟧⬜⬜⬜
+https://www.reddit.com/r/abbitHole/comments/...
+```
+
+A lost round reads "stayed buried 🕳️" instead. The squares are your guesses in order (brown for a wrong guess, orange for the right one, white for guesses you didn't need), and the link goes to the puzzle post. It never includes the answer, a clue or the post's title, so it spoils nothing. If your browser won't let the game copy, the text appears so you can select and copy it yourself. The game doesn't post or send anything for you.
+
 Everyone gets the same puzzle each day, a round takes under two minutes, and a new one drops at midnight Eastern.
 
 ## Why

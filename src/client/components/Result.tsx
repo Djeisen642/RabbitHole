@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { RoundResult } from '../../shared/api';
+import { copyText } from '../lib/clipboard';
 import { onReddit, toast, visit } from '../lib/platform';
 
 /** End of round: the answer, the score and what others guessed. */
@@ -59,28 +60,25 @@ export function Result({
  * share text only appears when copying fails, so it can be selected by hand.
  */
 export function ResultActions({ result }: { result: RoundResult }) {
-  const [copied, setCopied] = useState(false);
-  const [manual, setManual] = useState(false);
+  const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
 
-  async function copy(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(result.shareText);
-      setCopied(true);
-      toast('Copied. Paste it in the comments!');
-    } catch {
-      setCopied(false);
-      setManual(true);
-      toast('Select the text to copy it.');
+  async function copyResult(): Promise<void> {
+    if (await copyText(result.shareText)) {
+      setCopy('copied');
+      toast('Copied. Paste it in the comments.');
+    } else {
+      setCopy('failed');
+      toast('Couldn’t copy. Select the text to copy it.');
     }
   }
 
   return (
     <div className="rh-result-actions">
-      {manual ? (
+      {copy === 'failed' ? (
         <textarea
           className="rh-share"
           readOnly
-          rows={2}
+          rows={4}
           value={result.shareText}
           aria-label="Your result, without spoilers"
           onFocus={(e) => {
@@ -112,10 +110,14 @@ export function ResultActions({ result }: { result: RoundResult }) {
         type="button"
         className="rh-button quiet"
         onClick={() => {
-          void copy();
+          void copyResult();
         }}
       >
-        {copied ? 'Copied' : 'Copy result'}
+        {copy === 'copied'
+          ? 'Copied'
+          : copy === 'failed'
+            ? 'Couldn’t copy'
+            : 'Copy result'}
       </button>
     </div>
   );
