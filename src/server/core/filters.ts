@@ -12,7 +12,7 @@ import type {
 } from './source';
 
 /** A community needs this many members to be a fair puzzle. */
-export const MIN_SUBSCRIBERS = 50_000;
+export const MIN_SUBSCRIBERS = 10_000;
 /** Text posts a community needs in its month of top posts. */
 export const MIN_TEXT_POSTS = 3;
 /** Readable length for the post card. */
