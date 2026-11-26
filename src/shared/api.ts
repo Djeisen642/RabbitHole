@@ -26,7 +26,7 @@ export type ClueView =
   | { kind: 'stats'; subscribers: number; createdYear: number | null }
   | { kind: 'icon'; url: string };
 
-/** One guess so far. A skipped guess ("I don't know") has no name to show. */
+/** One guess so far. A skipped guess has no name to show. */
 export type GuessView = { name: string; correct: boolean; skipped: boolean };
 
 export type Streak = { current: number; best: number };

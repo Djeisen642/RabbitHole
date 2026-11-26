@@ -32,10 +32,7 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
       >
         <h2 id={titleId}>How to play</h2>
         <p>Here&apos;s a real Reddit post. Which subreddit is it from?</p>
-        <p>
-          Guess wrong, or tap I don&apos;t know, and you get a hint. Fewer
-          hints, better score.
-        </p>
+        <p>Guess wrong and you get a hint. Fewer hints, better score.</p>
         <p>There&apos;s a new puzzle every day.</p>
         <button
           ref={button}

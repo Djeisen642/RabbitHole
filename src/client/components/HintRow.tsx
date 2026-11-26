@@ -1,10 +1,10 @@
 import { guessHint } from '../lib/hint';
 
 /**
- * The line under the guess box or the options: what a miss costs, and an
- * "I don't know" for a player with no idea, so they never have to throw
- * away a guess on a random name to see the next clue. On the last guess it
- * reads "Give up", since a skip then ends the round.
+ * The line under the guess box: what a miss costs, and a Skip for a player
+ * with no idea, so they never have to throw away a guess on a random name
+ * to see the next clue. Options (including the last guess) have no Skip:
+ * the player just picks.
  */
 export function HintRow({
   guessesLeft,
@@ -21,14 +21,16 @@ export function HintRow({
   return (
     <div className="rh-hint-row">
       <p className="rh-hint">{guessHint(guessesLeft, nextClue)}</p>
-      <button
-        type="button"
-        className="rh-link rh-skip"
-        disabled={disabled}
-        onClick={onSkip}
-      >
-        {last ? 'Give up' : 'I don’t know'}
-      </button>
+      {last ? null : (
+        <button
+          type="button"
+          className="rh-link rh-skip"
+          disabled={disabled}
+          onClick={onSkip}
+        >
+          Skip
+        </button>
+      )}
     </div>
   );
 }

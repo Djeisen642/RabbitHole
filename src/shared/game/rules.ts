@@ -83,7 +83,7 @@ export function normalizeSubreddit(input: string): string {
 }
 
 /**
- * The guess an "I don't know" sends. It can't be a community name (those
+ * The guess a Skip sends. It can't be a community name (those
  * are letters, digits and underscores), so it is never right, and unlike a
  * named guess it can be made more than once. It costs a guess and shows the
  * next clue like any miss.

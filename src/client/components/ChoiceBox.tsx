@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { GuessView } from '../../shared/api';
-import { SKIP_GUESS, normalizeSubreddit } from '../../shared/game/rules';
-import { HintRow } from './HintRow';
+import { normalizeSubreddit } from '../../shared/game/rules';
+import { guessHint } from '../lib/hint';
 
 /**
  * Names longer than this get smaller text, so most fit a phone-width
@@ -73,14 +73,7 @@ export function ChoiceBox({
           );
         })}
       </div>
-      <HintRow
-        guessesLeft={guessesLeft}
-        nextClue={nextClue}
-        disabled={disabled}
-        onSkip={() => {
-          void onGuess(SKIP_GUESS);
-        }}
-      />
+      <p className="rh-hint">{guessHint(guessesLeft, nextClue)}</p>
     </div>
   );
 }
