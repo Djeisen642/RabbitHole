@@ -26,7 +26,9 @@ export type PoolCategory =
   | 'nature'
   | 'outdoors'
   | 'places'
-  | 'science';
+  | 'science'
+  | 'tech'
+  | 'work';
 
 export type PoolEntry = {
   name: string;

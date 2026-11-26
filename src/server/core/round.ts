@@ -607,10 +607,13 @@ export async function wrongGuessChart(
   return { bars, players };
 }
 
-/** Stands in for a post that was taken down after the player's round. */
+/**
+ * Stands in for the post of a round that ended before the day's puzzle
+ * changed (a takedown or a moderator's repick).
+ */
 function removedPost(date: string): PostCard {
   return {
-    title: 'This round’s post was removed from Reddit.',
+    title: 'Today’s puzzle changed after you finished it.',
     body: '',
     score: 0,
     comments: 0,

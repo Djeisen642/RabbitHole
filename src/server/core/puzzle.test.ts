@@ -83,7 +83,7 @@ describe('checkSub against the mock source', () => {
   });
 
   it('fails a sub under the member minimum', async () => {
-    const check = await checkSub(deps.source, entry('Lighthouses'));
+    const check = await checkSub(deps.source, entry('Lightbulb'));
     expect(check.ok).toBe(false);
     expect(check.problem).toMatch(/members/);
   });
@@ -195,7 +195,7 @@ describe('pickPuzzle', () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
     deps.pool = [
       { name: 'NoSuchSubHere', aliases: [], category: 'hobby' },
-      entry('Lighthouses'),
+      entry('Lightbulb'),
       entry('castiron'),
     ];
     const picked = await pickPuzzle(deps, '2026-12-03');
@@ -212,7 +212,7 @@ describe('pickPuzzle', () => {
       expect(seen.has(p.answer)).toBe(false);
       seen.add(p.answer);
     }
-    // Lighthouses is too small, so one fixture sub never gets picked.
+    // Lightbulb is too small, so one fixture sub never gets picked.
     expect(seen.size).toBe(MOCK_POOL.length - 1);
   });
 
@@ -437,7 +437,7 @@ describe('pool check', () => {
     const report = await readPoolCheck(deps, '2026-11-25');
     expect(report.done).toBe(true);
     expect(report.results).toHaveLength(MOCK_POOL.length);
-    expect(report.results[0]).toMatchObject({ name: 'Lighthouses', ok: false });
+    expect(report.results[0]).toMatchObject({ name: 'Lightbulb', ok: false });
     expect(report.results.filter((r) => r.ok)).toHaveLength(
       MOCK_POOL.length - 1
     );
