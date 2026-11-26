@@ -1,4 +1,5 @@
 import type {
+  ChoicesRequest,
   ErrorResponse,
   GuessRequest,
   PuzzleResponse,
@@ -36,6 +37,19 @@ export async function sendGuess(
 ): Promise<PuzzleResponse> {
   return read<PuzzleResponse>(
     await fetch('/api/guess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    })
+  );
+}
+
+/** Answer the training-wheels offer ("Want some options?"). */
+export async function sendChoices(
+  request: ChoicesRequest
+): Promise<PuzzleResponse> {
+  return read<PuzzleResponse>(
+    await fetch('/api/choices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),

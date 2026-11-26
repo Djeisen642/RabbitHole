@@ -275,6 +275,22 @@ async function recentlyUsed(
 }
 
 /**
+ * Normalized names of the subs picked for a date or any later one: the
+ * date's own answer (and any it had before a mid-day repick) and tomorrow's,
+ * which the nightly job picks a day ahead.
+ */
+export async function answersFrom(
+  deps: Deps,
+  date: PuzzleDate
+): Promise<Set<string>> {
+  const day = dayNumber(date);
+  const used = await deps.store.zRange(USED_KEY, day, day + REUSE_DAYS, {
+    by: 'score',
+  });
+  return new Set(used.map((u) => u.member));
+}
+
+/**
  * Choose and store the puzzle for a date. Tries subs in pickOrder, logging
  * and skipping any that fail a check, so a dead or wrong pool entry can't
  * break a day. Returns null if no sub worked within MAX_SUB_ATTEMPTS.

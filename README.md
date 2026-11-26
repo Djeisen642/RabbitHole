@@ -16,9 +16,16 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
    5. The community icon (only when the community has a custom icon)
 4. You get one guess on the post alone, then one after each clue: six guesses, or five when there's no icon clue. Solve it and you can jump straight to the community to join it.
 
+The first time you open the game, a short "How to play" card explains this; the "?" next to the name brings it back any time.
+
+### New players and training wheels
+
+New players pick from a list instead of typing: 5 communities on your first round, 10 on your second and third, then you type. The first round you type shows a short line on how typing works. If you lose 3 rounds in a row, the next round asks "Missed the last few? Want to pick from a list?" before your first guess. Say yes and you get 10 options, and keep getting them until you win 2 rounds that way. Picking works exactly like typing: a wrong pick uses a guess and shows the next clue, and scoring is the same. Everyone with options on a given day sees the same ones, and they never include another day's answer.
+
 ### Scoring
 
 - Your score is the number of clues you needed. Solving on the post alone scores 0, the best possible.
+- The "What others guessed" chart after a round only counts typed guesses, since picks from a short list would skew it.
 - Time doesn't count, and there is no tiebreak: players with the same score share a rank. Unsolved rounds rank last.
 - Solving on consecutive days builds your streak. Missing a day or failing a round resets it.
 
@@ -36,7 +43,7 @@ Posts and top comments that are deleted or removed on Reddit are dropped from th
 
 ### What is kept
 
-Each player's round and the day's scores are kept for 30 days, then deleted. Streaks are kept, since they run across days. Puzzles and pool check results are deleted a few days after their date.
+Each player's round and the day's scores are kept for 30 days, then deleted, and so is the small record of how many rounds they've finished and lost in a row (which decides whether they get options). Streaks are kept, since they run across days. Puzzles and pool check results are deleted a few days after their date.
 
 ## Setup
 
@@ -78,7 +85,8 @@ This builds the client, then starts a small local server at http://127.0.0.1:517
 Handy extras while it runs:
 
 - `curl -X POST 127.0.0.1:5174/mock/reset` clears your round and picks the puzzles again.
-- `curl -X POST "127.0.0.1:5174/mock/user?name=alice"` switches to another fake player, so the wrong-guess chart has more than one person in it.
+- `curl -X POST "127.0.0.1:5174/mock/user?name=alice"` switches to another fake player, so the wrong-guess chart has more than one person in it. A name you haven't used yet is a brand-new player, who gets the how-to-play card and options.
+- `curl -X POST 127.0.0.1:5174/mock/next-day` moves the mock clock to tomorrow and picks its puzzle, so you can play a player through several rounds.
 - `curl -X POST 127.0.0.1:5174/mock/check-pool`, then `curl 127.0.0.1:5174/api/pool-check`, runs the moderator pool check over the mock communities.
 
 On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE_SOURCE=mock` on the server swaps in the same made-up posts there too; everything else (Redis, the signed-in user) stays real.

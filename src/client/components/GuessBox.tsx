@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, SubmitEvent } from 'react';
 import { normalizeSubreddit } from '../../shared/game/rules';
 import { fetchSuggestions } from '../lib/api';
+import { guessHint } from '../lib/hint';
 
 /**
  * The guess input, docked at the bottom of the screen. Suggests a few
@@ -154,14 +155,7 @@ export function GuessBox({
           </ul>
         ) : null}
       </div>
-      <p className="rh-hint">
-        {guessesLeft === 1 || nextClue === null
-          ? 'Last guess. Make it count.'
-          : `A miss digs up ${lowerFirst(nextClue)}.`}
-      </p>
+      <p className="rh-hint">{guessHint(guessesLeft, nextClue)}</p>
     </form>
   );
 }
-
-const lowerFirst = (text: string): string =>
-  text.charAt(0).toLowerCase() + text.slice(1);
