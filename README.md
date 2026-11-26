@@ -15,6 +15,7 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
    4. The community's top post of all time (its title, with the name masked). Puzzles made before this clue existed, or where no top post passes the checks, show member count and founding year instead
    5. The community icon (only when the community has a custom icon)
 4. You get one guess on the post alone, then one after each clue: six guesses, or five when there's no icon clue. Solve it and you can jump straight to the community to join it.
+5. No idea? Tap "I don't know" under the guess box instead of throwing out a random name. It costs a guess and shows the next clue like a miss, but it isn't added to the "what others guessed" chart. On the last guess it reads "Give up" and ends the round.
 
 The first time you open the game, a short "How to play" card explains this; the "?" next to the name brings it back any time.
 
@@ -39,7 +40,7 @@ r/abbit_hole #12: dug it up with 2 clues 🐇
 https://www.reddit.com/r/abbit_hole/comments/...
 ```
 
-A lost round reads "stayed buried 🕳️" instead. The squares are your guesses in order (brown for a wrong guess, orange for the right one, white for guesses you didn't need), and the link goes to the puzzle post. It never includes the answer, a clue or the post's title, so it spoils nothing. If your browser won't let the game copy, the text appears so you can select and copy it yourself. The game doesn't post or send anything for you.
+A lost round reads "stayed buried 🕳️" instead. The squares are your guesses in order (brown for a wrong guess or an "I don't know", orange for the right one, white for guesses you didn't need), and the link goes to the puzzle post. It never includes the answer, a clue or the post's title, so it spoils nothing. If your browser won't let the game copy, the text appears so you can select and copy it yourself. The game doesn't post or send anything for you.
 
 Everyone gets the same puzzle each day, a round takes under two minutes, and a new one drops at midnight Eastern.
 

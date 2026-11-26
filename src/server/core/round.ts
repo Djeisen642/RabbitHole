@@ -36,9 +36,11 @@ import type {
 } from '../../shared/api';
 import { dayNumber, puzzleNumber } from '../../shared/game/day';
 import {
+  SKIP_GUESS,
   applyGuess,
   cluesRevealed,
   isCorrectGuess,
+  isSkip,
   maxGuesses,
   newRound,
   normalizeSubreddit,
@@ -436,7 +438,9 @@ const TAKEN: Refusal = {
  * Apply a guess for a user. A typed guess must name a community in the full
  * answer pool (the autocomplete only offers those) or the round's own
  * answer, so the wrong-guess chart only ever shows real subs. In a
- * multiple-choice round it must be one of the round's options. Records the
+ * multiple-choice round it must be one of the round's options. A skip
+ * ("I don't know") is allowed in either and counts as a miss that names
+ * nothing, so it stays off the chart. Records the
  * guess, the wrong-guess tally, and on the last guess the score, streak and
  * learner record.
  *
@@ -459,9 +463,11 @@ export async function submitGuess(
   const before = loaded.round;
   if (before.status !== 'playing') return ROUND_OVER;
   const choices = choicesOf(loaded.start, loaded.offerAnswer);
-  const name = choices
-    ? pickedOption(input, choices)
-    : guessName(input, before);
+  const name = isSkip(input)
+    ? SKIP_GUESS
+    : choices
+      ? pickedOption(input, choices)
+      : guessName(input, before);
   if (name === null)
     return {
       ok: false,
@@ -498,7 +504,12 @@ export async function submitGuess(
   // Only typed wrong guesses feed the chart: a pick from a short list says
   // little about what players really thought it was, and every new player
   // picking among the same few options would crowd out the typed guesses.
-  if (typed && !isCorrectGuess(name, round.answer, round.aliases))
+  // A skip names nothing, so it isn't charted either.
+  if (
+    typed &&
+    !isSkip(name) &&
+    !isCorrectGuess(name, round.answer, round.aliases)
+  )
     await deps.store.zIncrBy(wrongKey(date), name, 1);
 
   let learner = loaded.learner;
@@ -656,6 +667,7 @@ export function puzzleView(args: {
   const guesses: GuessView[] = round.guesses.map((name) => ({
     name,
     correct: isCorrectGuess(name, round.answer, round.aliases),
+    skipped: isSkip(name),
   }));
   const shown = visibleStreak(streak, day);
   const streakView: StreakView = { current: shown.current, best: shown.best };

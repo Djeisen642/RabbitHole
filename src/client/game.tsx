@@ -265,14 +265,20 @@ export const App = () => {
               ) : null}
               {puzzle.guesses.length > 0 ? (
                 <ul className="rh-guesses" aria-label="Your guesses">
-                  {puzzle.guesses.map((g) => (
-                    <li key={g.name} className={g.correct ? 'right' : ''}>
-                      r/{g.name}
-                      <span className="rh-sr-only">
-                        {g.correct ? ', right' : ', wrong'}
-                      </span>
-                    </li>
-                  ))}
+                  {puzzle.guesses.map((g, i) =>
+                    g.skipped ? (
+                      <li key={i} className="skipped">
+                        skipped
+                      </li>
+                    ) : (
+                      <li key={i} className={g.correct ? 'right' : ''}>
+                        r/{g.name}
+                        <span className="rh-sr-only">
+                          {g.correct ? ', right' : ', wrong'}
+                        </span>
+                      </li>
+                    )
+                  )}
                 </ul>
               ) : null}
             </>

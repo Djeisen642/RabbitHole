@@ -523,6 +523,23 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.rh-hint-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.rh-hint-row .rh-hint {
+  flex: 1;
+  min-width: 0;
+}
+.rh-skip {
+  flex: none;
+  font-size: 14px;
+}
+.rh-skip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
 .rh-guesses {
   display: flex;
   flex-wrap: wrap;
@@ -539,6 +556,13 @@ body {
   color: var(--bad);
   text-decoration: line-through;
   overflow-wrap: anywhere;
+}
+.rh-guesses li.skipped {
+  border-style: dashed;
+  border-color: var(--muted);
+  color: var(--muted);
+  text-decoration: none;
+  font-style: italic;
 }
 .rh-guesses li.right {
   border-color: var(--good);

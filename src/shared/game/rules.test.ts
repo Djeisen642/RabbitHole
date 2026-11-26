@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SKIP_GUESS,
   applyGuess,
   cluesFor,
   cluesRevealed,
@@ -57,6 +58,24 @@ describe('a round', () => {
     round = applyGuess(round, ' baking ');
     round = applyGuess(round, '   ');
     expect(round.guesses).toHaveLength(1);
+  });
+
+  it('lets a skip repeat, costing a guess and showing a clue each time', () => {
+    let round = newRound('Breadit', { hasCustomIcon: false });
+    round = applyGuess(round, SKIP_GUESS);
+    round = applyGuess(round, SKIP_GUESS);
+    expect(round.guesses).toEqual([SKIP_GUESS, SKIP_GUESS]);
+    expect(cluesRevealed(round)).toBe(2);
+    round = applyGuess(round, 'Breadit');
+    expect(score(round)).toBe(2);
+  });
+
+  it('ends the round when the last guess is a skip', () => {
+    let round = newRound('Breadit', { hasCustomIcon: false });
+    for (let i = 0; i < maxGuesses(round); i++)
+      round = applyGuess(round, SKIP_GUESS);
+    expect(round.status).toBe('failed');
+    expect(score(round)).toBeNull();
   });
 
   it('fails after six wrong guesses when the sub has an icon', () => {

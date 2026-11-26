@@ -15,7 +15,7 @@ import {
 import type { MockDeps } from '../core/mock/mock-deps';
 import { PLAYER_KEEP_DAYS } from '../core/round';
 import { addDays } from '../../shared/game/day';
-import { normalizeSubreddit } from '../../shared/game/rules';
+import { SKIP_GUESS, normalizeSubreddit } from '../../shared/game/rules';
 import { createApi } from './api';
 
 const NOW = new Date('2026-11-25T15:00:00Z');
@@ -236,6 +236,35 @@ describe('a full round', () => {
       99
     );
     expect(puzzle((await get('/puzzle')).body).status).toBe('failed');
+  });
+
+  it('takes an I don’t know as a miss that stays off the chart', async () => {
+    const { guess } = await setup();
+    const first = puzzle((await guess(SKIP_GUESS)).body);
+    expect(first.guesses).toEqual([
+      { name: SKIP_GUESS, correct: false, skipped: true },
+    ]);
+    expect(first.clues.map((c) => c.kind)).toEqual(['topComment']);
+    const second = puzzle((await guess(SKIP_GUESS)).body);
+    expect(second.clues).toHaveLength(2);
+    await guess('AskBaking');
+    const done = puzzle((await guess('Breadit')).body);
+    expect(done.result?.score).toBe(3);
+    expect(done.result?.wrongGuesses).toEqual([
+      { name: 'AskBaking', count: 1, percent: 100 },
+    ]);
+    expect(done.result?.shareText).toContain('🟫🟫🟫🟧');
+  });
+
+  it('gives up on the last guess with an I don’t know', async () => {
+    const { guess } = await setup('houseplants');
+    let view = puzzle((await guess(SKIP_GUESS)).body);
+    while (view.status === 'playing')
+      view = puzzle((await guess(SKIP_GUESS)).body);
+    expect(view.status).toBe('failed');
+    expect(view.guesses).toHaveLength(view.maxGuesses);
+    expect(view.result?.answer).toBe('houseplants');
+    expect(view.result?.wrongGuesses).toEqual([]);
   });
 
   it('counts wrong guesses across players for the chart', async () => {
@@ -479,7 +508,9 @@ describe('a first-timer', () => {
     const wrong = options.find((o) => o !== 'Breadit') ?? '';
     const miss = puzzle((await t.guess(wrong)).body);
     expect(miss.status).toBe('playing');
-    expect(miss.guesses).toEqual([{ name: wrong, correct: false }]);
+    expect(miss.guesses).toEqual([
+      { name: wrong, correct: false, skipped: false },
+    ]);
     expect(miss.clues.map((c) => c.kind)).toEqual(['topComment']);
     expect(miss.guessesLeft).toBe(miss.maxGuesses - 1);
 
@@ -490,9 +521,13 @@ describe('a first-timer', () => {
     expect(refused.status).toBe(400);
     expect(refused.body).toMatchObject({ message: 'Pick one of the options.' });
 
+    // An I don't know works while picking too.
+    const skipped = puzzle((await t.guess(SKIP_GUESS)).body);
+    expect(skipped.guesses.at(-1)).toMatchObject({ skipped: true });
+
     const done = puzzle((await t.guess('Breadit')).body);
     expect(done.status).toBe('solved');
-    expect(done.result?.score).toBe(1);
+    expect(done.result?.score).toBe(2);
     expect(done.firstTime).toBe(false);
   });
 
