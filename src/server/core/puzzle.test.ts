@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { POOL, findEntry } from '../../shared/pool';
 import type { PoolEntry } from '../../shared/pool';
-import { createMockDeps } from './mock/mock-deps';
-import { MOCK_POOL } from './mock/mock-source';
-import { readPoolCheck, runPoolCheckBatch, startPoolCheck } from './pool-check';
+import { MOCK_SALT, createMockDeps } from './mock/mock-deps';
+import { MOCK_POOL, createMockSource } from './mock/mock-source';
+import {
+  POOL_CHECK_STALE_MS,
+  readPoolCheck,
+  runPoolCheckBatch,
+  startPoolCheck,
+} from './pool-check';
 import { addDays } from '../../shared/game/day';
 import {
   LIVE_CHECK_MS,
+  PUZZLE_KEEP_DAYS,
   REUSE_DAYS,
   buildPuzzle,
   checkSub,
@@ -14,6 +20,8 @@ import {
   parseStoredPuzzle,
   pickOrder,
   pickPuzzle,
+  pickSalt,
+  randomSalt,
   runDailyPick,
   savePuzzle,
   servePuzzle,
@@ -28,16 +36,27 @@ const entry = (name: string): PoolEntry => {
 
 describe('pickOrder', () => {
   it('is the same for the same date and differs between dates', () => {
-    const a = pickOrder(POOL, '2026-12-01', new Set()).map((e) => e.name);
-    const b = pickOrder(POOL, '2026-12-01', new Set()).map((e) => e.name);
-    const c = pickOrder(POOL, '2026-12-02', new Set()).map((e) => e.name);
-    expect(a).toEqual(b);
-    expect(a).not.toEqual(c);
+    const order = (date: string) =>
+      pickOrder(POOL, date, new Set(), MOCK_SALT).map((e) => e.name);
+    const a = order('2026-12-01');
+    expect(a).toEqual(order('2026-12-01'));
+    expect(a).not.toEqual(order('2026-12-02'));
     expect(a).toHaveLength(POOL.length);
   });
 
+  it('depends on the secret salt, not just the date', () => {
+    const order = (salt: string) =>
+      pickOrder(POOL, '2026-12-01', new Set(), salt).map((e) => e.name);
+    expect(order('salt-a')).not.toEqual(order('salt-b'));
+  });
+
   it('leaves out recently used subs', () => {
-    const order = pickOrder(POOL, '2026-12-01', new Set(['breadit', 'canada']));
+    const order = pickOrder(
+      POOL,
+      '2026-12-01',
+      new Set(['breadit', 'canada']),
+      MOCK_SALT
+    );
     expect(order.map((e) => e.name)).not.toContain('Breadit');
     expect(order.map((e) => e.name)).not.toContain('canada');
   });
@@ -101,6 +120,37 @@ describe('buildPuzzle', () => {
     expect(p.jargon.length).toBeGreaterThanOrEqual(3);
     expect(p.jargon).toContain('crumb');
     expect(p.stats).toEqual({ subscribers: 1_240_000, createdYear: 2011 });
+  });
+
+  it('takes no jargon from NSFW, spoiler or removed post titles', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const real = createMockSource();
+    deps.source.topPosts = async (sub, timeframe, limit) => {
+      const posts = await real.topPosts(sub, timeframe, limit);
+      const base = posts[0];
+      if (!base) return posts;
+      // Each hidden word appears twice, so it would rank as jargon.
+      const extra = (id: string, title: string, over: object) => ({
+        ...base,
+        id,
+        title,
+        ...over,
+      });
+      return [
+        ...posts,
+        extra('t3_x1', 'Zzlewdword zzlewdword again', { nsfw: true }),
+        extra('t3_x2', 'Zzlewdword zzlewdword more', { nsfw: true }),
+        extra('t3_x3', 'Zzspoilerword reveal', { spoiler: true }),
+        extra('t3_x4', 'Zzspoilerword reveal', { spoiler: true }),
+        extra('t3_x5', 'Zzremovedword gone', { removed: true }),
+        extra('t3_x6', 'Zzremovedword gone', { removed: true }),
+      ];
+    };
+    const built = await buildPuzzle(deps.source, entry('Breadit'));
+    if (!('puzzle' in built)) throw new Error(built.problem);
+    const words = built.puzzle.jargon.join(' ');
+    expect(words).not.toMatch(/zzlewdword|zzspoilerword|zzremovedword/);
+    expect(built.puzzle.jargon.length).toBeGreaterThanOrEqual(3);
   });
 
   it('marks a sub without a custom icon', async () => {
@@ -187,7 +237,67 @@ describe('runDailyPick and servePuzzle', () => {
     expect((await servePuzzle(deps, '2026-11-25'))?.candidate.postId).toBe(
       't3_mockbr2'
     );
-    expect((await loadPuzzle(deps, '2026-11-25'))?.active).toBe(1);
+    // The gone post is dropped from Redis, not just skipped.
+    const stored = await loadPuzzle(deps, '2026-11-25');
+    expect(stored?.active).toBe(0);
+    expect(stored?.puzzle.candidates.map((c) => c.postId)).toEqual([
+      't3_mockbr2',
+    ]);
+    const raw = await deps.store.hGet('puzzle:2026-11-25', 'data');
+    expect(raw).not.toContain('t3_mockbr1');
+  });
+
+  it('falls back the same way when the top comment is deleted', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    deps.pool = [entry('Breadit')];
+    await runDailyPick(deps, '2026-11-25');
+    const before = await servePuzzle(deps, '2026-11-25');
+    const commentId = before?.candidate.commentId;
+    const commentBody = before?.candidate.topComment.body;
+    if (!commentId || !commentBody) throw new Error('no comment id stored');
+
+    deps.source.removeComment(commentId);
+    deps.setNow(new Date(NOW.getTime() + LIVE_CHECK_MS));
+    const after = await servePuzzle(deps, '2026-11-25');
+    expect(after?.candidate.postId).toBe('t3_mockbr2');
+    const raw = await deps.store.hGet('puzzle:2026-11-25', 'data');
+    expect(raw).not.toContain(commentId);
+    expect(raw).not.toContain(commentBody);
+  });
+
+  it('makes one liveness read when many players arrive at once', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runDailyPick(deps, '2026-11-25');
+    deps.setNow(new Date(NOW.getTime() + LIVE_CHECK_MS));
+    const served = await Promise.all(
+      Array.from({ length: 50 }, () => servePuzzle(deps, '2026-11-25'))
+    );
+    expect(served.every((s) => s !== null)).toBe(true);
+    expect(deps.source.calls.isPostLive).toBe(1);
+    expect(deps.source.calls.isCommentLive).toBe(1);
+  });
+
+  it('runs one on-demand pick for a burst of players, and retries after the lock expires', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const real = createMockSource();
+    let redditDown = true;
+    deps.source.subredditFacts = (name) =>
+      redditDown ? Promise.resolve(null) : real.subredditFacts(name);
+    const first = await Promise.all(
+      Array.from({ length: 20 }, () => servePuzzle(deps, '2026-11-25'))
+    );
+    expect(first.every((s) => s === null)).toBe(true);
+    // One pick ran, trying MAX_SUB_ATTEMPTS subs; the rest saw the lock.
+    expect(deps.logs.filter((l) => l.includes('no sub worked'))).toHaveLength(
+      1
+    );
+    redditDown = false;
+    // A failed pick leaves the lock to expire, then the next request picks.
+    expect(await servePuzzle(deps, '2026-11-25')).toBeNull();
+    deps.setNow(new Date(NOW.getTime() + 121_000));
+    expect((await servePuzzle(deps, '2026-11-25'))?.puzzle.date).toBe(
+      '2026-11-25'
+    );
   });
 
   it('keeps the same community when every stored post is gone', async () => {
@@ -230,6 +340,63 @@ describe('runDailyPick and servePuzzle', () => {
     const served = await servePuzzle(deps, '2026-11-25');
     expect(served?.puzzle.date).toBe('2026-11-25');
   });
+
+  it('expires a puzzle a few days after its date', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runDailyPick(deps, '2026-11-25');
+    const day = 86_400_000;
+    deps.setNow(new Date(NOW.getTime() + PUZZLE_KEEP_DAYS * day));
+    expect(await loadPuzzle(deps, '2026-11-25')).not.toBeNull();
+    deps.setNow(new Date(NOW.getTime() + (PUZZLE_KEEP_DAYS + 1) * day));
+    expect(await loadPuzzle(deps, '2026-11-25')).toBeNull();
+  });
+});
+
+describe('the pick salt', () => {
+  it('is made once, and concurrent first runs agree on it', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    let made = 0;
+    deps.newSalt = () => {
+      made += 1;
+      return `salt-${String(made)}`;
+    };
+    const salts = await Promise.all([
+      pickSalt(deps),
+      pickSalt(deps),
+      pickSalt(deps),
+    ]);
+    expect(new Set(salts).size).toBe(1);
+    expect(await pickSalt(deps)).toBe(salts[0]);
+    expect(await deps.store.get('pick-salt')).toBe(salts[0]);
+  });
+
+  it('is 128 random bits on Reddit', () => {
+    expect(randomSalt()).toMatch(/^[0-9a-f]{32}$/);
+    expect(randomSalt()).not.toBe(randomSalt());
+  });
+});
+
+describe('the first stored pick wins', () => {
+  it('keeps one answer when the nightly and an on-demand pick race', async () => {
+    const nightly = createMockDeps({ now: NOW, quiet: true });
+    // A second request with its own view of the pool shares the store.
+    const onDemand = createMockDeps({ now: NOW, quiet: true });
+    onDemand.store = nightly.store;
+    nightly.pool = [entry('Breadit')];
+    onDemand.pool = [entry('castiron')];
+    const [a, b] = await Promise.all([
+      pickPuzzle(nightly, '2026-11-25'),
+      pickPuzzle(onDemand, '2026-11-25'),
+    ]);
+    expect(a?.answer).toBeDefined();
+    expect(b?.answer).toBe(a?.answer);
+    expect((await loadPuzzle(nightly, '2026-11-25'))?.puzzle.answer).toBe(
+      a?.answer
+    );
+    // The loser's sub isn't marked as used.
+    const loser = a?.answer === 'Breadit' ? 'castiron' : 'breadit';
+    expect(await nightly.store.zScore('used-subs', loser)).toBeUndefined();
+  });
 });
 
 describe('pool check', () => {
@@ -255,10 +422,55 @@ describe('pool check', () => {
     );
   });
 
-  it('starts over when a new check is started', async () => {
+  it('starts over when a new check is started after the last one finished', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    let progress = await runPoolCheckBatch(deps, '2026-11-25', 4);
+    while (!progress.done)
+      progress = await runPoolCheckBatch(deps, '2026-11-25', 4);
+    const restarted = await startPoolCheck(deps, '2026-11-25');
+    expect(restarted.started).toBe(true);
+    expect(restarted.checked).toBe(Math.min(10, MOCK_POOL.length));
+  });
+
+  it('will not start a second check while one is running', async () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
     await runPoolCheckBatch(deps, '2026-11-25', 2);
-    const restarted = await startPoolCheck(deps, '2026-11-25');
-    expect(restarted.checked).toBe(Math.min(10, MOCK_POOL.length));
+    const busy = await startPoolCheck(deps, '2026-11-25');
+    expect(busy).toMatchObject({ started: false, checked: 2 });
+    // Two starts at the same moment: only one runs.
+    const fresh = createMockDeps({ now: NOW, quiet: true });
+    const both = await Promise.all([
+      startPoolCheck(fresh, '2026-11-25'),
+      startPoolCheck(fresh, '2026-11-25'),
+    ]);
+    expect(both.filter((p) => p.started)).toHaveLength(1);
+  });
+
+  it('starts again once a running check has gone quiet', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runPoolCheckBatch(deps, '2026-11-25', 2);
+    deps.setNow(new Date(NOW.getTime() + POOL_CHECK_STALE_MS));
+    expect((await startPoolCheck(deps, '2026-11-25')).started).toBe(true);
+  });
+
+  it('leaves out sample titles of today and tomorrow’s answers', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const picks = await runDailyPick(deps, '2026-11-25');
+    const answers = picks.map((p) => p.answer);
+    let progress = await runPoolCheckBatch(deps, '2026-11-25');
+    while (!progress.done)
+      progress = await runPoolCheckBatch(deps, '2026-11-25');
+    const report = await readPoolCheck(deps, '2026-11-25');
+    for (const r of report.results) {
+      if (answers.includes(r.name)) expect(r.sampleTitles).toEqual([]);
+      else if (r.ok) expect(r.sampleTitles.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('expires a few days after its date', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runPoolCheckBatch(deps, '2026-11-25', 2);
+    deps.setNow(new Date(NOW.getTime() + (PUZZLE_KEEP_DAYS + 1) * 86_400_000));
+    expect((await readPoolCheck(deps, '2026-11-25')).results).toEqual([]);
   });
 });

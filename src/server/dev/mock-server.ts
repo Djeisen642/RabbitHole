@@ -44,7 +44,7 @@ async function seed(): Promise<void> {
 const app = new Hono();
 app.route('/api', createApi(deps));
 app.post('/mock/reset', async (c) => {
-  deps.store = new MemoryStore();
+  deps.store = new MemoryStore(() => deps.now());
   await seed();
   return c.json({ ok: true });
 });
@@ -60,8 +60,10 @@ app.get('/', (c) => c.redirect('/splash.html'));
 app.use('/*', serveStatic({ root: ROOT }));
 
 await seed();
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`r/abbitHole mock mode: http://localhost:${info.port}/`);
+// Loopback only: the mock server has no login and resets on request, so it
+// must not be reachable from the network.
+serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
+  console.log(`r/abbitHole mock mode: http://127.0.0.1:${info.port}/`);
   console.log(
     'Splash: /splash.html  Game: /game.html  Reset: POST /mock/reset'
   );

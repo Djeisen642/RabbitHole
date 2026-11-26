@@ -7,8 +7,10 @@ import { reddit } from '@devvit/web/server';
 import type { Post } from '@devvit/web/server';
 import type { PuzzleSource, SourcePost } from './source';
 
+type T1 = `t1_${string}`;
 type T3 = `t3_${string}`;
 type T5 = `t5_${string}`;
+const isT1 = (id: string): id is T1 => id.startsWith('t1_');
 const isT3 = (id: string): id is T3 => id.startsWith('t3_');
 const isT5 = (id: string): id is T5 => id.startsWith('t5_');
 
@@ -126,6 +128,19 @@ export const devvitSource: PuzzleSource = {
       body !== '[removed]' &&
       body !== '[deleted]' &&
       post.authorName !== '[deleted]'
+    );
+  },
+
+  async isCommentLive(commentId) {
+    if (!isT1(commentId)) return false;
+    const comment = await reddit.getCommentById(commentId);
+    const body = comment.body.trim();
+    return (
+      !comment.removed &&
+      !comment.spam &&
+      body !== '[removed]' &&
+      body !== '[deleted]' &&
+      comment.authorName !== '[deleted]'
     );
   },
 };

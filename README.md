@@ -31,7 +31,13 @@ Reddit has hundreds of thousands of communities and most people only know a hand
 
 ## How content is picked
 
-A scheduled job runs nightly and picks the day's post from a curated list of public, safe-for-work communities. Before using a community it checks that it still exists, isn't NSFW or quarantined, has at least 50,000 members and has enough text posts; a community that fails is skipped for the night. Only text posts are used (no images, links or videos, which could give the answer away in ways a filter can't see), and posts are skipped if they are NSFW, too short or too long to read quickly, or name the community in the title or text. For country communities, posts that read like news or politics are skipped too. A community isn't used again for 60 days. Moderators of the r/abbitHole community can pick today's puzzle on demand and check the whole list from the subreddit menu. Posts that are deleted or removed on Reddit are dropped from the game, and the day falls back to another post from the same community.
+A scheduled job runs nightly and picks the day's post from a curated list of public, safe-for-work communities. Before using a community it checks that it still exists, isn't NSFW or quarantined, has at least 50,000 members and has enough text posts; a community that fails is skipped for the night. Only text posts are used (no images, links or videos, which could give the answer away in ways a filter can't see), and posts are skipped if they are NSFW, too short or too long to read quickly, or name the community in the title or text. For country communities, posts that read like news or politics are skipped too. The jargon cloud never draws on NSFW, spoiler or removed posts. A community isn't used again for 60 days. The order communities are tried in is shuffled with a secret made when the app is installed, so the list of possible answers alone doesn't tell anyone tomorrow's. Moderators of the r/abbitHole community can pick today's puzzle on demand and check the whole list from the subreddit menu; one pool check runs at a time, and the check's sample posts leave out today's and tomorrow's answers.
+
+Posts and top comments that are deleted or removed on Reddit are dropped from the game and from its database, and the day falls back to another post from the same community. If that community has nothing usable left, a new one is picked for the rest of the day. A round you already finished keeps its result, and a round still in play starts over on the new puzzle.
+
+### What is kept
+
+Each player's round and the day's scores are kept for 30 days, then deleted. Streaks are kept, since they run across days. Puzzles and pool check results are deleted a few days after their date.
 
 ## Setup
 
@@ -68,13 +74,13 @@ You can play the whole daily loop without Reddit or a Devvit login:
 npm run dev:mock
 ```
 
-This builds the client, then starts a small local server at http://localhost:5174 (set `PORT` to change it). Open `/splash.html` for the feed card or `/game.html` for the game. The server mounts the same API handlers the app uses on Reddit, but with made-up posts and communities from `src/server/core/mock/fixtures.ts`, an in-memory database and a fake player called `mock_player`. Nothing is saved between runs. Re-run the command after changing code.
+This builds the client, then starts a small local server at http://127.0.0.1:5174 (set `PORT` to change it). It only listens on your own machine, not the network. Open `/splash.html` for the feed card or `/game.html` for the game. The server mounts the same API handlers the app uses on Reddit, but with made-up posts and communities from `src/server/core/mock/fixtures.ts`, an in-memory database and a fake player called `mock_player`. Nothing is saved between runs. Re-run the command after changing code.
 
 Handy extras while it runs:
 
-- `curl -X POST localhost:5174/mock/reset` clears your round and picks the puzzles again.
-- `curl -X POST "localhost:5174/mock/user?name=alice"` switches to another fake player, so the wrong-guess chart has more than one person in it.
-- `curl -X POST localhost:5174/mock/check-pool`, then `curl localhost:5174/api/pool-check`, runs the moderator pool check over the mock communities.
+- `curl -X POST 127.0.0.1:5174/mock/reset` clears your round and picks the puzzles again.
+- `curl -X POST "127.0.0.1:5174/mock/user?name=alice"` switches to another fake player, so the wrong-guess chart has more than one person in it.
+- `curl -X POST 127.0.0.1:5174/mock/check-pool`, then `curl 127.0.0.1:5174/api/pool-check`, runs the moderator pool check over the mock communities.
 
 On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE_SOURCE=mock` on the server swaps in the same made-up posts there too; everything else (Redis, the signed-in user) stays real.
 
@@ -89,7 +95,7 @@ On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE
 
 - Every change goes on its own branch and lands through a pull request against `main`. Nothing is pushed straight to `main`.
 - GitHub Actions (`.github/workflows/ci.yaml`) runs type check, lint, format check, tests and build on every pull request and every push to `main`.
-- Dependabot (`.github/dependabot.yml`) opens pull requests for npm updates on Monday and Tuesday evenings and for GitHub Actions weekly. Actions are pinned to commit SHAs with the version in a comment.
+- Dependabot (`.github/dependabot.yml`) opens pull requests for npm updates on Monday and Tuesday evenings, once a release is a week old (Devvit packages excepted), and for GitHub Actions weekly. Actions are pinned to commit SHAs with the version in a comment.
 
 ### Layout
 

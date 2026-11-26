@@ -210,6 +210,7 @@ describe('pickTopComment', () => {
       breadit
     );
     expect(picked).toEqual({
+      id: 't1_a',
       body: 'Welcome to r/?????, that crumb is lovely!',
       score: 7,
     });
