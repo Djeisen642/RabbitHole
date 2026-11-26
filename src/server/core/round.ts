@@ -110,6 +110,8 @@ export type RoundStart = {
   answer: string;
   aliases: string[];
   hasCustomIcon: boolean;
+  /** False for rounds started before the top-post clue: they keep stats. */
+  hasTopPost: boolean;
   from: number;
   options: string[];
   offer: boolean;
@@ -131,6 +133,7 @@ async function startFor(
     answer: puzzle.answer,
     aliases: [...(findEntry(puzzle.answer, POOL)?.aliases ?? [])],
     hasCustomIcon: puzzle.hasCustomIcon,
+    hasTopPost: puzzle.topPost !== null,
     from,
     options:
       count > 0
@@ -157,7 +160,8 @@ function parseStart(json: string | undefined): RoundStart | null {
   // Rounds started before choices existed have neither field: typed.
   const options = asStringArray(s?.options) ?? [];
   const offer = asBoolean(s?.offer) ?? false;
-  return { answer, aliases, hasCustomIcon, from, options, offer };
+  const hasTopPost = asBoolean(s?.hasTopPost) ?? false;
+  return { answer, aliases, hasCustomIcon, hasTopPost, from, options, offer };
 }
 
 const sameSub = (a: string, b: string): boolean =>
@@ -281,6 +285,7 @@ async function readRound(
     let round = newRound(start.answer, {
       aliases: start.aliases,
       hasCustomIcon: start.hasCustomIcon,
+      hasTopPost: start.hasTopPost,
     });
     for (let i = start.from; i < nextSlot; i += 1)
       round = applyGuess(round, fields[String(i)] ?? '');
@@ -366,6 +371,7 @@ function freshRound(puzzle: StoredPuzzle): PlayerRound {
   const round = newRound(puzzle.answer, {
     aliases: findEntry(puzzle.answer, POOL)?.aliases ?? [],
     hasCustomIcon: puzzle.hasCustomIcon,
+    hasTopPost: puzzle.topPost !== null,
   });
   return { round, choices: null, offer: false, learner: NEW_LEARNER };
 }

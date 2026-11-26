@@ -5,15 +5,30 @@
  * guess on the post alone, and every wrong guess reveals the next clue, so a
  * round allows one more guess than it has clues. The icon clue is only used
  * when the subreddit has a custom icon, so a round has four or five clues.
+ * The fourth clue is the community's top post of all time; puzzles made
+ * before that clue existed (or with no usable top post) use its member
+ * count and founding year instead.
  * Score is the number of clues the player needed; time never counts and ties
  * share a rank.
  */
 
-export type ClueKind = 'topComment' | 'about' | 'jargon' | 'stats' | 'icon';
+export type ClueKind =
+  'topComment' | 'about' | 'jargon' | 'topPost' | 'stats' | 'icon';
 
-/** The clues a round uses, in reveal order. The icon clue needs a custom icon. */
-export function cluesFor(hasCustomIcon: boolean): ClueKind[] {
-  return CLUE_ORDER.filter((kind) => kind !== 'icon' || hasCustomIcon);
+/**
+ * The clues a round uses, in reveal order. The icon clue needs a custom
+ * icon; the top-post clue replaces the stats clue when the puzzle has one.
+ */
+export function cluesFor(
+  hasCustomIcon: boolean,
+  hasTopPost = false
+): ClueKind[] {
+  return CLUE_ORDER.filter(
+    (kind) =>
+      (kind !== 'icon' || hasCustomIcon) &&
+      (kind !== 'topPost' || hasTopPost) &&
+      (kind !== 'stats' || !hasTopPost)
+  );
 }
 
 /** Order in which clues are revealed, least to most obvious. */
@@ -21,6 +36,7 @@ export const CLUE_ORDER: readonly ClueKind[] = [
   'topComment',
   'about',
   'jargon',
+  'topPost',
   'stats',
   'icon',
 ];
@@ -37,12 +53,16 @@ export type Round = {
 
 export function newRound(
   answer: string,
-  options: { aliases?: readonly string[]; hasCustomIcon: boolean }
+  options: {
+    aliases?: readonly string[];
+    hasCustomIcon: boolean;
+    hasTopPost?: boolean;
+  }
 ): Round {
   return {
     answer,
     aliases: options.aliases ?? [],
-    clues: cluesFor(options.hasCustomIcon),
+    clues: cluesFor(options.hasCustomIcon, options.hasTopPost ?? false),
     guesses: [],
     status: 'playing',
   };

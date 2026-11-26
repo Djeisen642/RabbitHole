@@ -13,7 +13,7 @@ Rabbit Hole, written r/abbit_hole. Each day, guess which subreddit a real post c
   1. An insider-y top comment
   2. One of the sub's rules (the "no posting your own cat" kind)
   3. A word cloud of its jargon
-  4. Member count and founding year
+  4. The all-time top post title (was member count and founding year, which pointed nowhere in an open answer space)
   5. Its icon, blurred, only when the sub has a custom icon (otherwise the round has four clues)
 - One guess on the post alone, then one after each clue.
 - Guesses autocomplete against a hidden pool of possible answers; the pool is never shown as a list.

@@ -46,7 +46,7 @@ export type SubredditFacts = {
   description: string | null;
 };
 
-export type Timeframe = 'week' | 'month';
+export type Timeframe = 'week' | 'month' | 'all';
 
 export type PuzzleSource = {
   /** Top posts of a community over a time range, best first. */

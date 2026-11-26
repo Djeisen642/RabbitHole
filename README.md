@@ -12,7 +12,7 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
    1. A top comment from the original thread
    2. How the community describes itself (its sidebar, with the name hidden)
    3. A cloud of the community's in-jokes and jargon
-   4. Member count and the year it was founded
+   4. The community's top post of all time (its title, with the name masked). Puzzles made before this clue existed, or where no top post passes the checks, show member count and founding year instead
    5. The community icon (only when the community has a custom icon)
 4. You get one guess on the post alone, then one after each clue: six guesses, or five when there's no icon clue. Solve it and you can jump straight to the community to join it.
 

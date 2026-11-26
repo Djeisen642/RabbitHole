@@ -73,7 +73,8 @@ export function createMockSource(
     },
     topPosts(subreddit, timeframe, limit) {
       calls.topPosts += 1;
-      const maxDays = timeframe === 'week' ? 7 : 31;
+      const maxDays =
+        timeframe === 'week' ? 7 : timeframe === 'month' ? 31 : Infinity;
       const posts = (sub(subreddit)?.posts ?? [])
         .filter((p) => p.daysAgo <= maxDays && !removed.has(p.id))
         .map(toSourcePost)

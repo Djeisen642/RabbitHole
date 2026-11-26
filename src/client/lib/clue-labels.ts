@@ -5,6 +5,7 @@ export const CLUE_LABELS: Record<ClueKind, string> = {
   topComment: 'The top comment',
   about: 'How it describes itself',
   jargon: 'Words the regulars use',
+  topPost: 'Its biggest post ever',
   stats: 'Members and birthday',
   icon: 'Its icon',
 };

@@ -16,6 +16,7 @@ import {
   REUSE_DAYS,
   buildPuzzle,
   checkSub,
+  clueView,
   loadPuzzle,
   parseStoredPuzzle,
   pickOrder,
@@ -123,6 +124,48 @@ describe('buildPuzzle', () => {
     expect(p.jargon.length).toBeGreaterThanOrEqual(3);
     expect(p.jargon).toContain('crumb');
     expect(p.stats).toEqual({ subscribers: 1_240_000, createdYear: 2011 });
+  });
+
+  it("takes the top-post clue from another post than today's", async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const built = await buildPuzzle(deps.source, entry('Breadit'));
+    if (!('puzzle' in built)) throw new Error(built.problem);
+    const top = built.puzzle.topPost;
+    expect(top).not.toBeNull();
+    expect(top?.title).not.toMatch(/breadit/i);
+    const shown = built.puzzle.candidates.map((c) => c.post.title);
+    expect(shown).not.toContain(top?.title);
+  });
+
+  it('still builds, with no top post, when the all-time read fails', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const real = deps.source.topPosts.bind(deps.source);
+    deps.source.topPosts = (sub, timeframe, limit) =>
+      timeframe === 'all'
+        ? Promise.reject(new Error('boom'))
+        : real(sub, timeframe, limit);
+    const built = await buildPuzzle(deps.source, entry('Breadit'));
+    if (!('puzzle' in built)) throw new Error(built.problem);
+    expect(built.puzzle.topPost).toBeNull();
+  });
+
+  it('reads puzzles stored before the top-post clue, showing stats', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const built = await buildPuzzle(deps.source, entry('Breadit'));
+    if (!('puzzle' in built)) throw new Error(built.problem);
+    const { topPost: _dropped, ...old } = built.puzzle;
+    const parsed = parseStoredPuzzle(
+      JSON.stringify({ date: '2026-11-25', ...old })
+    );
+    expect(parsed?.topPost).toBeNull();
+    const candidate = parsed?.candidates[0];
+    if (!parsed || !candidate) throw new Error('no puzzle');
+    expect(clueView('topPost', parsed, candidate).kind).toBe('stats');
+    expect(clueView('stats', parsed, candidate)).toEqual({
+      kind: 'stats',
+      subscribers: 1_240_000,
+      createdYear: 2011,
+    });
   });
 
   it('leaves the founding year out when Reddit gives no date', async () => {

@@ -16,6 +16,7 @@ import {
   pickAbout,
   plainDescription,
   pickTopComment,
+  pickTopPost,
   postProblem,
   subredditProblem,
 } from './filters';
@@ -433,5 +434,52 @@ describe('pickTopComment length cap', () => {
     expect(body.endsWith('…')).toBe(true);
     expect(long.startsWith(body.slice(0, -1))).toBe(true);
     expect(body.slice(0, -1).endsWith(' ')).toBe(false);
+  });
+});
+
+describe('pickTopPost', () => {
+  it('takes the first usable title, image posts included', () => {
+    const top = pickTopPost(
+      [post({ id: 't3_img', isSelf: false, body: '', score: 90_000 })],
+      breadit
+    );
+    expect(top).toEqual({
+      title: 'My third loaf finally has an open crumb',
+      score: 90_000,
+      createdAt: 0,
+    });
+  });
+
+  it("skips today's post, NSFW, spoiler, removed, pinned and meta posts", () => {
+    const top = pickTopPost(
+      [
+        post({ id: 't3_today' }),
+        post({ id: 't3_n', nsfw: true }),
+        post({ id: 't3_s', spoiler: true }),
+        post({ id: 't3_r', removed: true }),
+        post({ id: 't3_p', stickied: true }),
+        post({ id: 't3_m', title: 'Dear mods, please ban AI loaves' }),
+        post({ id: 't3_ok', title: 'Grandma taught me this rye at 91' }),
+      ],
+      breadit,
+      new Set(['t3_today'])
+    );
+    expect(top?.title).toBe('Grandma taught me this rye at 91');
+  });
+
+  it('masks the name, and skips a title that still names it', () => {
+    expect(
+      pickTopPost([post({ title: 'Ten years of Breadit loaves' })], breadit)
+        ?.title
+    ).toBe('Ten years of ????? loaves');
+    expect(
+      pickTopPost([post({ title: 'My #castironcooking haul today' })], castiron)
+    ).toBeNull();
+  });
+
+  it('skips news in news-heavy communities', () => {
+    expect(
+      pickTopPost([post({ title: 'Election results are in tonight' })], canada)
+    ).toBeNull();
   });
 });

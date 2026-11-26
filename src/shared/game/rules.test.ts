@@ -91,6 +91,17 @@ describe('cluesFor', () => {
     ]);
     expect(cluesFor(false)).toEqual(['topComment', 'about', 'jargon', 'stats']);
   });
+
+  it('shows the top post in place of the stats when the puzzle has one', () => {
+    expect(cluesFor(true, true)).toEqual([
+      'topComment',
+      'about',
+      'jargon',
+      'topPost',
+      'icon',
+    ]);
+    expect(cluesFor(false, true)).not.toContain('stats');
+  });
 });
 
 describe('rankByScore', () => {

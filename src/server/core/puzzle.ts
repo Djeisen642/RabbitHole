@@ -24,6 +24,7 @@ import {
   jargonWords,
   pickAbout,
   pickTopComment,
+  pickTopPost,
   postProblem,
   subredditProblem,
 } from './filters';
@@ -46,6 +47,8 @@ export const MAX_SUB_ATTEMPTS = 12;
 export const MAX_CANDIDATES = 3;
 /** Top posts read per sub. */
 export const TOP_POST_LIMIT = 50;
+/** All-time top posts read for the top-post clue. */
+export const ALL_TIME_POST_LIMIT = 25;
 /** Comment fetches per sub before moving on. */
 export const MAX_COMMENT_FETCHES = 8;
 /** How long a liveness check of today's post is trusted. */
@@ -79,6 +82,12 @@ export type StoredPuzzle = {
   jargon: string[];
   /** createdYear is null when Reddit gave no readable founding date. */
   stats: { subscribers: number; createdYear: number | null };
+  /**
+   * The community's top post of all time (title masked), shown as the
+   * fourth clue. Null when none was usable, or for puzzles made before
+   * this clue existed; those rounds show the stats clue instead.
+   */
+  topPost: { title: string; score: number; createdAt: number } | null;
   iconUrl: string | null;
 };
 
@@ -260,6 +269,17 @@ export async function buildPuzzle(
   );
   if (jargon.length < 3) return { problem: 'not enough jargon' };
 
+  // The all-time top post is a nice-to-have: if it can't be read or none
+  // passes, the round falls back to the stats clue instead of losing the sub.
+  const allTime = await source
+    .topPosts(entry.name, 'all', ALL_TIME_POST_LIMIT)
+    .catch(() => []);
+  const topPost = pickTopPost(
+    allTime,
+    entry,
+    new Set(candidates.map((c) => c.postId))
+  );
+
   return {
     puzzle: {
       answer: entry.name,
@@ -274,6 +294,7 @@ export async function buildPuzzle(
             ? null
             : new Date(facts.createdAt).getUTCFullYear(),
       },
+      topPost,
       iconUrl: facts.iconUrl,
     },
   };
@@ -465,6 +486,15 @@ export function parseStoredPuzzle(json: string): StoredPuzzle | null {
   const unknownYear = stats?.createdYear === null;
   const createdYear = unknownYear ? null : asNumber(stats?.createdYear);
   const iconUrl = p?.iconUrl === null ? null : asString(p?.iconUrl);
+  // Missing on puzzles stored before the top-post clue; those use stats.
+  const rawTop = asRecord(p?.topPost);
+  const topTitle = asString(rawTop?.title);
+  const topScore = asNumber(rawTop?.score);
+  const topCreated = asNumber(rawTop?.createdAt);
+  const topPost =
+    topTitle === null || topScore === null || topCreated === null
+      ? null
+      : { title: topTitle, score: topScore, createdAt: topCreated };
   const rawCandidates = Array.isArray(p?.candidates) ? p.candidates : [];
   const candidates = rawCandidates
     .map(parseCandidate)
@@ -489,6 +519,7 @@ export function parseStoredPuzzle(json: string): StoredPuzzle | null {
     about,
     jargon,
     stats: { subscribers, createdYear },
+    topPost,
     iconUrl: iconUrl ?? null,
   };
 }
@@ -695,6 +726,10 @@ export function clueView(
       return { kind, text: puzzle.about };
     case 'jargon':
       return { kind, words: puzzle.jargon };
+    case 'topPost':
+      return puzzle.topPost
+        ? { kind, ...puzzle.topPost }
+        : { kind: 'stats', ...puzzle.stats };
     case 'stats':
       return { kind, ...puzzle.stats };
     case 'icon':

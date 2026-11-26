@@ -256,6 +256,34 @@ export function pickTopComment(
   return null;
 }
 
+/**
+ * The community's best top-of-all-time post for the fourth clue: its title
+ * only, so image and link posts count too. Skips NSFW, spoiler, removed,
+ * pinned and meta posts, news in news-heavy subs, and any post in
+ * `exclude` (today's own post). Mentions of the answer are masked, and a
+ * title still naming it after masking is skipped.
+ */
+export function pickTopPost(
+  posts: readonly SourcePost[],
+  entry: PoolEntry,
+  exclude: ReadonlySet<string> = new Set()
+): { title: string; score: number; createdAt: number } | null {
+  for (const post of posts) {
+    const title = post.title.trim();
+    if (exclude.has(post.id)) continue;
+    if (post.nsfw || post.spoiler || post.removed || post.stickied) continue;
+    if (GONE.has(title)) continue;
+    if (title.length < MIN_TITLE_CHARS || title.length > MAX_TITLE_CHARS)
+      continue;
+    if (looksLikeMeta(title, post.flair)) continue;
+    if (entry.newsHeavy && looksLikeNews(title, post.flair)) continue;
+    const masked = maskGiveaways(title, entry);
+    if (containsGiveaway(masked, entry)) continue;
+    return { title: masked, score: post.score, createdAt: post.createdAt };
+  }
+  return null;
+}
+
 const MAX_ABOUT_CHARS = 240;
 const MIN_ABOUT_CHARS = 30;
 

@@ -20,6 +20,8 @@ export type ClueView =
   | { kind: 'topComment'; body: string; score: number }
   | { kind: 'about'; text: string }
   | { kind: 'jargon'; words: string[] }
+  /** The community's top post of all time; createdAt is ms since the epoch. */
+  | { kind: 'topPost'; title: string; score: number; createdAt: number }
   /** createdYear is null when the founding date isn't known. */
   | { kind: 'stats'; subscribers: number; createdYear: number | null }
   | { kind: 'icon'; url: string };

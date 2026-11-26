@@ -137,7 +137,7 @@ describe('GET /puzzle', () => {
       'topComment',
       'about',
       'jargon',
-      'stats',
+      'topPost',
       'icon',
     ]);
     expect(view.maxGuesses).toBe(6);
@@ -189,7 +189,7 @@ describe('a full round', () => {
       'topComment',
       'about',
       'jargon',
-      'stats',
+      'topPost',
       'icon',
     ]);
     expect(result.visitUrl).toBe('https://www.reddit.com/r/Breadit/');
