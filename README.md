@@ -6,7 +6,7 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
 
 ## How to play
 
-1. Open today's r/abbitHole post. You see one real Reddit text post (title and body) with the subreddit hidden.
+1. Open today's r/abbitHole post. You see one real Reddit text post (its title, and its body when it has one) with the subreddit hidden.
 2. Type a guess. Matching communities are suggested as you type, but the full list of possible answers stays hidden. `r/`, capitals and spaces don't matter.
 3. Every wrong guess reveals a clue, each one more obvious than the last:
    1. A top comment from the original thread
@@ -49,7 +49,7 @@ Reddit has hundreds of thousands of communities and most people only know a hand
 
 ## How content is picked
 
-A scheduled job runs nightly and picks the day's post from a curated list of public, safe-for-work communities. Before using a community it checks that it still exists, isn't NSFW or quarantined, has at least 50,000 members and has enough text posts; a community that fails is skipped for the night. Only text posts are used (no images, links or videos, which could give the answer away in ways a filter can't see), and posts are skipped if they are NSFW, too short or too long to read quickly, or name the community in the title or text. For country communities, posts that read like news or politics are skipped too. The jargon cloud never draws on NSFW, spoiler or removed posts. A community isn't used again for 60 days. The order communities are tried in is shuffled with a secret made when the app is installed, so the list of possible answers alone doesn't tell anyone tomorrow's. Moderators of the r/abbitHole community can pick today's puzzle on demand and check the whole list from the subreddit menu; one pool check runs at a time, and the check's sample posts leave out today's and tomorrow's answers.
+A scheduled job runs nightly and picks the day's post from a curated list of public, safe-for-work communities. Before using a community it checks that it still exists, isn't NSFW or quarantined, has at least 10,000 members and has enough text posts; a community that fails is skipped for the night. Only text posts are used (no images, links or videos, which could give the answer away in ways a filter can't see), and posts are skipped if they are NSFW, too short or too long to read quickly, or name the community in the title or text. For country communities, posts that read like news or politics are skipped too. The jargon cloud never draws on NSFW, spoiler or removed posts. A community isn't used again for 60 days. The order communities are tried in is shuffled with a secret made when the app is installed, so the list of possible answers alone doesn't tell anyone tomorrow's. Moderators of the r/abbitHole community can pick today's puzzle on demand and check the whole list from the subreddit menu; one pool check runs at a time, and the check's sample posts leave out today's and tomorrow's answers.
 
 Posts and top comments that are deleted or removed on Reddit are dropped from the game and from its database, and the day falls back to another post from the same community. If that community has nothing usable left, a new one is picked for the rest of the day. A round you already finished keeps its result, and a round still in play starts over on the new puzzle.
 
@@ -115,7 +115,7 @@ On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE
 Reddit's Game of the Day Hackathon closes Tue Dec 8, 2026, 6:00 PM PT (9:00 PM ET). Checklist, from the [official rules](https://redditgameofday2026.devpost.com/rules):
 
 1. Set `FIRST_PUZZLE_DATE` in `src/shared/game/day.ts` to the launch day, so the first public puzzle is #1.
-2. `npm run login`, then `npm run deploy`. The first upload creates the app link, developers.reddit.com/apps/rabbit-hole, which goes on the Devpost form.
+2. `npm run login`, then `npm run deploy`. The first upload creates the app link, developers.reddit.com/apps/abbit-hole (rabbit-hole was taken), which goes on the Devpost form.
 3. In the test subreddit, use the "Post today's r/abbitHole puzzle" menu item to make a post running the game. Judges must be able to reach it: either make the subreddit public (it must stay under 200 members) or install the [devvit-dev-bot](https://developers.reddit.com/apps/devvit-dev-bot) app there.
 4. Keep this README current. The rules require one in the repo root that describes the game and how to play.
 5. Fill in the Devpost submission: a text description of the features and how it works, the app link and the link to the game post.
