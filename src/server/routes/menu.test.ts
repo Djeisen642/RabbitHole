@@ -32,7 +32,12 @@ describe('moderator menu actions', () => {
   it('refuses every action to a non-moderator on the server', async () => {
     const { deps, post, posts } = setup();
     deps.isModerator = () => Promise.resolve(false);
-    for (const path of ['/post-create', '/pick-puzzle', '/check-pool']) {
+    for (const path of [
+      '/post-create',
+      '/pick-puzzle',
+      '/repick-puzzle',
+      '/check-pool',
+    ]) {
       const res = await post(path);
       expect(res.status).toBe(403);
       expect(await toast(res)).toMatch(/only moderators/i);
@@ -47,6 +52,20 @@ describe('moderator menu actions', () => {
     expect((await post('/post-create')).status).toBe(200);
     expect(posts()).toBe(1);
     expect(await toast(await post('/pick-puzzle'))).toMatch(/ready/);
+  });
+
+  it("replaces today's puzzle with a different community", async () => {
+    const { deps, post } = setup();
+    await post('/pick-puzzle');
+    const before = await deps.store.hGet('puzzle:2026-11-25', 'answer');
+    await deps.store.zIncrBy('wrong:2026-11-25', 'Cooking', 1);
+    expect(await toast(await post('/repick-puzzle'))).toMatch(/replaced/);
+    const after = await deps.store.hGet('puzzle:2026-11-25', 'answer');
+    expect(after).toBeDefined();
+    expect(after).not.toBe(before);
+    expect(
+      await deps.store.zScore('wrong:2026-11-25', 'Cooking')
+    ).toBeUndefined();
   });
 
   it('says so when a pool check is already running', async () => {

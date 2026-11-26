@@ -689,3 +689,11 @@ export function puzzleView(args: {
     offer: player.offer,
   };
 }
+
+/** Forget a date's wrong guesses, after its answer changes (see repickPuzzle). */
+export async function clearWrongGuesses(
+  deps: Deps,
+  date: string
+): Promise<void> {
+  await deps.store.del(wrongKey(date));
+}
