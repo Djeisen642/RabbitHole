@@ -82,6 +82,18 @@ export function normalizeSubreddit(input: string): string {
     .replace(/[\s_-]+/g, '');
 }
 
+/**
+ * The guess a Skip sends. It can't be a community name (those
+ * are letters, digits and underscores), so it is never right, and unlike a
+ * named guess it can be made more than once. It costs a guess and shows the
+ * next clue like any miss.
+ */
+export const SKIP_GUESS = '?';
+
+export function isSkip(guess: string): boolean {
+  return guess === SKIP_GUESS;
+}
+
 export function isCorrectGuess(
   guess: string,
   answer: string,
@@ -103,12 +115,18 @@ export function cluesRevealed(round: Round): number {
   return Math.min(wrongGuessCount(round), round.clues.length);
 }
 
-/** Returns a new round with the guess applied. Guesses after the round ends, blank or repeated guesses are ignored. */
+/**
+ * Returns a new round with the guess applied. Guesses after the round ends,
+ * blank guesses and repeats of a named guess are ignored; a skip may repeat.
+ */
 export function applyGuess(round: Round, guess: string): Round {
   if (round.status !== 'playing') return round;
   const normalized = normalizeSubreddit(guess);
   if (normalized === '') return round;
-  if (round.guesses.some((g) => normalizeSubreddit(g) === normalized))
+  if (
+    !isSkip(guess) &&
+    round.guesses.some((g) => normalizeSubreddit(g) === normalized)
+  )
     return round;
 
   const guesses = [...round.guesses, guess];

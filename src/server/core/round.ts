@@ -35,10 +35,13 @@ import type {
   WrongGuessBar,
 } from '../../shared/api';
 import { dayNumber, puzzleNumber } from '../../shared/game/day';
+import type { PuzzleDate } from '../../shared/game/day';
 import {
+  SKIP_GUESS,
   applyGuess,
   cluesRevealed,
   isCorrectGuess,
+  isSkip,
   maxGuesses,
   newRound,
   normalizeSubreddit,
@@ -180,6 +183,8 @@ type Loaded = {
   /** The answer to a training-wheels offer: 'yes', 'no', or not given. */
   offerAnswer: string | undefined;
   learner: Learner;
+  /** Options for a typed round's last guess (see finalChoices), else null. */
+  final: string[] | null;
 };
 
 /** A player's round and what the view needs to know about it. */
@@ -202,11 +207,35 @@ function choicesOf(
   return start.options;
 }
 
+/**
+ * A typed round's last guess is a pick from CHOICES options instead, so a
+ * player who is still stumped after every clue has a fair shot rather than
+ * a blind one. Everyone gets the same list for a date and answer (the
+ * training-wheels list), so it gives nothing away; earlier wrong guesses on
+ * it show crossed out. Null when the round isn't on its last guess, or
+ * already has options.
+ */
+async function finalChoices(
+  deps: Deps,
+  date: PuzzleDate,
+  start: RoundStart,
+  offerAnswer: string | undefined,
+  round: Round
+): Promise<string[] | null> {
+  if (choicesOf(start, offerAnswer) !== null) return null;
+  if (
+    round.status !== 'playing' ||
+    round.guesses.length !== maxGuesses(round) - 1
+  )
+    return null;
+  return optionsFor(deps, date, start.answer, CHOICES);
+}
+
 function playerRound(loaded: Loaded): PlayerRound {
-  const { round, start, offerAnswer, learner } = loaded;
+  const { round, start, offerAnswer, learner, final } = loaded;
   return {
     round,
-    choices: choicesOf(start, offerAnswer),
+    choices: choicesOf(start, offerAnswer) ?? final,
     offer:
       start.offer &&
       offerAnswer === undefined &&
@@ -291,16 +320,20 @@ async function readRound(
       round = applyGuess(round, fields[String(i)] ?? '');
     return round;
   };
+  const final = (start: RoundStart, round: Round): Promise<string[] | null> =>
+    finalChoices(deps, puzzle.date, start, offerAnswer, round);
   const restart = async (from: number): Promise<Loaded> => {
     const start = await startFor(deps, puzzle, learner, from);
+    const round = replay(start);
     return {
-      round: replay(start),
+      round,
       start,
       nextSlot,
       startChanged: true,
       hadStart,
       offerAnswer,
       learner,
+      final: await final(start, round),
     };
   };
   if (!saved) return restart(0);
@@ -315,6 +348,7 @@ async function readRound(
     hadStart,
     offerAnswer,
     learner,
+    final: await final(saved, round),
   };
 }
 
@@ -436,7 +470,9 @@ const TAKEN: Refusal = {
  * Apply a guess for a user. A typed guess must name a community in the full
  * answer pool (the autocomplete only offers those) or the round's own
  * answer, so the wrong-guess chart only ever shows real subs. In a
- * multiple-choice round it must be one of the round's options. Records the
+ * multiple-choice round, and on a typed round's last guess, it must be one
+ * of the options. A skip is only allowed while typing and counts as a miss that names
+ * nothing, so it stays off the chart. Records the
  * guess, the wrong-guess tally, and on the last guess the score, streak and
  * learner record.
  *
@@ -458,10 +494,22 @@ export async function submitGuess(
   const loaded = await readRound(deps, puzzle, user);
   const before = loaded.round;
   if (before.status !== 'playing') return ROUND_OVER;
-  const choices = choicesOf(loaded.start, loaded.offerAnswer);
-  const name = choices
-    ? pickedOption(input, choices)
-    : guessName(input, before);
+  // A typed round's last guess is a pick too (see finalChoices), but the
+  // round still counts as typed for the player's record.
+  const typedRound = choicesOf(loaded.start, loaded.offerAnswer) === null;
+  const choices = choicesOf(loaded.start, loaded.offerAnswer) ?? loaded.final;
+  // With options on screen the player just picks: no skip.
+  if (isSkip(input) && choices)
+    return {
+      ok: false,
+      status: 400,
+      message: 'Pick one of the options.',
+    };
+  const name = isSkip(input)
+    ? SKIP_GUESS
+    : choices
+      ? pickedOption(input, choices)
+      : guessName(input, before);
   if (name === null)
     return {
       ok: false,
@@ -493,12 +541,17 @@ export async function submitGuess(
   const typed = choices === null;
   if (loaded.nextSlot === 0) {
     await deps.store.hIncrBy(statsKey(date), 'players', 1);
-    if (typed) await deps.store.hIncrBy(statsKey(date), 'typed', 1);
+    if (typedRound) await deps.store.hIncrBy(statsKey(date), 'typed', 1);
   }
   // Only typed wrong guesses feed the chart: a pick from a short list says
   // little about what players really thought it was, and every new player
   // picking among the same few options would crowd out the typed guesses.
-  if (typed && !isCorrectGuess(name, round.answer, round.aliases))
+  // A skip names nothing, so it isn't charted either.
+  if (
+    typed &&
+    !isSkip(name) &&
+    !isCorrectGuess(name, round.answer, round.aliases)
+  )
     await deps.store.zIncrBy(wrongKey(date), name, 1);
 
   let learner = loaded.learner;
@@ -516,18 +569,20 @@ export async function submitGuess(
       score: score(round) ?? UNSOLVED_SCORE,
     });
     await deps.store.expire(scoresKey(date), PLAYER_KEEP_SECONDS);
-    learner = afterRound(learner, { solved, withChoices: !typed });
+    learner = afterRound(learner, { solved, withChoices: !typedRound });
     await saveLearner(deps, user, learner);
   }
+  const offerAnswer = loaded.start.offer
+    ? (loaded.offerAnswer ?? 'no')
+    : undefined;
   return {
     ok: true,
     player: playerRound({
       ...loaded,
       round,
-      offerAnswer: loaded.start.offer
-        ? (loaded.offerAnswer ?? 'no')
-        : undefined,
+      offerAnswer,
       learner,
+      final: await finalChoices(deps, date, loaded.start, offerAnswer, round),
     }),
     streak,
   };
@@ -656,6 +711,7 @@ export function puzzleView(args: {
   const guesses: GuessView[] = round.guesses.map((name) => ({
     name,
     correct: isCorrectGuess(name, round.answer, round.aliases),
+    skipped: isSkip(name),
   }));
   const shown = visibleStreak(streak, day);
   const streakView: StreakView = { current: shown.current, best: shown.best };

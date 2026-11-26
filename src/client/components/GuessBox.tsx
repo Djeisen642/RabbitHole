@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent, SubmitEvent } from 'react';
-import { normalizeSubreddit } from '../../shared/game/rules';
+import { SKIP_GUESS, normalizeSubreddit } from '../../shared/game/rules';
 import { fetchSuggestions } from '../lib/api';
-import { guessHint } from '../lib/hint';
+import { HintRow } from './HintRow';
 
 /**
  * The guess input, docked at the bottom of the screen. Suggests a few
@@ -155,7 +155,14 @@ export function GuessBox({
           </ul>
         ) : null}
       </div>
-      <p className="rh-hint">{guessHint(guessesLeft, nextClue)}</p>
+      <HintRow
+        guessesLeft={guessesLeft}
+        nextClue={nextClue}
+        disabled={disabled}
+        onSkip={() => {
+          void onGuess(SKIP_GUESS);
+        }}
+      />
     </form>
   );
 }

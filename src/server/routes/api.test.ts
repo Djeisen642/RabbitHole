@@ -15,7 +15,7 @@ import {
 import type { MockDeps } from '../core/mock/mock-deps';
 import { PLAYER_KEEP_DAYS } from '../core/round';
 import { addDays } from '../../shared/game/day';
-import { normalizeSubreddit } from '../../shared/game/rules';
+import { SKIP_GUESS, normalizeSubreddit } from '../../shared/game/rules';
 import { createApi } from './api';
 
 const NOW = new Date('2026-11-25T15:00:00Z');
@@ -219,16 +219,31 @@ describe('a full round', () => {
 
   it('fails after every guess is used and resets the streak', async () => {
     const { deps, get, guess } = await setup('houseplants');
-    for (const name of ['Breadit', 'castiron', 'birding', 'canada']) {
-      const view = puzzle((await guess(name)).body);
+    let view = puzzle((await get('/puzzle')).body);
+    for (const name of ['Breadit', 'castiron', 'birding']) {
+      expect(view.choices).toBeNull();
+      view = puzzle((await guess(name)).body);
       expect(view.result).toBeNull();
       expect(JSON.stringify(view).toLowerCase()).not.toContain('houseplants');
     }
-    const last = puzzle((await guess('tipofmytongue')).body);
+    view = puzzle((await guess('canada')).body);
+    // The last guess is a pick from ten, the answer among them. Wrong
+    // guesses already made show crossed out, and a name off the list is
+    // refused.
+    const options = optionsOf(view);
+    expect(options).toHaveLength(10);
+    expect(options).toContain('houseplants');
+    expect((await guess('tipofmytongue')).status).toBe(400);
+    const miss =
+      options.find((o) => !['houseplants', 'Breadit'].includes(o)) ?? '';
+    const last = puzzle((await guess(miss)).body);
     expect(last.maxGuesses).toBe(5); // no custom icon, so four clues
     expect(last.status).toBe('failed');
     expect(last.result?.answer).toBe('houseplants');
     expect(last.result?.score).toBeNull();
+    // The pick from the list stays off the chart; the typed misses are on it.
+    expect(last.result?.wrongGuesses.map((w) => w.name)).not.toContain(miss);
+    expect(last.result?.wrongGuesses).toHaveLength(4);
     expect(last.result?.shareText).toContain('stayed buried');
     expect(last.result?.shareText.toLowerCase()).not.toContain('houseplants');
     expect(last.streak.current).toBe(0);
@@ -236,6 +251,37 @@ describe('a full round', () => {
       99
     );
     expect(puzzle((await get('/puzzle')).body).status).toBe('failed');
+  });
+
+  it('takes a skip as a miss that stays off the chart', async () => {
+    const { guess } = await setup();
+    const first = puzzle((await guess(SKIP_GUESS)).body);
+    expect(first.guesses).toEqual([
+      { name: SKIP_GUESS, correct: false, skipped: true },
+    ]);
+    expect(first.clues.map((c) => c.kind)).toEqual(['topComment']);
+    const second = puzzle((await guess(SKIP_GUESS)).body);
+    expect(second.clues).toHaveLength(2);
+    await guess('AskBaking');
+    const done = puzzle((await guess('Breadit')).body);
+    expect(done.result?.score).toBe(3);
+    expect(done.result?.wrongGuesses).toEqual([
+      { name: 'AskBaking', count: 1, percent: 100 },
+    ]);
+    expect(done.result?.shareText).toContain('🟫🟫🟫🟧');
+  });
+
+  it('can skip to the last guess, which must be a pick', async () => {
+    const { guess } = await setup('houseplants');
+    let view = puzzle((await guess(SKIP_GUESS)).body);
+    while (view.guessesLeft > 1) view = puzzle((await guess(SKIP_GUESS)).body);
+    expect(view.choices).toContain('houseplants');
+    const refused = await guess(SKIP_GUESS);
+    expect(refused.status).toBe(400);
+    const done = puzzle((await guess('houseplants')).body);
+    expect(done.status).toBe('solved');
+    expect(done.result?.score).toBe(4);
+    expect(done.result?.wrongGuesses).toEqual([]);
   });
 
   it('counts wrong guesses across players for the chart', async () => {
@@ -431,11 +477,14 @@ async function loseTyping(
   date: string,
   answer: string
 ): Promise<PuzzleResponse> {
-  const wrong = POOL.map((e) => e.name).filter(
-    (n) => normalizeSubreddit(n) !== normalizeSubreddit(answer)
-  );
-  for (const name of wrong) {
-    const view = puzzle((await t.guess(name, date)).body);
+  const wrong = (names: readonly string[]): string[] =>
+    names.filter((n) => normalizeSubreddit(n) !== normalizeSubreddit(answer));
+  const typed = wrong(POOL.map((e) => e.name));
+  let view: PuzzleResponse | null = null;
+  for (let i = 0; i < typed.length; i += 1) {
+    // The last guess of a typed round is a pick from ten options.
+    const name = view?.choices ? wrong(view.choices)[0] : typed[i];
+    view = puzzle((await t.guess(name ?? '', date)).body);
     if (view.status !== 'playing') return view;
   }
   throw new Error('round never ended');
@@ -479,7 +528,9 @@ describe('a first-timer', () => {
     const wrong = options.find((o) => o !== 'Breadit') ?? '';
     const miss = puzzle((await t.guess(wrong)).body);
     expect(miss.status).toBe('playing');
-    expect(miss.guesses).toEqual([{ name: wrong, correct: false }]);
+    expect(miss.guesses).toEqual([
+      { name: wrong, correct: false, skipped: false },
+    ]);
     expect(miss.clues.map((c) => c.kind)).toEqual(['topComment']);
     expect(miss.guessesLeft).toBe(miss.maxGuesses - 1);
 
@@ -489,6 +540,9 @@ describe('a first-timer', () => {
     const refused = await t.guess(outside);
     expect(refused.status).toBe(400);
     expect(refused.body).toMatchObject({ message: 'Pick one of the options.' });
+
+    // No skipping while picking: the player just picks.
+    expect((await t.guess(SKIP_GUESS)).status).toBe(400);
 
     const done = puzzle((await t.guess('Breadit')).body);
     expect(done.status).toBe('solved');
