@@ -45,6 +45,13 @@
         "endpoint": "/internal/menu/repick-puzzle"
       },
       {
+        "label": "Reset my r/abbitHole round",
+        "description": "Clears your own round for today so you can replay it",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/reset-round"
+      },
+      {
         "label": "Check r/abbitHole pool",
         "description": "Checks every pool community; results at /api/pool-check",
         "location": "subreddit",
