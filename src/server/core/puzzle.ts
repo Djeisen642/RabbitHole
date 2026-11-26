@@ -196,6 +196,18 @@ type Built = { puzzle: PuzzleContent } | { problem: string };
  * until MAX_CANDIDATES posts with a good top comment are found. Posts in
  * `exclude` are never used.
  */
+/**
+ * Run one Reddit read, naming it in any error, so a skipped community's log
+ * line says which read failed.
+ */
+async function step<T>(what: string, read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    throw new Error(`${what} failed: ${String(error)}`, { cause: error });
+  }
+}
+
 export async function buildPuzzle(
   source: PuzzleSource,
   entry: PoolEntry,
@@ -212,7 +224,9 @@ export async function buildPuzzle(
 
   const candidates: StoredCandidate[] = [];
   for (const post of passing.slice(0, MAX_COMMENT_FETCHES)) {
-    const comments = await source.topComments(post.id, 10);
+    const comments = await step('reading comments', () =>
+      source.topComments(post.id, 10)
+    );
     const topComment = pickTopComment(comments, entry);
     if (!topComment) continue;
     candidates.push({
@@ -232,7 +246,10 @@ export async function buildPuzzle(
   if (candidates.length === 0)
     return { problem: 'no post has a good top comment' };
 
-  const rule = pickRule(await source.rules(entry.name), entry);
+  const rule = pickRule(
+    await step('reading rules', () => source.rules(entry.name)),
+    entry
+  );
   if (!rule) return { problem: 'no rules' };
 
   // Every title feeds the jargon cloud, not just the passing posts, but
