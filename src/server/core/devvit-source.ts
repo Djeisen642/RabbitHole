@@ -35,13 +35,13 @@ function toMillis(value: Date | number | string | undefined): number {
 }
 
 /**
- * A text (self) post: its URL is its own comments page, and it has a body
- * and no gallery or embedded media.
+ * A text (self) post: its URL is its own comments page and it has no
+ * gallery or embedded media. The body may be empty (the whole thought is
+ * in the title, as on r/Showerthoughts) — filters.ts decides whether an
+ * empty body is still enough to read.
  */
 function isSelfPost(post: Post): boolean {
-  const body = post.body ?? '';
-  if (body.trim() === '' || post.gallery.length > 0 || post.secureMedia)
-    return false;
+  if (post.gallery.length > 0 || post.secureMedia) return false;
   try {
     const url = new URL(post.url, 'https://www.reddit.com');
     return (

@@ -12,7 +12,7 @@ import type {
 } from './source';
 
 /** A community needs this many members to be a fair puzzle. */
-export const MIN_SUBSCRIBERS = 50_000;
+export const MIN_SUBSCRIBERS = 10_000;
 /** Text posts a community needs in its month of top posts. */
 export const MIN_TEXT_POSTS = 3;
 /** Readable length for the post card. */
@@ -20,6 +20,11 @@ export const MIN_TITLE_CHARS = 10;
 export const MAX_TITLE_CHARS = 300;
 export const MIN_BODY_CHARS = 80;
 export const MAX_BODY_CHARS = 1500;
+/**
+ * A post with no body (the whole thought is in the title, as on
+ * r/Showerthoughts) still counts if the title alone is this long.
+ */
+export const MIN_TITLE_ONLY_CHARS = 40;
 /** Readable length for the top-comment clue. */
 export const MIN_COMMENT_WORDS = 6;
 /** Longer comments are truncated to this many words, not rejected. */
@@ -127,9 +132,11 @@ export function looksLikeNews(title: string, flair: string | null): boolean {
 const GONE = new Set(['[removed]', '[deleted]']);
 
 /**
- * Why a post can't be today's puzzle, or null if it can. Only text posts
- * with a readable body: an image, link, gallery or video could give the
- * answer away in ways we can't check (a flag, a landmark, a watermark).
+ * Why a post can't be today's puzzle, or null if it can. Needs a readable
+ * body, or (title-only, as on r/Showerthoughts) a title long enough to
+ * carry the whole thought on its own: an image, link, gallery or video
+ * could give the answer away in ways we can't check (a flag, a landmark,
+ * a watermark).
  */
 export function postProblem(post: SourcePost, entry: PoolEntry): string | null {
   const title = post.title.trim();
@@ -141,8 +148,13 @@ export function postProblem(post: SourcePost, entry: PoolEntry): string | null {
   if (post.stickied) return 'stickied';
   if (title.length < MIN_TITLE_CHARS) return 'title too short';
   if (title.length > MAX_TITLE_CHARS) return 'title too long';
-  if (body.length < MIN_BODY_CHARS) return 'body too short';
-  if (body.length > MAX_BODY_CHARS) return 'body too long';
+  if (body.length === 0) {
+    if (title.length < MIN_TITLE_ONLY_CHARS) return 'no body, title too short';
+  } else if (body.length < MIN_BODY_CHARS) {
+    return 'body too short';
+  } else if (body.length > MAX_BODY_CHARS) {
+    return 'body too long';
+  }
   if (containsGiveaway(title, entry)) return 'title names the sub';
   if (containsGiveaway(body, entry)) return 'body names the sub';
   if (entry.newsHeavy && looksLikeNews(title, post.flair))
@@ -150,11 +162,15 @@ export function postProblem(post: SourcePost, entry: PoolEntry): string | null {
   return null;
 }
 
-/** A text post with a real body, whether or not it passes the filters. */
+/**
+ * A text post with enough to read: a real body, or (title-only format) a
+ * title long enough to carry the whole thought itself.
+ */
 export function isTextPost(post: SourcePost): boolean {
-  return (
-    post.isSelf && post.body.trim().length > 0 && !GONE.has(post.body.trim())
-  );
+  if (!post.isSelf) return false;
+  const body = post.body.trim();
+  if (GONE.has(body)) return false;
+  return body.length > 0 || post.title.trim().length >= MIN_TITLE_ONLY_CHARS;
 }
 
 /** Why a community can't be used today, or null if it can. */
