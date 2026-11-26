@@ -17,15 +17,9 @@ async function toast(res: Response): Promise<string> {
 
 function setup() {
   const deps = createMockDeps({ now: NOW, quiet: true });
-  let posts = 0;
-  const menu = createMenu(deps, {
-    createPost: () => {
-      posts += 1;
-      return Promise.resolve('https://reddit.com/r/test/comments/abc');
-    },
-  });
+  const menu = createMenu(deps);
   const post = (path: string) => menu.request(path, { method: 'POST' });
-  return { deps, post, posts: () => posts };
+  return { deps, post, posts: () => deps.posts.length };
 }
 
 describe('moderator menu actions', () => {
@@ -49,9 +43,13 @@ describe('moderator menu actions', () => {
   });
 
   it('runs them for a moderator', async () => {
-    const { post, posts } = setup();
+    const { deps, post, posts } = setup();
     expect((await post('/post-create')).status).toBe(200);
     expect(posts()).toBe(1);
+    expect(deps.pinned).toHaveLength(1);
+    expect(await deps.store.get('daily-post:2026-11-25')).toBe(
+      deps.posts[0]?.url
+    );
     expect(await toast(await post('/pick-puzzle'))).toMatch(/ready/);
   });
 

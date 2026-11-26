@@ -31,6 +31,12 @@ export type Deps = {
    * fixed in tests so picks there are repeatable.
    */
   newSalt(): string;
+  /** Make a post in the app's community; returns its id and link. */
+  createPost(title: string): Promise<{ id: string; url: string }>;
+  /** Comment on a post as the app and pin the comment as a moderator. */
+  pinComment(postId: string, markdown: string): Promise<void>;
+  /** Send the community's moderators a modmail notification. */
+  notifyMods(subject: string, markdown: string): Promise<void>;
   /** Queue the next batch of a pool check (a no-op where there's no scheduler). */
   scheduleNextPoolCheck(date: string): Promise<void>;
   now(): Date;

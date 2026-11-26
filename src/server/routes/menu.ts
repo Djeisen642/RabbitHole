@@ -2,22 +2,22 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type { UiResponse } from '@devvit/web/shared';
 import { puzzleDateAt } from '../../shared/game/day';
+import {
+  dailyTitle,
+  recordDailyPost,
+  SPOILER_COMMENT,
+} from '../core/daily-post';
 import type { Deps } from '../core/deps';
 import { startPoolCheck } from '../core/pool-check';
 import { repickPuzzle, runDailyPick } from '../core/puzzle';
 import { clearWrongGuesses, resetRound } from '../core/round';
-
-export type MenuOptions = {
-  /** Creates today's post and returns its URL. */
-  createPost(): Promise<string>;
-};
 
 /**
  * Moderator menu actions. devvit.json only shows these items to
  * moderators, but each handler checks again on the server, since the
  * endpoints can be called without the menu.
  */
-export function createMenu(deps: Deps, options: MenuOptions): Hono {
+export function createMenu(deps: Deps): Hono {
   const menu = new Hono();
 
   const notMod = (c: Context) =>
@@ -26,10 +26,17 @@ export function createMenu(deps: Deps, options: MenuOptions): Hono {
   menu.post('/post-create', async (c) => {
     try {
       if (!(await deps.isModerator())) return notMod(c);
-      return c.json<UiResponse>(
-        { navigateTo: await options.createPost() },
-        200
-      );
+      // Same title and pinned comment as the scheduler's post, and recorded
+      // so the scheduler doesn't post today again.
+      const date = puzzleDateAt(deps.now());
+      const post = await deps.createPost(dailyTitle(date));
+      await recordDailyPost(deps, date, post.url);
+      try {
+        await deps.pinComment(post.id, SPOILER_COMMENT);
+      } catch (error) {
+        console.error('pinning the spoiler comment failed', error);
+      }
+      return c.json<UiResponse>({ navigateTo: post.url }, 200);
     } catch (error) {
       console.error(`Error creating post: ${String(error)}`);
       return c.json<UiResponse>({ showToast: 'Failed to create post' }, 400);

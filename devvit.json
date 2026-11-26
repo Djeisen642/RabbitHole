@@ -71,7 +71,7 @@
     "tasks": {
       "daily-pick": {
         "endpoint": "/internal/scheduler/daily-pick",
-        "cron": "0 5 * * *"
+        "cron": "0 * * * *"
       },
       "pool-check": {
         "endpoint": "/internal/scheduler/pool-check"
