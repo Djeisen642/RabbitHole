@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PoolEntry } from '../../shared/pool';
 import {
+  MAX_COMMENT_WORDS,
   MIN_BODY_CHARS,
   MIN_SUBSCRIBERS,
   MIN_TEXT_POSTS,
@@ -215,6 +216,34 @@ describe('pickTopComment', () => {
       score: 7,
     });
     expect(pickTopComment([], breadit)).toBeNull();
+  });
+
+  it('needs at least MIN_COMMENT_WORDS words, by word count not length', () => {
+    // 5 words: rejected even though it reads fine.
+    expect(
+      pickTopComment(
+        [comment({ body: 'Kicks like a mule, honestly.' })],
+        breadit
+      )
+    ).toBeNull();
+    // 6 words: the same kind of short, punchy comment, now accepted.
+    expect(
+      pickTopComment(
+        [comment({ body: 'Kicks like a mule, no joke.' })],
+        breadit
+      )?.body
+    ).toBe('Kicks like a mule, no joke.');
+  });
+
+  it('truncates a comment past MAX_COMMENT_WORDS instead of rejecting it', () => {
+    const long = Array.from(
+      { length: MAX_COMMENT_WORDS + 10 },
+      (_, i) => `word${String(i)}`
+    ).join(' ');
+    const picked = pickTopComment([comment({ body: long })], breadit);
+    expect(picked?.body).toBe(
+      `${Array.from({ length: MAX_COMMENT_WORDS }, (_, i) => `word${String(i)}`).join(' ')}…`
+    );
   });
 
   it('skips a comment that still names the sub after masking', () => {

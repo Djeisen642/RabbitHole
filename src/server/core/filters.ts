@@ -21,12 +21,24 @@ export const MAX_TITLE_CHARS = 300;
 export const MIN_BODY_CHARS = 80;
 export const MAX_BODY_CHARS = 1500;
 /** Readable length for the top-comment clue. */
-export const MIN_COMMENT_CHARS = 20;
-export const MAX_COMMENT_CHARS = 400;
+export const MIN_COMMENT_WORDS = 6;
+/** Longer comments are truncated to this many words, not rejected. */
+export const MAX_COMMENT_WORDS = 30;
 
 const MASK = '?????';
 
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** A string's space-separated words, empty entries dropped. */
+const words = (s: string): string[] =>
+  s.split(/\s+/).filter((w) => w.length > 0);
+const wordCount = (s: string): number => words(s).length;
+
+/** The first `max` words, with an ellipsis if any were cut. */
+function truncateWords(s: string, max: number): string {
+  const all = words(s);
+  return all.length <= max ? s : `${all.slice(0, max).join(' ')}…`;
+}
 
 /**
  * Every way a post could name the answer: the sub's name and aliases as whole
@@ -176,9 +188,9 @@ export function pickTopComment(
     const body = c.body.trim();
     if (c.stickied || c.removed || c.distinguished) continue;
     if (BOTS.has(c.author.toLowerCase()) || GONE.has(body)) continue;
-    if (body.length < MIN_COMMENT_CHARS || body.length > MAX_COMMENT_CHARS)
-      continue;
-    const masked = maskGiveaways(body, entry);
+    if (wordCount(body) < MIN_COMMENT_WORDS) continue;
+    const trimmed = truncateWords(body, MAX_COMMENT_WORDS);
+    const masked = maskGiveaways(trimmed, entry);
     // Masking only replaces whole words; a name glued into another word
     // ("#castironcooking") survives it, so such a comment is skipped.
     if (containsGiveaway(masked, entry)) continue;
