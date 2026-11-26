@@ -1,5 +1,5 @@
 /**
- * Core r/abbitHole rules. Pure functions only: no Devvit, no React, no I/O.
+ * Core r/abbit_hole rules. Pure functions only: no Devvit, no React, no I/O.
  *
  * A round: the player sees one real post with its subreddit hidden. They may
  * guess on the post alone, and every wrong guess reveals the next clue, so a

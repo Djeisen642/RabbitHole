@@ -44,7 +44,7 @@ export const Splash = () => {
     <main className="rh-splash">
       <div>
         <h1 className="rh-wordmark" style={{ margin: 0 }}>
-          <b>r/</b>abbitHole
+          <b>r/</b>abbit_hole
         </h1>
         <p className="rh-muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
           {puzzle

@@ -1,4 +1,4 @@
-# r/abbitHole: rules for working in this repo
+# r/abbit_hole: rules for working in this repo
 
 A daily guess-the-subreddit puzzle built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day Hackathon. Deadline Tue Dec 8 2026, 6 PM PT. Read `README.md` for the game, `PLAN.md` for the build plan and `IDEAS.md` for the agreed ideas.
 

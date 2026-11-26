@@ -9,7 +9,7 @@ Judging is 25% each: delightful UX, polish, Reddit-native feel, fresh daily cont
 - Cross-subreddit reads work. `reddit.getTopPosts({ subredditName, timeframe })`, `reddit.getHotPosts(...)`, `reddit.getComments({ postId })` and `reddit.getSubredditInfoByName(name)` (subscribersCount, createdAt, isNsfw, isQuarantined, description.markdown for the sidebar) all take any public subreddit. `reddit.getRules` does not: playtest showed it only works inside the installed subreddit, so the second clue is the sidebar description instead. Icon comes from `reddit.getSubredditStyles(subredditId)`. Docs: capabilities/server/reddit-api.mdx ("Omitting `subredditName` searches `all`, even when your code runs in an installed-subreddit context").
 - Scheduler: cron tasks in `devvit.json` hit `/internal/...` endpoints. Already wired: `daily-pick` hourly (picks if missing, then makes the day's post once).
 - Redis: strings, hashes, sorted sets, numbers, bitfields, transactions (no plain sets or lists). 100 MB per install until published, 5 GB after.
-- Joining: the API can only subscribe a user to the subreddit the app is installed in (`subscribeToCurrentSubreddit`). For the solved community we use `navigateTo` its page, where the player taps Join. We can offer a real one-tap "follow r/abbitHole" for the daily habit.
+- Joining: the API can only subscribe a user to the subreddit the app is installed in (`subscribeToCurrentSubreddit`). For the solved community we use `navigateTo` its page, where the player taps Join. We can offer a real one-tap "follow r/abbit_hole" for the daily habit.
 
 ## Scoring
 
@@ -40,7 +40,7 @@ It should look handcrafted, not AI-made, with one consistent theme across every 
 
 **4. Mod tools and content (Dec 3 to 5).** Moderator menu items: preview next 7 days, swap a day's pick, rerun the picker. Hand-seed and review 30 days of puzzles so launch content is known-good. Nightly post creation so each day has its own post (done: hourly job posts once a day, pins a spoiler-tag comment and sends a modmail notification).
 
-**5. Polish and ship (Dec 5 to 7).** Playtest with friends and family, fix rough edges, accessibility and mobile checks, app listing copy and screenshots, `npm run deploy`, demo post live in the r/abbitHole subreddit, short demo video, Devpost write-up.
+**5. Polish and ship (Dec 5 to 7).** Playtest with friends and family, fix rough edges, accessibility and mobile checks, app listing copy and screenshots, `npm run deploy`, demo post live in the r/abbit_hole subreddit, short demo video, Devpost write-up.
 
 **Dec 8.** Buffer only. Submit by noon ET.
 
@@ -48,7 +48,7 @@ It should look handcrafted, not AI-made, with one consistent theme across every 
 
 - Register for the hackathon on Devpost.
 - `npm run login` with his Reddit account (developers.reddit.com).
-- Run `npx devvit upload` once; Devvit creates a private playtest subreddit automatically (playtest subs must stay under 200 members). Later, create the public r/abbitHole community if the name is free.
+- Run `npx devvit upload` once; Devvit creates a private playtest subreddit automatically (playtest subs must stay under 200 members). Later, create the public r/abbit_hole community if the name is free.
 - Upload and publish the app, and submit on Devpost.
 
 ## Open questions

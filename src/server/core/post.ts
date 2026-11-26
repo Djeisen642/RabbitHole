@@ -2,6 +2,6 @@ import { reddit } from '@devvit/web/server';
 
 export const createPost = async () => {
   return await reddit.submitCustomPost({
-    title: "r/abbitHole: today's puzzle",
+    title: "r/abbit_hole: today's puzzle",
   });
 };

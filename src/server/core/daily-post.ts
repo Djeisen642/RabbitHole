@@ -21,7 +21,7 @@ export const dailyPostKey = (date: string): string => `daily-post:${date}`;
 const missingKey = (date: string): string => `daily-post-missing:${date}`;
 
 export function dailyTitle(date: PuzzleDate): string {
-  return `r/abbitHole #${String(puzzleNumber(date))}: which subreddit is this post from?`;
+  return `r/abbit_hole #${String(puzzleNumber(date))}: which subreddit is this post from?`;
 }
 
 export const SPOILER_COMMENT =
@@ -56,8 +56,8 @@ export async function postDaily(
     if (await claim(deps, missingKey(date)))
       await tell(
         deps,
-        `r/abbitHole has no puzzle for ${date}`,
-        `No community passed the checks for ${date}, so there's no post yet. The app tries again every hour. To try now, use **Pick today's r/abbitHole puzzle** from the subreddit's mod menu.`
+        `r/abbit_hole has no puzzle for ${date}`,
+        `No community passed the checks for ${date}, so there's no post yet. The app tries again every hour. To try now, use **Pick today's r/abbit_hole puzzle** from the subreddit's mod menu.`
       );
     return { kind: 'no-puzzle' };
   }
@@ -83,8 +83,8 @@ export async function postDaily(
   }
   await tell(
     deps,
-    `r/abbitHole #${String(puzzleNumber(date))} is r/${answer}`,
-    `Today's post is up: ${post.url}\n\nThe answer is **r/${answer}**. If it's a bad pick (mostly photos, a post about the sub itself, anything off), use **Replace today's r/abbitHole puzzle** from the subreddit's mod menu.`
+    `r/abbit_hole #${String(puzzleNumber(date))} is r/${answer}`,
+    `Today's post is up: ${post.url}\n\nThe answer is **r/${answer}**. If it's a bad pick (mostly photos, a post about the sub itself, anything off), use **Replace today's r/abbit_hole puzzle** from the subreddit's mod menu.`
   );
   return { kind: 'posted', url: post.url };
 }

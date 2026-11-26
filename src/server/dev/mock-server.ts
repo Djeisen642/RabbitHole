@@ -71,7 +71,7 @@ await seed();
 // Loopback only: the mock server has no login and resets on request, so it
 // must not be reachable from the network.
 serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
-  console.log(`r/abbitHole mock mode: http://127.0.0.1:${info.port}/`);
+  console.log(`r/abbit_hole mock mode: http://127.0.0.1:${info.port}/`);
   console.log(
     'Splash: /splash.html  Game: /game.html  Reset: POST /mock/reset'
   );

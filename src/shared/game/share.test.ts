@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { postLink, shareText, solvedWith } from './share';
 
-const POST = 'https://www.reddit.com/r/abbitHole/comments/abc123/';
+const POST = 'https://www.reddit.com/r/abbit_hole/comments/abc123/';
 
 describe('shareText', () => {
   it('says how many clues a solve took, with a square per guess and the link', () => {
@@ -12,7 +12,7 @@ describe('shareText', () => {
       postUrl: POST,
     });
     expect(text).toBe(
-      `r/abbitHole #12: dug it up with 2 clues 🐇\n🟫🟫🟧⬜⬜⬜\n${POST}`
+      `r/abbit_hole #12: dug it up with 2 clues 🐇\n🟫🟫🟧⬜⬜⬜\n${POST}`
     );
   });
 
@@ -23,7 +23,9 @@ describe('shareText', () => {
       maxGuesses: 5,
       postUrl: POST,
     });
-    expect(one.split('\n')[0]).toBe('r/abbitHole #3: dug it up with 1 clue 🐇');
+    expect(one.split('\n')[0]).toBe(
+      'r/abbit_hole #3: dug it up with 1 clue 🐇'
+    );
 
     const none = shareText({
       puzzleNumber: 1,
@@ -32,7 +34,7 @@ describe('shareText', () => {
       postUrl: POST,
     });
     expect(none.split('\n')[0]).toBe(
-      'r/abbitHole #1: dug it up with no clues 🐇'
+      'r/abbit_hole #1: dug it up with no clues 🐇'
     );
     expect(none.split('\n')[1]).toBe('🟧⬜⬜⬜⬜');
   });
@@ -45,7 +47,7 @@ describe('shareText', () => {
         maxGuesses: 5,
         postUrl: POST,
       })
-    ).toBe(`r/abbitHole #2: stayed buried 🕳️\n🟫🟫🟫🟫🟫\n${POST}`);
+    ).toBe(`r/abbit_hole #2: stayed buried 🕳️\n🟫🟫🟫🟫🟫\n${POST}`);
   });
 
   it('leaves the link line out when there is no post', () => {
@@ -56,7 +58,7 @@ describe('shareText', () => {
         maxGuesses: 6,
         postUrl: null,
       })
-    ).toBe('r/abbitHole #4: dug it up with no clues 🐇\n🟧⬜⬜⬜⬜⬜');
+    ).toBe('r/abbit_hole #4: dug it up with no clues 🐇\n🟧⬜⬜⬜⬜⬜');
   });
 
   it('is made of the headline, the squares and the link, nothing else', () => {
@@ -70,7 +72,7 @@ describe('shareText', () => {
     });
     const [headline, squares, link, ...rest] = text.split('\n');
     expect(headline).toMatch(
-      /^r\/abbitHole #40: dug it up with \d+ clues? 🐇$/
+      /^r\/abbit_hole #40: dug it up with \d+ clues? 🐇$/
     );
     expect(squares).toMatch(/^[🟫🟧⬜]+$/u);
     expect(link).toBe(POST);
@@ -80,8 +82,8 @@ describe('shareText', () => {
 
 describe('postLink', () => {
   it('builds the permalink from the bare id, with or without t3_', () => {
-    expect(postLink('abbitHole', 't3_abc123')).toBe(POST);
-    expect(postLink('abbitHole', 'abc123')).toBe(POST);
+    expect(postLink('abbit_hole', 't3_abc123')).toBe(POST);
+    expect(postLink('abbit_hole', 'abc123')).toBe(POST);
   });
 });
 

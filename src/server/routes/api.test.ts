@@ -202,7 +202,7 @@ describe('a full round', () => {
     // Spoiler-free: the clue count, the squares and the post link, and
     // none of the answer, the post title or any clue's text.
     expect(result.shareText).toBe(
-      `r/abbitHole #${String(done.number)}: dug it up with 2 clues 🐇\n` +
+      `r/abbit_hole #${String(done.number)}: dug it up with 2 clues 🐇\n` +
         `🟫🟫🟧⬜⬜⬜\n${MOCK_POST_URL}`
     );
     expect(result.shareText.toLowerCase()).not.toContain('breadit');

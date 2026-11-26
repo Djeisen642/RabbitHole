@@ -18,8 +18,8 @@ describe('puzzle days', () => {
   it('counts days and puzzle numbers', () => {
     expect(dayNumber('1970-01-02')).toBe(1);
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
-    expect(puzzleNumber('2026-11-24')).toBe(1);
-    expect(puzzleNumber('2026-12-08')).toBe(15);
+    expect(puzzleNumber('2026-11-26')).toBe(1);
+    expect(puzzleNumber('2026-12-08')).toBe(13);
   });
 
   it('validates dates', () => {

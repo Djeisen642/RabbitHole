@@ -6,7 +6,7 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
 
 ## How to play
 
-1. Open today's r/abbitHole post. You see one real Reddit text post (its title, and its body when it has one) with the subreddit hidden.
+1. Open today's r/abbit_hole post. You see one real Reddit text post (its title, and its body when it has one) with the subreddit hidden.
 2. Type a guess. Matching communities are suggested as you type, but the full list of possible answers stays hidden. `r/`, capitals and spaces don't matter.
 3. Every wrong guess reveals a clue, each one more obvious than the last:
    1. A top comment from the original thread
@@ -34,9 +34,9 @@ New players pick from a list instead of typing: 5 communities on your first roun
 When a round ends, "Copy result" copies a short line you can paste in the post's comments or anywhere else, like this:
 
 ```
-r/abbitHole #12: dug it up with 2 clues 🐇
+r/abbit_hole #12: dug it up with 2 clues 🐇
 🟫🟫🟧⬜⬜⬜
-https://www.reddit.com/r/abbitHole/comments/...
+https://www.reddit.com/r/abbit_hole/comments/...
 ```
 
 A lost round reads "stayed buried 🕳️" instead. The squares are your guesses in order (brown for a wrong guess, orange for the right one, white for guesses you didn't need), and the link goes to the puzzle post. It never includes the answer, a clue or the post's title, so it spoils nothing. If your browser won't let the game copy, the text appears so you can select and copy it yourself. The game doesn't post or send anything for you.
@@ -45,11 +45,11 @@ Everyone gets the same puzzle each day, a round takes under two minutes, and a n
 
 ## Why
 
-Reddit has hundreds of thousands of communities and most people only know a handful. r/abbitHole turns discovering a new one into a daily habit: you learn what a place is like from its own posts, comments and sidebar, then decide whether to join.
+Reddit has hundreds of thousands of communities and most people only know a handful. r/abbit_hole turns discovering a new one into a daily habit: you learn what a place is like from its own posts, comments and sidebar, then decide whether to join.
 
 ## How content is picked
 
-A scheduled job picks the day's post from a curated list of about 190 public, safe-for-work communities, chosen because they post mostly text (photo and video communities rarely have enough text posts). Before using a community it checks that it still exists, isn't NSFW or quarantined, has at least 10,000 members and has enough text posts; a community that fails is skipped for the night, and up to 12 are tried before the night's pick gives up. Only text posts are used (no images, links or videos, which could give the answer away in ways a filter can't see), and posts are skipped if they are NSFW, too short or too long to read quickly, or name the community in the title or text. Posts about the community itself (asks to the mods, rule or policy debates, megathreads, meta or mod-post flair) are skipped too, since they read the same in any sub. For country communities, posts that read like news or politics are skipped too. The jargon cloud never draws on NSFW, spoiler or removed posts. A community isn't used again for 60 days. The order communities are tried in is shuffled with a secret made when the app is installed, so the list of possible answers alone doesn't tell anyone tomorrow's. Each day the app makes its own numbered post just after midnight Eastern, pins a comment asking players to hide answers in spoiler tags, and sends the moderators a modmail notification naming the day's community so a bad pick can be replaced early (or saying that nothing passed the checks). The job runs hourly, so a failed pick or post is retried an hour later, and a day that already has its post is left alone. Moderators of the r/abbitHole community can pick today's puzzle on demand, replace a bad pick with a different community, and check the whole list from the subreddit menu; one pool check runs at a time, and the check's sample posts leave out today's and tomorrow's answers.
+A scheduled job picks the day's post from a curated list of about 190 public, safe-for-work communities, chosen because they post mostly text (photo and video communities rarely have enough text posts). Before using a community it checks that it still exists, isn't NSFW or quarantined, has at least 10,000 members and has enough text posts; a community that fails is skipped for the night, and up to 12 are tried before the night's pick gives up. Only text posts are used (no images, links or videos, which could give the answer away in ways a filter can't see), and posts are skipped if they are NSFW, too short or too long to read quickly, or name the community in the title or text. Posts about the community itself (asks to the mods, rule or policy debates, megathreads, meta or mod-post flair) are skipped too, since they read the same in any sub. For country communities, posts that read like news or politics are skipped too. The jargon cloud never draws on NSFW, spoiler or removed posts. A community isn't used again for 60 days. The order communities are tried in is shuffled with a secret made when the app is installed, so the list of possible answers alone doesn't tell anyone tomorrow's. Each day the app makes its own numbered post just after midnight Eastern, pins a comment asking players to hide answers in spoiler tags, and sends the moderators a modmail notification naming the day's community so a bad pick can be replaced early (or saying that nothing passed the checks). The job runs hourly, so a failed pick or post is retried an hour later, and a day that already has its post is left alone. Moderators of the r/abbit_hole community can pick today's puzzle on demand, replace a bad pick with a different community, and check the whole list from the subreddit menu; one pool check runs at a time, and the check's sample posts leave out today's and tomorrow's answers.
 
 Posts and top comments that are deleted or removed on Reddit are dropped from the game and from its database, and the day falls back to another post from the same community. If that community has nothing usable left, a new one is picked for the rest of the day. A round you already finished keeps its result, and a round still in play starts over on the new puzzle.
 
@@ -67,8 +67,8 @@ Each player's round and the day's scores are kept for 30 days, then deleted, and
 ### Install
 
 ```
-git clone https://github.com/Djeisen642/RabbitHole.git
-cd RabbitHole
+git clone https://github.com/Djeisen642/Rabbit_hole.git
+cd Rabbit_hole
 npm install
 ```
 
@@ -114,9 +114,9 @@ On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE
 
 Reddit's Game of the Day Hackathon closes Tue Dec 8, 2026, 6:00 PM PT (9:00 PM ET). Checklist, from the [official rules](https://redditgameofday2026.devpost.com/rules):
 
-1. Set `FIRST_PUZZLE_DATE` in `src/shared/game/day.ts` to the launch day, so the first public puzzle is #1.
+1. `FIRST_PUZZLE_DATE` in `src/shared/game/day.ts` is the launch day (Nov 26, 2026), so the first public puzzle is #1. Change it only if launch moves.
 2. `npm run login`, then `npm run deploy`. The first upload creates the app link, developers.reddit.com/apps/abbit-hole (rabbit-hole was taken), which goes on the Devpost form.
-3. In the test subreddit, use the "Post today's r/abbitHole puzzle" menu item to make the first post running the game (after that, the app posts each day by itself). Judges must be able to reach it: either make the subreddit public (it must stay under 200 members) or install the [devvit-dev-bot](https://developers.reddit.com/apps/devvit-dev-bot) app there.
+3. In the test subreddit, use the "Post today's r/abbit_hole puzzle" menu item to make the first post running the game (after that, the app posts each day by itself). Judges must be able to reach it: either make the subreddit public (it must stay under 200 members) or install the [devvit-dev-bot](https://developers.reddit.com/apps/devvit-dev-bot) app there.
 4. Keep this README current. The rules require one in the repo root that describes the game and how to play.
 5. Fill in the Devpost submission: a text description of the features and how it works, the app link and the link to the game post.
 6. Optional: a demo video under one minute, public on YouTube or Vimeo, showing the game running on Reddit; a link to the repo if it's public; and the developer satisfaction survey, which enters the feedback prize.
