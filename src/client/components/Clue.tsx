@@ -57,6 +57,8 @@ function preview(clue: ClueView): string {
       return clue.text;
     case 'jargon':
       return clue.words.join(' · ');
+    case 'topPost':
+      return clue.title;
     case 'stats':
       return clue.createdYear === null
         ? `${compact(clue.subscribers)} members`
@@ -87,6 +89,16 @@ function ClueBody({ clue }: { clue: ClueView }) {
               {word}
             </span>
           ))}
+        </p>
+      );
+    case 'topPost':
+      return (
+        <p className="quote">
+          {clue.title}{' '}
+          <span className="rh-muted" style={{ fontSize: 13 }}>
+            ({compact(clue.score)} points ·{' '}
+            {String(new Date(clue.createdAt).getUTCFullYear())})
+          </span>
         </p>
       );
     case 'stats':
