@@ -540,6 +540,29 @@ async function withPickLock<T>(
   return result;
 }
 
+/**
+ * A moderator's do-over: drop the date's puzzle and pick a different
+ * community (the old answer counts as recently used, so it isn't picked
+ * again). Rounds handle the switch as after replaceGonePosts: finished
+ * ones stay as they ended, ones in play start over. Returns 'busy' when
+ * another pick for the date is running.
+ */
+export async function repickPuzzle(
+  deps: Deps,
+  date: PuzzleDate
+): Promise<StoredPuzzle | null | 'busy'> {
+  const done = await withPickLock(deps, date, async () => {
+    const old = await loadPuzzle(deps, date);
+    await deps.store.del(puzzleKey(date));
+    const picked = await pickPuzzle(deps, date);
+    deps.log(
+      `repick ${date}: r/${old?.puzzle.answer ?? 'none'} -> r/${picked?.answer ?? 'none'}`
+    );
+    return { picked };
+  });
+  return done ? done.picked : 'busy';
+}
+
 const firstCandidate = (puzzle: StoredPuzzle | null): Served | null => {
   const candidate = puzzle?.candidates[0];
   return puzzle && candidate ? { puzzle, candidate } : null;

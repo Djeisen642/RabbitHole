@@ -4,7 +4,8 @@ import type { UiResponse } from '@devvit/web/shared';
 import { puzzleDateAt } from '../../shared/game/day';
 import type { Deps } from '../core/deps';
 import { startPoolCheck } from '../core/pool-check';
-import { runDailyPick } from '../core/puzzle';
+import { repickPuzzle, runDailyPick } from '../core/puzzle';
+import { clearWrongGuesses } from '../core/round';
 
 export type MenuOptions = {
   /** Creates today's post and returns its URL. */
@@ -52,6 +53,32 @@ export function createMenu(deps: Deps, options: MenuOptions): Hono {
     } catch (error) {
       console.error('pick-puzzle failed', error);
       return c.json<UiResponse>({ showToast: 'Picking failed' }, 400);
+    }
+  });
+
+  // Replaces today's puzzle with a different community, for a bad pick.
+  menu.post('/repick-puzzle', async (c) => {
+    try {
+      if (!(await deps.isModerator())) return notMod(c);
+      const date = puzzleDateAt(deps.now());
+      const picked = await repickPuzzle(deps, date);
+      if (picked === 'busy')
+        return c.json<UiResponse>(
+          { showToast: 'A pick is already running. Try again in a minute.' },
+          200
+        );
+      if (picked) await clearWrongGuesses(deps, date);
+      return c.json<UiResponse>(
+        {
+          showToast: picked
+            ? "Today's puzzle was replaced with a new community."
+            : 'No community passed the checks. See the logs.',
+        },
+        200
+      );
+    } catch (error) {
+      console.error('repick-puzzle failed', error);
+      return c.json<UiResponse>({ showToast: 'Replacing failed' }, 400);
     }
   });
 

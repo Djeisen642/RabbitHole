@@ -10,6 +10,7 @@ import {
   containsGiveaway,
   isTextPost,
   jargonWords,
+  looksLikeMeta,
   looksLikeNews,
   maskGiveaways,
   pickAbout,
@@ -183,6 +184,38 @@ describe('looksLikeNews', () => {
     expect(looksLikeNews('Cozy cabin weekend', 'News')).toBe(true);
     expect(looksLikeNews('Warm socks for winter', null)).toBe(false);
     expect(looksLikeNews('Taxidermy at the museum', null)).toBe(false);
+  });
+});
+
+describe('looksLikeMeta', () => {
+  it('catches posts about the sub itself', () => {
+    for (const title of [
+      'Mods can we please get a "no ai content" policy in here',
+      'Dear mods, please ban low effort posts',
+      'Can this sub stop posting the same question?',
+      'New rule: no more giveaway posts',
+      'Rule 4 should be enforced more',
+      'Weekly questions megathread',
+      '[Meta] Thoughts on the new flair system',
+      'We need to ban AI images already',
+      'The moderators removed my post for no reason',
+    ])
+      expect(looksLikeMeta(title, null), title).toBe(true);
+    expect(looksLikeMeta('Thoughts on the redesign', 'Meta')).toBe(true);
+    expect(looksLikeMeta('Changes coming in December', 'Mod Post')).toBe(true);
+  });
+
+  it('leaves topic posts alone, gaming mods and strategy meta included', () => {
+    for (const title of [
+      'Best mods for a cozy 1.21 survival world',
+      'Which mods can I run with shaders on a laptop?',
+      'Is the current meta too reliant on blue decks?',
+      'Finally finished my first sourdough loaf',
+      'My AI opponent in Catan app is ruthless',
+    ])
+      expect(looksLikeMeta(title, null), title).toBe(false);
+    expect(looksLikeMeta('Crumb shot', 'Sourdough')).toBe(false);
+    expect(looksLikeMeta('Cozy farm pack update', 'Mods')).toBe(false);
   });
 });
 
