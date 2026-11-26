@@ -140,6 +140,35 @@ export function looksLikeNews(title: string, flair: string | null): boolean {
   return NEWS_RE.test(title) || (flair !== null && NEWS_RE.test(flair));
 }
 
+/**
+ * Posts about the community itself (asks to the mods, rule and policy
+ * debates, announcements) read the same in any sub, so they make a
+ * puzzle no one can solve. Matched on the title and the flair only.
+ * "mods" counts only at the start or addressed to them, since in gaming
+ * subs it means game mods; "meta" only as a flair or [Meta] tag, since
+ * card and board gamers use it for strategy.
+ */
+const META_TITLE: readonly RegExp[] = [
+  /^\W*(hey |dear |attention |calling all |to the )?(mods|moderators|mod team)\b/i,
+  /\b(dear|to the|@) ?mods\b/i,
+  /\b(moderators|mod team|mod post|automod(erator)?)\b/i,
+  /\b(this|our) (sub|subreddit)\b/i,
+  /\b(sub(reddit)?|new) (rules?|polic(y|ies))\b/i,
+  /\brule ?#?\d+\b/i,
+  /\bmegathread\b/i,
+  /\[meta\]/i,
+  /\b(no|ban|banning|allow|allowing) (ai|a\.i\.)\b/i,
+  /\bai[\s-](ban|policy|rule)\b/i,
+];
+const META_FLAIR =
+  /\b(meta|mod (post|announcement|note|news)|moderators?|announcements?|sub(reddit)? (news|update|rules?))\b/i;
+
+/** Whether a post is about the community itself rather than its topic. */
+export function looksLikeMeta(title: string, flair: string | null): boolean {
+  if (flair !== null && META_FLAIR.test(flair)) return true;
+  return META_TITLE.some((re) => re.test(title));
+}
+
 const GONE = new Set(['[removed]', '[deleted]']);
 
 /**
@@ -168,6 +197,7 @@ export function postProblem(post: SourcePost, entry: PoolEntry): string | null {
   }
   if (containsGiveaway(title, entry)) return 'title names the sub';
   if (containsGiveaway(body, entry)) return 'body names the sub';
+  if (looksLikeMeta(title, post.flair)) return 'about the sub itself';
   if (entry.newsHeavy && looksLikeNews(title, post.flair))
     return 'news or politics';
   return null;

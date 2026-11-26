@@ -38,6 +38,13 @@
         "endpoint": "/internal/menu/pick-puzzle"
       },
       {
+        "label": "Replace today's r/abbitHole puzzle",
+        "description": "Drops today's puzzle and picks a different community",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/repick-puzzle"
+      },
+      {
         "label": "Check r/abbitHole pool",
         "description": "Checks every pool community; results at /api/pool-check",
         "location": "subreddit",
