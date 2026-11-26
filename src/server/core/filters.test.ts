@@ -5,7 +5,9 @@ import {
   MIN_BODY_CHARS,
   MIN_SUBSCRIBERS,
   MIN_TEXT_POSTS,
+  MIN_TITLE_ONLY_CHARS,
   containsGiveaway,
+  isTextPost,
   jargonWords,
   looksLikeNews,
   maskGiveaways,
@@ -115,6 +117,17 @@ describe('postProblem', () => {
     expect(postProblem(post({ title: 'Hi' }), breadit)).toBe('title too short');
   });
 
+  it('accepts a title-only post (no body) when the title carries it', () => {
+    const longTitle = 'x'.repeat(MIN_TITLE_ONLY_CHARS);
+    const shortTitle = 'x'.repeat(MIN_TITLE_ONLY_CHARS - 1);
+    expect(
+      postProblem(post({ body: '', title: longTitle }), breadit)
+    ).toBeNull();
+    expect(postProblem(post({ body: '', title: shortTitle }), breadit)).toBe(
+      'no body, title too short'
+    );
+  });
+
   it('rejects posts that name the sub in the title or body', () => {
     expect(
       postProblem(post({ title: 'First post on r/Breadit!' }), breadit)
@@ -140,6 +153,24 @@ describe('postProblem', () => {
     expect(
       postProblem(post({ title: 'Saw the northern lights last night' }), canada)
     ).toBeNull();
+  });
+});
+
+describe('isTextPost', () => {
+  it('counts a title-only post as text when the title is long enough', () => {
+    expect(
+      isTextPost(post({ body: '', title: 'x'.repeat(MIN_TITLE_ONLY_CHARS) }))
+    ).toBe(true);
+    expect(
+      isTextPost(
+        post({ body: '', title: 'x'.repeat(MIN_TITLE_ONLY_CHARS - 1) })
+      )
+    ).toBe(false);
+  });
+
+  it('still requires a self post that is not removed or deleted', () => {
+    expect(isTextPost(post({ isSelf: false }))).toBe(false);
+    expect(isTextPost(post({ body: '[removed]' }))).toBe(false);
   });
 });
 
