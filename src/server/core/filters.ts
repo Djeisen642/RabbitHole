@@ -201,7 +201,7 @@ export function subredditProblem(
     return `only ${facts.subscribers} members`;
   const textPosts = posts.filter(isTextPost).length;
   if (textPosts < MIN_TEXT_POSTS)
-    return `only ${textPosts} text posts this month`;
+    return `only ${textPosts} text posts in this month's top ${posts.length}`;
   return null;
 }
 
