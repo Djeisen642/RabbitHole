@@ -1,4 +1,4 @@
-# r/abbitHole
+# r/abbit_hole
 
 A daily puzzle for Reddit: read one real post, guess which community it came from.
 
