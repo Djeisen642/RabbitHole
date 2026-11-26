@@ -31,14 +31,14 @@ describe('choiceOptions', () => {
   });
 
   it('tops up from other categories when the category is too small', () => {
-    const fitness = POOL.filter((e) => e.category === 'fitness');
-    expect(fitness.length).toBeLessThan(10);
-    const answer = fitness[0]?.name ?? '';
+    const collecting = POOL.filter((e) => e.category === 'collecting');
+    expect(collecting.length).toBeLessThan(10);
+    const answer = collecting[0]?.name ?? '';
     const options = choiceOptions({ ...base, answer, count: 10 });
     expect(options).toHaveLength(10);
     expect(options).toContain(answer);
-    // Every other fitness sub is offered before any other category.
-    for (const e of fitness) expect(options).toContain(e.name);
+    // Every other collecting sub is offered before any other category.
+    for (const e of collecting) expect(options).toContain(e.name);
   });
 
   it('is the same every time for the same day and answer', () => {

@@ -10,9 +10,9 @@ import {
 import type { PoolEntry } from './pool';
 
 describe('POOL', () => {
-  it('has about 140 communities with unique names and spellings', () => {
-    expect(POOL.length).toBeGreaterThanOrEqual(100);
-    expect(POOL.length).toBeLessThanOrEqual(160);
+  it('has about 300 communities with unique names and spellings', () => {
+    expect(POOL.length).toBeGreaterThanOrEqual(250);
+    expect(POOL.length).toBeLessThanOrEqual(340);
     const seen = new Map<string, string>();
     for (const entry of POOL) {
       for (const s of [entry.name, ...entry.aliases].map(normalizeSubreddit)) {
@@ -27,7 +27,7 @@ describe('POOL', () => {
   it('marks every country sub as news heavy, and only those', () => {
     for (const entry of POOL)
       expect(entry.newsHeavy === true).toBe(entry.category === 'country');
-    expect(POOL.filter((e) => e.category === 'country').length).toBe(22);
+    expect(POOL.filter((e) => e.category === 'country').length).toBe(21);
   });
 });
 
