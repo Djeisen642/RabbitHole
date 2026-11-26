@@ -1,4 +1,5 @@
 import { context, reddit } from '@devvit/web/server';
+import { postLink } from '../../shared/game/share';
 
 export const createPost = async () => {
   return await reddit.submitCustomPost({
@@ -9,5 +10,5 @@ export const createPost = async () => {
 /** Create today's post and return its URL. */
 export async function createPostUrl(): Promise<string> {
   const post = await createPost();
-  return `https://reddit.com/r/${context.subredditName}/comments/${post.id}`;
+  return postLink(context.subredditName, post.id);
 }

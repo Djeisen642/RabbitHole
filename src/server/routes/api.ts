@@ -57,6 +57,7 @@ export function createApi(deps: Deps): Hono {
       day: dayNumber(date),
       username: user?.username ?? null,
       chart,
+      postUrl: deps.postUrl(),
     });
   }
 

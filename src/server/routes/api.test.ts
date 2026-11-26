@@ -4,7 +4,7 @@ import type {
   PuzzleResponse,
   SuggestResponse,
 } from '../../shared/api';
-import { createMockDeps } from '../core/mock/mock-deps';
+import { MOCK_POST_URL, createMockDeps } from '../core/mock/mock-deps';
 import { findEntry, POOL } from '../../shared/pool';
 import {
   LIVE_CHECK_MS,
@@ -199,8 +199,17 @@ describe('a full round', () => {
     ]);
     expect(result.wrongGuesses[0]?.percent).toBe(100);
     expect(result.players).toBe(1);
-    expect(result.shareText).toContain('solved with 2 clues');
+    // Spoiler-free: the clue count, the squares and the post link, and
+    // none of the answer, the post title or any clue's text.
+    expect(result.shareText).toBe(
+      `r/abbitHole #${String(done.number)}: dug it up with 2 clues 🐇\n` +
+        `🟫🟫🟧⬜⬜⬜\n${MOCK_POST_URL}`
+    );
     expect(result.shareText.toLowerCase()).not.toContain('breadit');
+    expect(result.shareText).not.toContain(done.post.title);
+    for (const clue of result.clues)
+      if (clue.kind === 'rule')
+        expect(result.shareText).not.toContain(clue.title);
 
     // The finished round comes back the same on reload, and is closed.
     const reload = puzzle((await get('/puzzle')).body);
@@ -220,7 +229,8 @@ describe('a full round', () => {
     expect(last.status).toBe('failed');
     expect(last.result?.answer).toBe('houseplants');
     expect(last.result?.score).toBeNull();
-    expect(last.result?.shareText).toContain('stumped');
+    expect(last.result?.shareText).toContain('stayed buried');
+    expect(last.result?.shareText.toLowerCase()).not.toContain('houseplants');
     expect(last.streak.current).toBe(0);
     expect(await deps.store.zScore(`scores:${TODAY}`, 't2_mockplayer')).toBe(
       99

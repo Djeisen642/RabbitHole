@@ -11,6 +11,7 @@ import { devvitSource } from './devvit-source';
 import { MOCK_POOL, mockSource } from './mock/mock-source';
 import { cachedIsModerator } from './moderator';
 import { randomSalt } from './puzzle';
+import { postLink } from '../../shared/game/share';
 
 export type SourceMode = 'devvit' | 'mock';
 
@@ -28,6 +29,10 @@ export function createDevvitDeps(mode: SourceMode): Deps {
       return Promise.resolve(
         userId && username ? { id: userId, username } : null
       );
+    },
+    postUrl() {
+      const { postId, subredditName } = context;
+      return postId ? postLink(subredditName, postId) : null;
     },
     isModerator() {
       const { userId, username, subredditName } = context;

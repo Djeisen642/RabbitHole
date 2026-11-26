@@ -17,6 +17,10 @@ export type MockDeps = Deps & {
   logs: string[];
 };
 
+/** The post link the share text uses in tests and mock mode. */
+export const MOCK_POST_URL =
+  'https://www.reddit.com/r/abbitHole/comments/mock01/';
+
 /** The pick salt in tests, so the same date always picks the same sub. */
 export const MOCK_SALT = 'mock-salt';
 
@@ -41,6 +45,8 @@ export function createMockDeps(
     pool: MOCK_POOL,
     logs,
     user: () => Promise.resolve(user),
+    // A made-up post, so the share text has a link line in mock mode too.
+    postUrl: () => MOCK_POST_URL,
     isModerator: () => Promise.resolve(user !== null),
     newSalt: () => options.salt ?? MOCK_SALT,
     // Tests and the mock server run the next batch themselves.
