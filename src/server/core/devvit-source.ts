@@ -21,6 +21,20 @@ const takenDown = (category: string | undefined): boolean =>
 const REDDIT_HOSTS = /(^|\.)reddit\.com$/;
 
 /**
+ * Devvit's types claim `createdAt` is always a `Date`, but at runtime it can
+ * cross the sandbox boundary as a plain epoch-ms number or an ISO string
+ * instead, so `.getTime()` isn't always there to call. Coerce whatever we
+ * actually got.
+ */
+function toMillis(value: Date | number | string | undefined): number {
+  if (value === undefined) return 0;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return value;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+/**
  * A text (self) post: its URL is its own comments page, and it has a body
  * and no gallery or embedded media.
  */
@@ -52,7 +66,7 @@ function toSourcePost(post: Post): SourcePost {
     flair: post.flair?.text ?? null,
     score: post.score,
     comments: post.numberOfComments,
-    createdAt: post.createdAt.getTime(),
+    createdAt: toMillis(post.createdAt),
   };
 }
 
@@ -110,7 +124,7 @@ export const devvitSource: PuzzleSource = {
     return {
       name: info.name,
       subscribers: info.subscribersCount ?? 0,
-      createdAt: info.createdAt?.getTime() ?? 0,
+      createdAt: toMillis(info.createdAt),
       nsfw: info.isNsfw ?? false,
       quarantined: info.isQuarantined ?? false,
       iconUrl,
