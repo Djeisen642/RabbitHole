@@ -694,6 +694,20 @@ export function puzzleView(args: {
 }
 
 /** Forget a date's wrong guesses, after its answer changes (see repickPuzzle). */
+/**
+ * Deletes `user`'s round for `date`, so a moderator can replay a day while
+ * testing. The day's stats and wrong-guess chart keep what the first try
+ * added; the streak is safe, since a second solve of the same day doesn't
+ * move it.
+ */
+export async function resetRound(
+  deps: Deps,
+  user: User,
+  date: string
+): Promise<void> {
+  await deps.store.del(roundKey(date, user.id));
+}
+
 export async function clearWrongGuesses(
   deps: Deps,
   date: string

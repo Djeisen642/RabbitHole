@@ -36,6 +36,7 @@ describe('moderator menu actions', () => {
       '/post-create',
       '/pick-puzzle',
       '/repick-puzzle',
+      '/reset-round',
       '/check-pool',
     ]) {
       const res = await post(path);
@@ -66,6 +67,19 @@ describe('moderator menu actions', () => {
     expect(
       await deps.store.zScore('wrong:2026-11-25', 'Cooking')
     ).toBeUndefined();
+  });
+
+  it("clears only the moderator's own round for today", async () => {
+    const { deps, post } = setup();
+    const me = await deps.user();
+    if (!me) throw new Error('mock deps should have a user');
+    await deps.store.hSet(`round:2026-11-25:${me.id}`, { '0': 'Cooking' });
+    await deps.store.hSet('round:2026-11-25:t2_other', { '0': 'Cooking' });
+    expect(await toast(await post('/reset-round'))).toMatch(/reset/);
+    expect(await deps.store.hGetAll(`round:2026-11-25:${me.id}`)).toEqual({});
+    expect(await deps.store.hGet('round:2026-11-25:t2_other', '0')).toBe(
+      'Cooking'
+    );
   });
 
   it('says so when a pool check is already running', async () => {

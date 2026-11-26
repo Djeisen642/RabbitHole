@@ -5,7 +5,7 @@ import { puzzleDateAt } from '../../shared/game/day';
 import type { Deps } from '../core/deps';
 import { startPoolCheck } from '../core/pool-check';
 import { repickPuzzle, runDailyPick } from '../core/puzzle';
-import { clearWrongGuesses } from '../core/round';
+import { clearWrongGuesses, resetRound } from '../core/round';
 
 export type MenuOptions = {
   /** Creates today's post and returns its URL. */
@@ -79,6 +79,26 @@ export function createMenu(deps: Deps, options: MenuOptions): Hono {
     } catch (error) {
       console.error('repick-puzzle failed', error);
       return c.json<UiResponse>({ showToast: 'Replacing failed' }, 400);
+    }
+  });
+
+  // Clears the moderator's own round for today, so they can replay it.
+  menu.post('/reset-round', async (c) => {
+    try {
+      if (!(await deps.isModerator())) return notMod(c);
+      const user = await deps.user();
+      if (!user) return c.json<UiResponse>({ showToast: 'Log in first.' }, 200);
+      await resetRound(deps, user, puzzleDateAt(deps.now()));
+      return c.json<UiResponse>(
+        {
+          showToast:
+            "Your round for today was reset. Reopen today's post to play again.",
+        },
+        200
+      );
+    } catch (error) {
+      console.error('reset-round failed', error);
+      return c.json<UiResponse>({ showToast: 'Reset failed' }, 400);
     }
   });
 
