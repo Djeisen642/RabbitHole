@@ -29,6 +29,11 @@ export const MIN_TITLE_ONLY_CHARS = 40;
 export const MIN_COMMENT_WORDS = 6;
 /** Longer comments are truncated to this many words, not rejected. */
 export const MAX_COMMENT_WORDS = 30;
+/**
+ * And to this many characters, since 30 words with a long link or two can
+ * still fill the screen.
+ */
+export const MAX_COMMENT_CHARS = 400;
 
 const MASK = '?????';
 
@@ -39,10 +44,21 @@ const words = (s: string): string[] =>
   s.split(/\s+/).filter((w) => w.length > 0);
 const wordCount = (s: string): number => words(s).length;
 
-/** The first `max` words, with an ellipsis if any were cut. */
-function truncateWords(s: string, max: number): string {
+/**
+ * At most `maxWords` words and `maxChars` characters, cut at a word break
+ * where there is one, with an ellipsis if anything was cut.
+ */
+function truncateComment(
+  s: string,
+  maxWords: number,
+  maxChars: number
+): string {
   const all = words(s);
-  return all.length <= max ? s : `${all.slice(0, max).join(' ')}…`;
+  const byWords = all.length <= maxWords ? s : all.slice(0, maxWords).join(' ');
+  if (byWords.length <= maxChars) return byWords === s ? s : `${byWords}…`;
+  const cut = byWords.slice(0, maxChars);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
 /**
@@ -205,7 +221,7 @@ export function pickTopComment(
     if (c.stickied || c.removed || c.distinguished) continue;
     if (BOTS.has(c.author.toLowerCase()) || GONE.has(body)) continue;
     if (wordCount(body) < MIN_COMMENT_WORDS) continue;
-    const trimmed = truncateWords(body, MAX_COMMENT_WORDS);
+    const trimmed = truncateComment(body, MAX_COMMENT_WORDS, MAX_COMMENT_CHARS);
     const masked = maskGiveaways(trimmed, entry);
     // Masking only replaces whole words; a name glued into another word
     // ("#castironcooking") survives it, so such a comment is skipped.

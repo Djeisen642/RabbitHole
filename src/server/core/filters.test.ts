@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PoolEntry } from '../../shared/pool';
 import {
+  MAX_COMMENT_CHARS,
   MAX_COMMENT_WORDS,
   MIN_BODY_CHARS,
   MIN_SUBSCRIBERS,
@@ -360,5 +361,30 @@ describe('jargonWords', () => {
     expect(words).not.toContain('cast');
     expect(words).not.toContain('iron');
     expect(words[0]).toBe('skillet');
+  });
+});
+
+describe('pickTopComment length cap', () => {
+  const comment = (body: string): SourceComment => ({
+    id: 't1_a',
+    body,
+    author: 'example_user',
+    score: 10,
+    stickied: false,
+    removed: false,
+    distinguished: false,
+  });
+  it('cuts a comment of long words at a word break under MAX_COMMENT_CHARS', () => {
+    const long = Array.from(
+      { length: 12 },
+      (_, i) => `https://example.com/${'x'.repeat(40)}/${String(i)}`
+    ).join(' ');
+    const picked = pickTopComment([comment(long)], breadit);
+    expect(picked).not.toBeNull();
+    const body = picked?.body ?? '';
+    expect(body.length).toBeLessThanOrEqual(MAX_COMMENT_CHARS + 1);
+    expect(body.endsWith('…')).toBe(true);
+    expect(long.startsWith(body.slice(0, -1))).toBe(true);
+    expect(body.slice(0, -1).endsWith(' ')).toBe(false);
   });
 });

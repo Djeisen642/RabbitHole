@@ -58,7 +58,9 @@ function preview(clue: ClueView): string {
     case 'jargon':
       return clue.words.join(' · ');
     case 'stats':
-      return `${compact(clue.subscribers)} members · ${clue.createdYear}`;
+      return clue.createdYear === null
+        ? `${compact(clue.subscribers)} members`
+        : `${compact(clue.subscribers)} members · ${String(clue.createdYear)}`;
     case 'icon':
       return 'Tap to see it';
   }
@@ -104,10 +106,12 @@ function ClueBody({ clue }: { clue: ClueView }) {
             <b>{grouped(clue.subscribers)}</b>
             <span className="rh-muted">members</span>
           </p>
-          <p>
-            <b>{clue.createdYear}</b>
-            <span className="rh-muted">founded</span>
-          </p>
+          {clue.createdYear === null ? null : (
+            <p>
+              <b>{clue.createdYear}</b>
+              <span className="rh-muted">founded</span>
+            </p>
+          )}
         </div>
       );
     case 'icon':

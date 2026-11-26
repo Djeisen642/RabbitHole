@@ -38,8 +38,8 @@ export type SourceRule = { title: string; description: string };
 export type SubredditFacts = {
   name: string;
   subscribers: number;
-  /** ms since the epoch */
-  createdAt: number;
+  /** ms since the epoch, or null when Reddit didn't give a readable date. */
+  createdAt: number | null;
   nsfw: boolean;
   quarantined: boolean;
   /** The community's own icon, or null when it uses Reddit's default. */

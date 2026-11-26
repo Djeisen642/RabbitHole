@@ -122,6 +122,24 @@ describe('buildPuzzle', () => {
     expect(p.stats).toEqual({ subscribers: 1_240_000, createdYear: 2011 });
   });
 
+  it('leaves the founding year out when Reddit gives no date', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const real = deps.source.subredditFacts.bind(deps.source);
+    deps.source.subredditFacts = async (name) => {
+      const facts = await real(name);
+      return facts && { ...facts, createdAt: null };
+    };
+    const built = await buildPuzzle(deps.source, entry('Breadit'));
+    if (!('puzzle' in built)) throw new Error(built.problem);
+    expect(built.puzzle.stats).toEqual({
+      subscribers: 1_240_000,
+      createdYear: null,
+    });
+    // An unknown year survives the trip through Redis.
+    const stored = JSON.stringify({ date: '2026-11-25', ...built.puzzle });
+    expect(parseStoredPuzzle(stored)?.stats.createdYear).toBeNull();
+  });
+
   it('takes no jargon from NSFW, spoiler or removed post titles', async () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
     const real = createMockSource();

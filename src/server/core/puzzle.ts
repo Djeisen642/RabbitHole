@@ -76,7 +76,8 @@ export type StoredPuzzle = {
   candidates: StoredCandidate[];
   rule: { title: string; description: string };
   jargon: string[];
-  stats: { subscribers: number; createdYear: number };
+  /** createdYear is null when Reddit gave no readable founding date. */
+  stats: { subscribers: number; createdYear: number | null };
   iconUrl: string | null;
 };
 
@@ -253,7 +254,10 @@ export async function buildPuzzle(
       jargon,
       stats: {
         subscribers: facts.subscribers,
-        createdYear: new Date(facts.createdAt).getUTCFullYear(),
+        createdYear:
+          facts.createdAt === null
+            ? null
+            : new Date(facts.createdAt).getUTCFullYear(),
       },
       iconUrl: facts.iconUrl,
     },
@@ -444,7 +448,9 @@ export function parseStoredPuzzle(json: string): StoredPuzzle | null {
   const ruleTitle = asString(rule?.title);
   const ruleDescription = asString(rule?.description);
   const subscribers = asNumber(stats?.subscribers);
-  const createdYear = asNumber(stats?.createdYear);
+  // An explicit null is a sub with no known founding year, not bad data.
+  const unknownYear = stats?.createdYear === null;
+  const createdYear = unknownYear ? null : asNumber(stats?.createdYear);
   const iconUrl = p?.iconUrl === null ? null : asString(p?.iconUrl);
   const rawCandidates = Array.isArray(p?.candidates) ? p.candidates : [];
   const candidates = rawCandidates
@@ -458,7 +464,7 @@ export function parseStoredPuzzle(json: string): StoredPuzzle | null {
     ruleTitle === null ||
     ruleDescription === null ||
     subscribers === null ||
-    createdYear === null ||
+    (createdYear === null && !unknownYear) ||
     candidates.length === 0 ||
     (hasCustomIcon && iconUrl === null)
   )
