@@ -41,7 +41,7 @@ import type { PuzzleSource, SourcePost, SubredditFacts } from './source';
 /** A sub isn't picked again within this many days. */
 export const REUSE_DAYS = 60;
 /** Subs tried per pick before giving up for the night. */
-export const MAX_SUB_ATTEMPTS = 6;
+export const MAX_SUB_ATTEMPTS = 12;
 /** Candidate posts kept per puzzle, as fallbacks if one is removed. */
 export const MAX_CANDIDATES = 3;
 /** Top posts read per sub. */
