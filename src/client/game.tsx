@@ -182,7 +182,7 @@ export const App = () => {
         <div className="rh-top-info">
           <div className="rh-title-row">
             <h1 className="rh-wordmark">
-              <b>r/</b>abbitHole
+              <b>r/</b>abbit_hole
             </h1>
             <button
               ref={helpButton}

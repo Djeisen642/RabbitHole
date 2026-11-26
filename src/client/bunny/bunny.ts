@@ -1,4 +1,4 @@
-// r/abbitHole mascot: one continuous line, posed by a handful of numbers, that
+// r/abbit_hole mascot: one continuous line, posed by a handful of numbers, that
 // can unravel into a loose string to travel and wind back up. Typed port of
 // design/bunny/bunny.js; see design/bunny/README.md for how it works.
 //

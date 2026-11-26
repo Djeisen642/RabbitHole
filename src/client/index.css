@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
- * r/abbitHole theme. One paper-and-soil look on every screen, drawn with the
+ * r/abbit_hole theme. One paper-and-soil look on every screen, drawn with the
  * bunny's line. Colours are tokens so light and dark share every rule;
  * Reddit's apps set the web view's colour scheme to the reader's Reddit
  * theme, so prefers-color-scheme follows it.

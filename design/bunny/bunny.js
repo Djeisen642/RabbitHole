@@ -1,4 +1,4 @@
-// r/abbitHole mascot: one continuous line, posed by a handful of numbers, that
+// r/abbit_hole mascot: one continuous line, posed by a handful of numbers, that
 // can unravel into a loose string to travel and wind back up.
 //
 // The bunny is a single SVG <path>. Its shape is built from anchor points

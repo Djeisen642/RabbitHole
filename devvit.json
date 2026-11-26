@@ -24,35 +24,35 @@
   "menu": {
     "items": [
       {
-        "label": "Post today's r/abbitHole puzzle",
+        "label": "Post today's r/abbit_hole puzzle",
         "description": "Creates the daily guess-the-subreddit post",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-create"
       },
       {
-        "label": "Pick today's r/abbitHole puzzle",
+        "label": "Pick today's r/abbit_hole puzzle",
         "description": "Picks today's and tomorrow's puzzles now if they are missing",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/pick-puzzle"
       },
       {
-        "label": "Replace today's r/abbitHole puzzle",
+        "label": "Replace today's r/abbit_hole puzzle",
         "description": "Drops today's puzzle and picks a different community",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/repick-puzzle"
       },
       {
-        "label": "Reset my r/abbitHole round",
+        "label": "Reset my r/abbit_hole round",
         "description": "Clears your own round for today so you can replay it",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/reset-round"
       },
       {
-        "label": "Check r/abbitHole pool",
+        "label": "Check r/abbit_hole pool",
         "description": "Checks every pool community; results at /api/pool-check",
         "location": "subreddit",
         "forUserType": "moderator",

@@ -4,7 +4,7 @@ Captured from the Nov 23 and 24 brainstorms. `PLAN.md` turns these into a schedu
 
 ## The concept
 
-Rabbit Hole, written r/abbitHole. Each day, guess which subreddit a real post came from. The goal is to help people get acquainted with communities and make it easier to jump into one. It sits in the same family as LinkedIn's Pinpoint, but the content is real communities, which makes it its own thing.
+Rabbit Hole, written r/abbit_hole. Each day, guess which subreddit a real post came from. The goal is to help people get acquainted with communities and make it easier to jump into one. It sits in the same family as LinkedIn's Pinpoint, but the content is real communities, which makes it its own thing.
 
 ## The round
 

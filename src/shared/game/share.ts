@@ -52,7 +52,7 @@ export function shareText(input: ShareInput): string {
       () => UNUSED
     ),
   ].join('');
-  const lines = [`r/abbitHole #${puzzleNumber}: ${headline}`, squares];
+  const lines = [`r/abbit_hole #${puzzleNumber}: ${headline}`, squares];
   if (postUrl !== null) lines.push(postUrl);
   return lines.join('\n');
 }

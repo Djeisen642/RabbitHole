@@ -23,7 +23,7 @@ export type MockDeps = Deps & {
 
 /** The post link the share text uses in tests and mock mode. */
 export const MOCK_POST_URL =
-  'https://www.reddit.com/r/abbitHole/comments/mock01/';
+  'https://www.reddit.com/r/abbit_hole/comments/mock01/';
 
 /** The pick salt in tests, so the same date always picks the same sub. */
 export const MOCK_SALT = 'mock-salt';
@@ -61,7 +61,7 @@ export function createMockDeps(
     newSalt: () => options.salt ?? MOCK_SALT,
     createPost(title) {
       const id = `t3_mock${String(posts.length + 1)}`;
-      const url = `https://www.reddit.com/r/abbitHole/comments/${id.slice(3)}/`;
+      const url = `https://www.reddit.com/r/abbit_hole/comments/${id.slice(3)}/`;
       posts.push({ id, title, url });
       return Promise.resolve({ id, url });
     },
