@@ -53,8 +53,8 @@ function preview(clue: ClueView): string {
   switch (clue.kind) {
     case 'topComment':
       return clue.body;
-    case 'rule':
-      return clue.title;
+    case 'about':
+      return clue.text;
     case 'jargon':
       return clue.words.join(' · ');
     case 'stats':
@@ -77,18 +77,8 @@ function ClueBody({ clue }: { clue: ClueView }) {
           </span>
         </p>
       );
-    case 'rule':
-      return (
-        <p>
-          <strong>{clue.title}</strong>
-          {clue.description ? (
-            <>
-              <br />
-              <span className="rh-muted">{clue.description}</span>
-            </>
-          ) : null}
-        </p>
-      );
+    case 'about':
+      return <p className="quote">{clue.text}</p>;
     case 'jargon':
       return (
         <p className="rh-jargon">

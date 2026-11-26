@@ -43,7 +43,6 @@ export function createMockSource(
   const calls: MockSource['calls'] = {
     topPosts: 0,
     topComments: 0,
-    rules: 0,
     subredditFacts: 0,
     isPostLive: 0,
     isCommentLive: 0,
@@ -98,10 +97,6 @@ export function createMockSource(
         .filter((c) => !removed.has(c.id));
       return Promise.resolve(comments);
     },
-    rules(subreddit) {
-      calls.rules += 1;
-      return Promise.resolve([...(sub(subreddit)?.rules ?? [])]);
-    },
     subredditFacts(subreddit) {
       calls.subredditFacts += 1;
       const s = sub(subreddit);
@@ -113,6 +108,7 @@ export function createMockSource(
         nsfw: s.nsfw ?? false,
         quarantined: s.quarantined ?? false,
         iconUrl: s.iconUrl,
+        description: s.description,
       });
     },
     isPostLive(postId) {

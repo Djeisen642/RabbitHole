@@ -18,7 +18,7 @@ export type PostCard = {
 
 export type ClueView =
   | { kind: 'topComment'; body: string; score: number }
-  | { kind: 'rule'; title: string; description: string }
+  | { kind: 'about'; text: string }
   | { kind: 'jargon'; words: string[] }
   /** createdYear is null when the founding date isn't known. */
   | { kind: 'stats'; subscribers: number; createdYear: number | null }

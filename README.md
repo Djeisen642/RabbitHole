@@ -10,7 +10,7 @@ Built on Reddit's Developer Platform (Devvit Web) for the Reddit Game of the Day
 2. Type a guess. Matching communities are suggested as you type, but the full list of possible answers stays hidden. `r/`, capitals and spaces don't matter.
 3. Every wrong guess reveals a clue, each one more obvious than the last:
    1. A top comment from the original thread
-   2. One of the community's rules
+   2. How the community describes itself (its sidebar, with the name hidden)
    3. A cloud of the community's in-jokes and jargon
    4. Member count and the year it was founded
    5. The community icon (only when the community has a custom icon)
@@ -45,7 +45,7 @@ Everyone gets the same puzzle each day, a round takes under two minutes, and a n
 
 ## Why
 
-Reddit has hundreds of thousands of communities and most people only know a handful. r/abbitHole turns discovering a new one into a daily habit: you learn what a place is like from its own posts, comments and rules, then decide whether to join.
+Reddit has hundreds of thousands of communities and most people only know a handful. r/abbitHole turns discovering a new one into a daily habit: you learn what a place is like from its own posts, comments and sidebar, then decide whether to join.
 
 ## How content is picked
 

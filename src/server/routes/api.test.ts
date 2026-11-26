@@ -135,7 +135,7 @@ describe('GET /puzzle', () => {
     expect(view.clues).toEqual([]);
     expect(view.clueKinds).toEqual([
       'topComment',
-      'rule',
+      'about',
       'jargon',
       'stats',
       'icon',
@@ -171,7 +171,7 @@ describe('a full round', () => {
     expect(JSON.stringify(first).toLowerCase()).not.toContain('breadit');
 
     const second = puzzle((await guess('sourdough')).body);
-    expect(second.clues.map((c) => c.kind)).toEqual(['topComment', 'rule']);
+    expect(second.clues.map((c) => c.kind)).toEqual(['topComment', 'about']);
     expect(JSON.stringify(second)).not.toContain('"words"');
     expect(JSON.stringify(second).toLowerCase()).not.toContain('breadit');
     expect(second.result).toBeNull();
@@ -187,7 +187,7 @@ describe('a full round', () => {
     expect(result.score).toBe(2);
     expect(result.clues.map((c) => c.kind)).toEqual([
       'topComment',
-      'rule',
+      'about',
       'jargon',
       'stats',
       'icon',
@@ -208,8 +208,8 @@ describe('a full round', () => {
     expect(result.shareText.toLowerCase()).not.toContain('breadit');
     expect(result.shareText).not.toContain(done.post.title);
     for (const clue of result.clues)
-      if (clue.kind === 'rule')
-        expect(result.shareText).not.toContain(clue.title);
+      if (clue.kind === 'about')
+        expect(result.shareText).not.toContain(clue.text);
 
     // The finished round comes back the same on reload, and is closed.
     const reload = puzzle((await get('/puzzle')).body);

@@ -116,7 +116,10 @@ describe('buildPuzzle', () => {
       't3_mockbr2',
     ]);
     expect(p.candidates[0]?.topComment.body).toMatch(/scoring angle/);
-    expect(p.rule.title).toBe('Share your recipe');
+    expect(p.about).toMatch(
+      /^Welcome to r\/\?{5}! A place to share your loaves/
+    );
+    expect(p.about).not.toMatch(/wiki\)|https?:|\*\*/);
     expect(p.jargon.length).toBeGreaterThanOrEqual(3);
     expect(p.jargon).toContain('crumb');
     expect(p.stats).toEqual({ subscribers: 1_240_000, createdYear: 2011 });
@@ -337,7 +340,7 @@ describe('runDailyPick and servePuzzle', () => {
     // Players mid-round keep the same answer; only the post changes.
     expect(served?.puzzle.answer).toBe('Breadit');
     expect(served?.candidate.postId).toBe('t3_mockbr2');
-    expect(served?.puzzle.rule).toEqual(loaded.puzzle.rule);
+    expect(served?.puzzle.about).toEqual(loaded.puzzle.about);
   });
 
   it('picks another community when the old one has no posts left', async () => {

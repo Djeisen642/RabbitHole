@@ -9,7 +9,7 @@
  * share a rank.
  */
 
-export type ClueKind = 'topComment' | 'rule' | 'jargon' | 'stats' | 'icon';
+export type ClueKind = 'topComment' | 'about' | 'jargon' | 'stats' | 'icon';
 
 /** The clues a round uses, in reveal order. The icon clue needs a custom icon. */
 export function cluesFor(hasCustomIcon: boolean): ClueKind[] {
@@ -19,7 +19,7 @@ export function cluesFor(hasCustomIcon: boolean): ClueKind[] {
 /** Order in which clues are revealed, least to most obvious. */
 export const CLUE_ORDER: readonly ClueKind[] = [
   'topComment',
-  'rule',
+  'about',
   'jargon',
   'stats',
   'icon',
