@@ -194,6 +194,7 @@ describe('subredditProblem', () => {
     nsfw: false,
     quarantined: false,
     iconUrl: null,
+    description: null,
     ...over,
   });
   const posts = Array.from({ length: MIN_TEXT_POSTS }, () => post());
