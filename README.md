@@ -114,7 +114,7 @@ On Reddit the app reads real posts. Setting the environment variable `RABBITHOLE
 
 Reddit's Game of the Day Hackathon closes Tue Dec 8, 2026, 6:00 PM PT (9:00 PM ET). Checklist, from the [official rules](https://redditgameofday2026.devpost.com/rules):
 
-1. Set `FIRST_PUZZLE_DATE` in `src/shared/game/day.ts` to the launch day, so the first public puzzle is #1.
+1. `FIRST_PUZZLE_DATE` in `src/shared/game/day.ts` is the launch day (Nov 26, 2026), so the first public puzzle is #1. Change it only if launch moves.
 2. `npm run login`, then `npm run deploy`. The first upload creates the app link, developers.reddit.com/apps/abbit-hole (rabbit-hole was taken), which goes on the Devpost form.
 3. In the test subreddit, use the "Post today's r/abbit_hole puzzle" menu item to make the first post running the game (after that, the app posts each day by itself). Judges must be able to reach it: either make the subreddit public (it must stay under 200 members) or install the [devvit-dev-bot](https://developers.reddit.com/apps/devvit-dev-bot) app there.
 4. Keep this README current. The rules require one in the repo root that describes the game and how to play.

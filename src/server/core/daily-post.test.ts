@@ -17,11 +17,11 @@ describe('daily post', () => {
     expect(first.kind).toBe('posted');
     expect(deps.posts).toHaveLength(1);
     expect(deps.posts[0]?.title).toBe(dailyTitle(DATE));
-    expect(deps.posts[0]?.title).toMatch(/^r\/abbit_hole #3:/);
+    expect(deps.posts[0]?.title).toMatch(/^r\/abbit_hole #1:/);
     expect(deps.pinned[0]?.postId).toBe(deps.posts[0]?.id);
     expect(deps.pinned[0]?.markdown).toMatch(/spoiler/);
     expect(deps.notices).toHaveLength(1);
-    expect(deps.notices[0]?.subject).toBe('r/abbit_hole #3 is r/AskOldPeople');
+    expect(deps.notices[0]?.subject).toBe('r/abbit_hole #1 is r/AskOldPeople');
     expect(deps.notices[0]?.markdown).toContain(deps.posts[0]?.url);
 
     const again = await postDaily(deps, DATE, 'AskOldPeople');
