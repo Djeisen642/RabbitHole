@@ -20,7 +20,8 @@ export type ClueView =
   | { kind: 'topComment'; body: string; score: number }
   | { kind: 'rule'; title: string; description: string }
   | { kind: 'jargon'; words: string[] }
-  | { kind: 'stats'; subscribers: number; createdYear: number }
+  /** createdYear is null when the founding date isn't known. */
+  | { kind: 'stats'; subscribers: number; createdYear: number | null }
   | { kind: 'icon'; url: string };
 
 export type GuessView = { name: string; correct: boolean };

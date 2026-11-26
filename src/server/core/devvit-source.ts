@@ -24,14 +24,18 @@ const REDDIT_HOSTS = /(^|\.)reddit\.com$/;
  * Devvit's types claim `createdAt` is always a `Date`, but at runtime it can
  * cross the sandbox boundary as a plain epoch-ms number or an ISO string
  * instead, so `.getTime()` isn't always there to call. Coerce whatever we
- * actually got.
+ * actually got. Null when it's missing or unreadable: falling back to 0
+ * would show a post as 56 years old and a sub as founded in 1970.
  */
-function toMillis(value: Date | number | string | undefined): number {
-  if (value === undefined) return 0;
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === 'number') return value;
-  const parsed = new Date(value).getTime();
-  return Number.isNaN(parsed) ? 0 : parsed;
+function toMillis(value: Date | number | string | undefined): number | null {
+  if (value === undefined) return null;
+  const ms =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === 'number'
+        ? value
+        : new Date(value).getTime();
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
 }
 
 /**
@@ -52,7 +56,13 @@ function isSelfPost(post: Post): boolean {
   }
 }
 
-function toSourcePost(post: Post): SourcePost {
+/**
+ * Null for a post with no readable date: the post card shows its age, and
+ * there are plenty of other posts to pick from.
+ */
+function toSourcePost(post: Post): SourcePost | null {
+  const createdAt = toMillis(post.createdAt);
+  if (createdAt === null) return null;
   const self = isSelfPost(post);
   return {
     id: post.id,
@@ -66,7 +76,7 @@ function toSourcePost(post: Post): SourcePost {
     flair: post.flair?.text ?? null,
     score: post.score,
     comments: post.numberOfComments,
-    createdAt: toMillis(post.createdAt),
+    createdAt,
   };
 }
 
@@ -80,7 +90,7 @@ export const devvitSource: PuzzleSource = {
         pageSize: limit,
       })
       .all();
-    return posts.map(toSourcePost);
+    return posts.map(toSourcePost).filter((p): p is SourcePost => p !== null);
   },
 
   async topComments(postId, limit) {
