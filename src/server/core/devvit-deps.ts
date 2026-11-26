@@ -47,6 +47,26 @@ export function createDevvitDeps(mode: SourceMode): Deps {
       });
     },
     newSalt: randomSalt,
+    async createPost(title) {
+      const post = await reddit.submitCustomPost({ title });
+      return { id: post.id, url: postLink(context.subredditName, post.id) };
+    },
+    async pinComment(postId, markdown) {
+      const id = postId.startsWith('t3_') ? postId : `t3_${postId}`;
+      const comment = await reddit.submitComment({
+        id: id as `t3_${string}`,
+        text: markdown,
+        runAs: 'APP',
+      });
+      await comment.distinguish(true);
+    },
+    async notifyMods(subject, markdown) {
+      await reddit.modMail.createModNotification({
+        subject: subject.slice(0, 100),
+        bodyMarkdown: markdown,
+        subredditId: context.subredditId,
+      });
+    },
     async scheduleNextPoolCheck(date) {
       await scheduler.runJob({
         name: 'pool-check',
