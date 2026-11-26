@@ -4,12 +4,7 @@
  */
 import { normalizeSubreddit } from '../../shared/game/rules';
 import type { PoolEntry } from '../../shared/pool';
-import type {
-  SourceComment,
-  SourcePost,
-  SourceRule,
-  SubredditFacts,
-} from './source';
+import type { SourceComment, SourcePost, SubredditFacts } from './source';
 
 /** A community needs this many members to be a fair puzzle. */
 export const MIN_SUBSCRIBERS = 10_000;
@@ -231,44 +226,57 @@ export function pickTopComment(
   return null;
 }
 
-/** Rules every community has; they say nothing about this one. */
-const GENERIC_RULE =
-  /\b(civil|civility|respect|respectful|kind|spam|reddiquette|self[\s-]?promo|promotion|harass|nsfw|personal info|doxx|repost|low[\s-]?effort|be nice|no hate|bigotry|trolling|politics)\b/i;
+const MAX_ABOUT_CHARS = 240;
+const MIN_ABOUT_CHARS = 30;
 
-const MAX_RULE_CHARS = 240;
+/** Sidebar markdown reduced to plain sentences: no links, URLs or markup. */
+export function plainDescription(markdown: string): string {
+  return markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ') // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // [text](url) keeps the text
+    .replace(/\bhttps?:\/\/\S+/gi, ' ')
+    .replace(/\bwww\.\S+/gi, ' ')
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+[.)])\s+/gm, '') // headings, quotes, lists
+    .replace(/^\s*([-*_]\s*){3,}$/gm, ' ') // horizontal rules
+    .replace(/[*_~`]+/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Cut at the last sentence end that fits, else the last word, with "...". */
+function clip(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const head = text.slice(0, max - 3);
+  const sentence = Math.max(
+    head.lastIndexOf('. '),
+    head.lastIndexOf('! '),
+    head.lastIndexOf('? ')
+  );
+  if (sentence >= max / 2) return head.slice(0, sentence + 1);
+  const space = head.lastIndexOf(' ');
+  return `${(space > 0 ? head.slice(0, space) : head).replace(/[\s,;:]+$/, '')}...`;
+}
 
 /**
- * The most telling rule: the first that isn't boilerplate, with the answer
- * masked. Rules that still name the sub after masking are skipped, as in
- * pickTopComment.
+ * The community's own description of itself, from its sidebar: plain text,
+ * a sentence or two, with the answer masked. Null when there's nothing
+ * usable, or when the name survives masking (as in pickTopComment).
  */
-export function pickRule(
-  rules: readonly SourceRule[],
+export function pickAbout(
+  description: string | null,
   entry: PoolEntry
-): SourceRule | null {
-  const usable = rules
-    .map((r) => {
-      const description = r.description.trim();
-      return {
-        title: maskGiveaways(r.title.trim(), entry),
-        description: maskGiveaways(
-          description.length > MAX_RULE_CHARS
-            ? `${description.slice(0, MAX_RULE_CHARS - 3)}...`
-            : description,
-          entry
-        ),
-      };
-    })
-    .filter(
-      (r) =>
-        r.title.length > 0 &&
-        !containsGiveaway(`${r.title} ${r.description}`, entry)
-    );
-  return (
-    usable.find((r) => !GENERIC_RULE.test(`${r.title} ${r.description}`)) ??
-    usable[0] ??
-    null
+): string | null {
+  if (!description) return null;
+  const text = maskGiveaways(
+    clip(plainDescription(description), MAX_ABOUT_CHARS),
+    entry
   );
+  if (text.length < MIN_ABOUT_CHARS) return null;
+  if (containsGiveaway(text, entry)) return null;
+  return text;
 }
 
 /** Everyday words that never count as a community's jargon. */

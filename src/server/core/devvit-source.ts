@@ -111,14 +111,6 @@ export const devvitSource: PuzzleSource = {
       }));
   },
 
-  async rules(subreddit) {
-    const rules = await reddit.getRules(subreddit);
-    return [...rules]
-      .sort((a, b) => a.priority - b.priority)
-      .filter((r) => r.kind !== 'comment')
-      .map((r) => ({ title: r.shortName, description: r.description }));
-  },
-
   async subredditFacts(subreddit) {
     const info = await reddit.getSubredditInfoByName(subreddit);
     if (!info.id || !info.name) return null;
@@ -131,6 +123,7 @@ export const devvitSource: PuzzleSource = {
         iconUrl = null;
       }
     }
+    const description = info.description?.markdown?.trim() ?? '';
     return {
       name: info.name,
       subscribers: info.subscribersCount ?? 0,
@@ -138,6 +131,7 @@ export const devvitSource: PuzzleSource = {
       nsfw: info.isNsfw ?? false,
       quarantined: info.isQuarantined ?? false,
       iconUrl,
+      description: description === '' ? null : description,
     };
   },
 

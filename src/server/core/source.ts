@@ -33,8 +33,6 @@ export type SourceComment = {
   distinguished: boolean;
 };
 
-export type SourceRule = { title: string; description: string };
-
 export type SubredditFacts = {
   name: string;
   subscribers: number;
@@ -44,6 +42,8 @@ export type SubredditFacts = {
   quarantined: boolean;
   /** The community's own icon, or null when it uses Reddit's default. */
   iconUrl: string | null;
+  /** The sidebar description as raw markdown, or null when there is none. */
+  description: string | null;
 };
 
 export type Timeframe = 'week' | 'month';
@@ -57,7 +57,6 @@ export type PuzzleSource = {
   ): Promise<SourcePost[]>;
   /** The top comments of a post, best first. */
   topComments(postId: string, limit: number): Promise<SourceComment[]>;
-  rules(subreddit: string): Promise<SourceRule[]>;
   /** Null when the community doesn't exist or can't be read. */
   subredditFacts(subreddit: string): Promise<SubredditFacts | null>;
   /** False once a post is removed or deleted. */

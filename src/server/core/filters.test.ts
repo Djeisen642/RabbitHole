@@ -12,7 +12,8 @@ import {
   jargonWords,
   looksLikeNews,
   maskGiveaways,
-  pickRule,
+  pickAbout,
+  plainDescription,
   pickTopComment,
   postProblem,
   subredditProblem,
@@ -193,6 +194,7 @@ describe('subredditProblem', () => {
     nsfw: false,
     quarantined: false,
     iconUrl: null,
+    description: null,
     ...over,
   });
   const posts = Array.from({ length: MIN_TEXT_POSTS }, () => post());
@@ -293,39 +295,51 @@ describe('pickTopComment', () => {
   });
 });
 
-describe('pickRule', () => {
-  it('prefers a rule that says something about the sub', () => {
+describe('plainDescription', () => {
+  it('strips links, URLs and markdown down to plain sentences', () => {
     expect(
-      pickRule(
-        [
-          { title: 'Be kind', description: 'No insults.' },
-          { title: 'Share your recipe', description: 'Post it on r/Breadit.' },
-        ],
+      plainDescription(
+        '# Welcome\n\n**Bread** lovers. See the [wiki](https://x.test/wiki) ' +
+          'or https://example.com.\n\n- Be nice\n- Post crumb shots &amp; more'
+      )
+    ).toBe(
+      'Welcome Bread lovers. See the wiki or Be nice Post crumb shots & more'
+    );
+  });
+});
+
+describe('pickAbout', () => {
+  it('masks the answer in a cleaned description', () => {
+    expect(
+      pickAbout(
+        'Welcome to r/Breadit! A place to share your loaves and crumb shots.',
         breadit
       )
-    ).toEqual({
-      title: 'Share your recipe',
-      description: 'Post it on r/?????.',
-    });
+    ).toBe('Welcome to r/?????! A place to share your loaves and crumb shots.');
   });
 
-  it('falls back to the first rule, and to null with none', () => {
-    expect(
-      pickRule([{ title: 'Be civil', description: '' }], breadit)?.title
-    ).toBe('Be civil');
-    expect(pickRule([], breadit)).toBeNull();
+  it('cuts a long description at a sentence end', () => {
+    const long = `${'Bakers share loaves and crumb shots here. '.repeat(8)}End`;
+    const about = pickAbout(long, breadit);
+    expect(about?.length).toBeLessThanOrEqual(240);
+    expect(about?.endsWith('here.')).toBe(true);
   });
 
-  it('skips a rule that still names the sub after masking', () => {
+  it('cuts at a word with an ellipsis when no sentence fits', () => {
+    const about = pickAbout('loaves '.repeat(60), breadit);
+    expect(about?.length).toBeLessThanOrEqual(240);
+    expect(about?.endsWith('loaves...')).toBe(true);
+  });
+
+  it('returns null for missing, short or still-naming descriptions', () => {
+    expect(pickAbout(null, breadit)).toBeNull();
+    expect(pickAbout('Bread.', breadit)).toBeNull();
     expect(
-      pickRule(
-        [
-          { title: 'Castironcookware only', description: 'Pans and pots.' },
-          { title: 'Show the pan', description: 'Photos of the cooking.' },
-        ],
+      pickAbout(
+        'All about #castironcookware and seasoning your pans.',
         castiron
-      )?.title
-    ).toBe('Show the pan');
+      )
+    ).toBeNull();
   });
 });
 

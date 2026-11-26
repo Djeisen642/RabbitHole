@@ -38,7 +38,8 @@ export type FixtureSub = {
   iconUrl: string | null;
   nsfw?: boolean;
   quarantined?: boolean;
-  rules: { title: string; description: string }[];
+  /** Sidebar markdown, or null for a sub that has none. */
+  description: string | null;
   posts: FixturePost[];
 };
 
@@ -81,22 +82,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     iconUrl: svgIcon(
       '<path d="M14 38c0-12 8-18 18-18s18 6 18 18v8H14z" fill="#c9803f" stroke="#6b3d16" stroke-width="3"/><path d="M24 28l4 6M32 26l4 6M40 28l4 6" stroke="#6b3d16" stroke-width="2.5" stroke-linecap="round"/>'
     ),
-    rules: [
-      {
-        title: 'Be kind',
-        description:
-          'Everyone started somewhere. Critique the loaf, not the baker.',
-      },
-      {
-        title: 'Share your recipe',
-        description:
-          'If you post a bake, include the recipe or the method in a comment within an hour, or the post may be removed.',
-      },
-      {
-        title: 'No selling',
-        description: 'Posts promoting a bakery or a shop are not allowed.',
-      },
-    ],
+    description:
+      'Welcome to r/Breadit! A place to share your loaves, crumb shots and **sourdough starters**. Ask about hydration, proofing and scoring. See the [wiki](https://www.reddit.com/r/Breadit/wiki) for beginner recipes.',
     posts: [
       {
         id: 't3_mockbr1',
@@ -150,17 +137,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     subscribers: 3_180_000,
     createdYear: 2009,
     iconUrl: null,
-    rules: [
-      {
-        title: 'Be civil',
-        description: 'No personal attacks or harassment.',
-      },
-      {
-        title: 'Identification requests go in the weekly thread',
-        description:
-          'Single photos asking what a plant is will be removed. Use the pinned weekly thread instead.',
-      },
-    ],
+    description:
+      'A community for indoor plant lovers. Share your jungle, ask why your leaves are yellowing, and swap care tips for pothos, monsteras and everything in between.',
     posts: [
       {
         id: 't3_mockhp1',
@@ -199,17 +177,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     iconUrl: svgIcon(
       '<rect x="12" y="22" width="40" height="22" rx="4" fill="#fff" stroke="#3b2719" stroke-width="3"/><path d="M18 30h4M26 30h4M34 30h4M42 30h4M22 37h20" stroke="#3b2719" stroke-width="3" stroke-linecap="round"/>'
     ),
-    rules: [
-      {
-        title: 'No low effort posts',
-        description: 'Posts must contribute something to the community.',
-      },
-      {
-        title: 'Include a parts list',
-        description:
-          'Build posts must list the case, switches, keycaps and plate in a comment or the post body.',
-      },
-    ],
+    description:
+      '# Welcome\n\nAll things mechanical keyboards: switches, keycaps, custom builds and typing tests. Read the FAQ before asking which board to buy.',
     posts: [
       {
         id: 't3_mockmk1',
@@ -257,17 +226,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     subscribers: 760_000,
     createdYear: 2010,
     iconUrl: null,
-    rules: [
-      {
-        title: 'Be respectful',
-        description: 'No insults or personal attacks.',
-      },
-      {
-        title: 'Do not ask if it is ruined',
-        description:
-          'It almost certainly is not ruined. Search the wiki on rust and stripping before posting.',
-      },
-    ],
+    description:
+      'For lovers of cast iron cookware. Seasoning, restoration, cooking and identifying vintage pans. Rust is not the end of the world.',
     posts: [
       {
         id: 't3_mockci1',
@@ -307,17 +267,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     iconUrl: svgIcon(
       '<circle cx="28" cy="28" r="12" fill="none" stroke="#3b2719" stroke-width="4"/><path d="M37 37l12 12" stroke="#3b2719" stroke-width="5" stroke-linecap="round"/>'
     ),
-    rules: [
-      {
-        title: 'No spam',
-        description: 'Self promotion and spam are removed.',
-      },
-      {
-        title: 'Reply Solved! when you get an answer',
-        description:
-          'Reply to the correct answer with the word Solved! so the bot can flair the post.',
-      },
-    ],
+    description:
+      "Found something odd and can't figure out what it is? Post a clear photo and let the hive mind identify your mystery object. Reply Solved! when you get an answer.",
     posts: [
       {
         id: 't3_mockwt1',
@@ -371,18 +322,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     iconUrl: svgIcon(
       '<path d="M16 40c4-14 18-20 30-12l6-2-4 6c0 10-10 16-22 14z" fill="#fff" stroke="#3b2719" stroke-width="3"/><circle cx="42" cy="30" r="2" fill="#3b2719"/>'
     ),
-    rules: [
-      {
-        title: 'No baiting or disturbing birds',
-        description:
-          'Photos that show birds being baited, flushed or approached at the nest will be removed.',
-      },
-      {
-        title: 'Include a location',
-        description:
-          'Give at least the region for identification posts, because range matters.',
-      },
-    ],
+    description:
+      'A place for birders of every level to share sightings, ask for ID help and talk optics, feeders and field guides.',
     posts: [
       {
         id: 't3_mockbd1',
@@ -410,17 +351,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     subscribers: 310_000,
     createdYear: 2009,
     iconUrl: null,
-    rules: [
-      {
-        title: 'Be respectful',
-        description: 'Treat others the way you want to be treated.',
-      },
-      {
-        title: 'Trip reports need details',
-        description:
-          'Tell us the route, the distance and the gear. A photo with no story will be removed.',
-      },
-    ],
+    description:
+      'Planning a long ride with panniers? Share routes, gear lists and trip reports from your bicycle touring adventures around the world.',
     posts: [
       {
         id: 't3_mockbt1',
@@ -459,17 +391,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     iconUrl: svgIcon(
       '<path d="M32 12l4 10 8-4-2 12 8 2-10 8 2 6-10-2v10h-0v-10l-10 2 2-6-10-8 8-2-2-12 8 4z" fill="#d52b1e"/>'
     ),
-    rules: [
-      {
-        title: 'No personal attacks',
-        description: 'Attack the argument, not the person.',
-      },
-      {
-        title: 'Use the original headline',
-        description:
-          'Article titles must match the source headline. Editorialised titles will be removed.',
-      },
-    ],
+    description:
+      'r/canada is a place to discuss news, politics, culture and life across the provinces and territories. Bilingual posts welcome.',
     posts: [
       {
         id: 't3_mockca1',
@@ -523,9 +446,8 @@ export const FIXTURES: readonly FixtureSub[] = [
     subscribers: 8_000,
     createdYear: 2012,
     iconUrl: null,
-    rules: [
-      { title: 'Lighthouses only', description: 'Posts must feature one.' },
-    ],
+    description:
+      'Photos, history and visits to lighthouses around the world, from Cape Cod to the coast of Brittany.',
     posts: [
       filler('t3_mocklh1', 'A foggy morning at the point', 2),
       filler('t3_mocklh2', 'Climbed all 200 steps today', 9),

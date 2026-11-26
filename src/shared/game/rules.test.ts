@@ -84,12 +84,12 @@ describe('cluesFor', () => {
   it('keeps reveal order and only adds the icon when there is one', () => {
     expect(cluesFor(true)).toEqual([
       'topComment',
-      'rule',
+      'about',
       'jargon',
       'stats',
       'icon',
     ]);
-    expect(cluesFor(false)).toEqual(['topComment', 'rule', 'jargon', 'stats']);
+    expect(cluesFor(false)).toEqual(['topComment', 'about', 'jargon', 'stats']);
   });
 });
 

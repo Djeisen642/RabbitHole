@@ -22,7 +22,7 @@ import type { PoolEntry } from '../../shared/pool';
 import type { Deps } from './deps';
 import {
   jargonWords,
-  pickRule,
+  pickAbout,
   pickTopComment,
   postProblem,
   subredditProblem,
@@ -74,7 +74,8 @@ export type StoredPuzzle = {
   answer: string;
   hasCustomIcon: boolean;
   candidates: StoredCandidate[];
-  rule: { title: string; description: string };
+  /** The community's sidebar description, cleaned and masked. */
+  about: string;
   jargon: string[];
   /** createdYear is null when Reddit gave no readable founding date. */
   stats: { subscribers: number; createdYear: number | null };
@@ -246,11 +247,8 @@ export async function buildPuzzle(
   if (candidates.length === 0)
     return { problem: 'no post has a good top comment' };
 
-  const rule = pickRule(
-    await step('reading rules', () => source.rules(entry.name)),
-    entry
-  );
-  if (!rule) return { problem: 'no rules' };
+  const about = pickAbout(facts.description, entry);
+  if (!about) return { problem: 'no usable sidebar description' };
 
   // Every title feeds the jargon cloud, not just the passing posts, but
   // never one from an NSFW, spoiler or removed post.
@@ -267,7 +265,7 @@ export async function buildPuzzle(
       answer: entry.name,
       hasCustomIcon: facts.iconUrl !== null,
       candidates,
-      rule,
+      about,
       jargon,
       stats: {
         subscribers: facts.subscribers,
@@ -456,14 +454,12 @@ function parseCandidate(value: unknown): StoredCandidate | null {
 /** Parse a stored puzzle, checking every field the game relies on. */
 export function parseStoredPuzzle(json: string): StoredPuzzle | null {
   const p = asRecord(parseJson(json));
-  const rule = asRecord(p?.rule);
   const stats = asRecord(p?.stats);
   const date = asString(p?.date);
   const answer = asString(p?.answer);
   const hasCustomIcon = asBoolean(p?.hasCustomIcon);
   const jargon = asStringArray(p?.jargon);
-  const ruleTitle = asString(rule?.title);
-  const ruleDescription = asString(rule?.description);
+  const about = asString(p?.about);
   const subscribers = asNumber(stats?.subscribers);
   // An explicit null is a sub with no known founding year, not bad data.
   const unknownYear = stats?.createdYear === null;
@@ -478,8 +474,7 @@ export function parseStoredPuzzle(json: string): StoredPuzzle | null {
     answer === null ||
     hasCustomIcon === null ||
     jargon === null ||
-    ruleTitle === null ||
-    ruleDescription === null ||
+    about === null ||
     subscribers === null ||
     (createdYear === null && !unknownYear) ||
     candidates.length === 0 ||
@@ -491,7 +486,7 @@ export function parseStoredPuzzle(json: string): StoredPuzzle | null {
     answer,
     hasCustomIcon,
     candidates,
-    rule: { title: ruleTitle, description: ruleDescription },
+    about,
     jargon,
     stats: { subscribers, createdYear },
     iconUrl: iconUrl ?? null,
@@ -673,8 +668,8 @@ export function clueView(
   switch (kind) {
     case 'topComment':
       return { kind, ...candidate.topComment };
-    case 'rule':
-      return { kind, ...puzzle.rule };
+    case 'about':
+      return { kind, text: puzzle.about };
     case 'jargon':
       return { kind, words: puzzle.jargon };
     case 'stats':
