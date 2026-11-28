@@ -63,5 +63,10 @@
     "*.{json,md,css,html,yaml,yml}": [
       "prettier --write"
     ]
+  },
+  "overrides": {
+    "external-editor": {
+      "tmp": "^0.2.7"
+    }
   }
 }
