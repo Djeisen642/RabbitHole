@@ -5,7 +5,8 @@ import type { Deps } from '../core/deps';
 import { asRecord, asString } from '../core/json';
 import { runPoolCheckBatch } from '../core/pool-check';
 import { postDaily } from '../core/daily-post';
-import { keepRecentPuzzles, runDailyPick } from '../core/puzzle';
+import { runDailyPick } from '../core/puzzle-pick';
+import { keepRecentPuzzles } from '../core/puzzle-store';
 
 export function createScheduler(deps: Deps): Hono {
   const scheduler = new Hono();

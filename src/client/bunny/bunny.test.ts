@@ -1,21 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   PET_COOLDOWN_MS,
-  POSES,
   QUIET_MS,
   SCRATCH_CHANCE,
-  SCRATCH_STROKE,
-  bunnyPath,
-  bunnyPoints,
   canPet,
-  diveTracks,
   idleMove,
   inHoleAfter,
   movePlays,
-  peekPose,
-  threadPath,
-} from './bunny';
-import type { MoveName } from './bunny';
+} from './moves';
+import type { MoveName } from './moves';
+import { POSES, SCRATCH_STROKE, peekPose } from './poses';
+import { bunnyPath } from './shape';
+import { bunnyPoints, diveTracks, threadPath } from './thread';
 
 describe('the bunny', () => {
   it('is one continuous line in every pose', () => {

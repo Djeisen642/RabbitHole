@@ -21,8 +21,9 @@ import {
   parseJson,
 } from './json';
 import { tryLock } from './lock';
-import { checkSub, loadPuzzle, secondsToKeep } from './puzzle';
-import type { SubCheck } from './puzzle';
+import { checkSub } from './puzzle-build';
+import type { SubCheck } from './puzzle-build';
+import { loadPuzzle, secondsToKeep } from './puzzle-store';
 
 export const POOL_CHECK_BATCH = 10;
 /** Days a pool check's results are kept after its date. */

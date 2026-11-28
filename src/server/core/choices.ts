@@ -20,7 +20,7 @@ import { isCorrectGuess, normalizeSubreddit } from '../../shared/game/rules';
 import { POOL, findEntry } from '../../shared/pool';
 import type { PoolEntry } from '../../shared/pool';
 import type { Deps } from './deps';
-import { answersFrom, pickSalt } from './puzzle';
+import { answersFrom, pickSalt } from './puzzle-pick';
 
 const hash = (salt: string, text: string): string =>
   createHmac('sha256', salt).update(text).digest('hex');

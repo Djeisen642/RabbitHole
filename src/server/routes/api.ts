@@ -11,25 +11,21 @@ import {
   puzzleDateAt,
   puzzleNumber,
 } from '../../shared/game/day';
-import type { PuzzleDate } from '../../shared/game/day';
 import { suggest } from '../../shared/pool';
 import type { Deps } from '../core/deps';
 import { readPoolCheck } from '../core/pool-check';
 import type { PoolCheckReport } from '../core/pool-check';
-import { dailyPostKey } from '../core/daily-post';
+import { dailyPostUrl } from '../core/daily-post';
 import { giveStreakFlair, playerAvatar } from '../core/player-look';
-import { postDay } from '../core/post-day';
-import { servePastPuzzle, servePuzzle } from '../core/puzzle';
-import type { Served } from '../core/puzzle';
-import {
-  answerOffer,
-  loadRound,
-  loadStreak,
-  puzzleView,
-  submitGuess,
-  wrongGuessChart,
-} from '../core/round';
+import { playDay } from '../core/post-day';
+import type { PlayDay } from '../core/post-day';
+import { wrongGuessChart } from '../core/day-stats';
+import { servePastPuzzle, servePuzzle } from '../core/puzzle-serve';
+import type { Served } from '../core/puzzle-store';
+import { puzzleView } from '../core/puzzle-view';
+import { answerOffer, loadRound, submitGuess } from '../core/round';
 import type { PlayerRound } from '../core/round';
+import { loadStreak } from '../core/streak';
 import type { Streak } from '../../shared/game/rules';
 import type { User } from '../core/deps';
 import { asBoolean, asRecord, asString } from '../core/json';
@@ -40,9 +36,6 @@ const fail = (
   message: string
 ) => c.json<ErrorResponse>({ type: 'error', message }, status);
 
-/** The puzzle a request plays: its post's day (see post-day.ts) and today. */
-type Day = { date: PuzzleDate; today: PuzzleDate; past: boolean };
-
 /**
  * The player-facing API: the post's puzzle (today's, or an earlier day's
  * for an older post), guessing, the training-wheels offer and autocomplete.
@@ -50,29 +43,22 @@ type Day = { date: PuzzleDate; today: PuzzleDate; past: boolean };
 export function createApi(deps: Deps): Hono {
   const api = new Hono();
 
-  async function dayOf(): Promise<Day> {
-    const today = puzzleDateAt(deps.now());
-    const date = await postDay(deps, today);
-    return { date, today, past: date < today };
-  }
-
-  const serve = (day: Day) =>
+  const serve = (day: PlayDay) =>
     day.past ? servePastPuzzle(deps, day.date) : servePuzzle(deps, day.date);
 
   /** Where an older post points: today's number and post. */
   async function todayLink(
-    day: Day
+    day: PlayDay
   ): Promise<{ number: number; url: string | null } | null> {
     if (!day.past) return null;
-    const url = await deps.store.get(dailyPostKey(day.today));
     return {
       number: puzzleNumber(day.today),
-      url: url?.startsWith('https://') ? url : null,
+      url: await dailyPostUrl(deps, day.today),
     };
   }
 
   async function view(
-    day: Day,
+    day: PlayDay,
     user: User | null,
     player: PlayerRound,
     streak: Streak,
@@ -97,7 +83,7 @@ export function createApi(deps: Deps): Hono {
     });
   }
 
-  const notReady = (c: Context, day: Day) =>
+  const notReady = (c: Context, day: PlayDay) =>
     day.past
       ? fail(
           c,
@@ -108,7 +94,7 @@ export function createApi(deps: Deps): Hono {
 
   api.get('/puzzle', async (c) => {
     try {
-      const day = await dayOf();
+      const day = await playDay(deps);
       const served = await serve(day);
       if (!served) return notReady(c, day);
       const user = await deps.user();
@@ -131,7 +117,7 @@ export function createApi(deps: Deps): Hono {
       const guess = asString(body?.guess)?.trim() ?? '';
       if (guess === '' || guess.length > 64)
         return fail(c, 400, 'Type a community to guess.');
-      const day = await dayOf();
+      const day = await playDay(deps);
       // The client says which day's puzzle it is looking at. On a post that
       // isn't tied to a day, a guess sent after midnight from a page loaded
       // before it would otherwise land on a puzzle the player has never seen.
@@ -167,7 +153,7 @@ export function createApi(deps: Deps): Hono {
       const body = asRecord(await c.req.json<unknown>().catch(() => null));
       const accept = asBoolean(body?.accept);
       if (accept === null) return fail(c, 400, 'Say yes or no to the options.');
-      const day = await dayOf();
+      const day = await playDay(deps);
       if (asString(body?.date) !== day.date)
         return fail(c, 409, 'A new puzzle is out. Reload to play it.');
       const served = await serve(day);

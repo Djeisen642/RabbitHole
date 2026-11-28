@@ -107,6 +107,18 @@ export async function recordDailyPost(
 }
 
 /**
+ * The link to a date's daily post, or null if it has none yet. The key
+ * also holds a marker while the post is being made, which isn't a link.
+ */
+export async function dailyPostUrl(
+  deps: Deps,
+  date: PuzzleDate
+): Promise<string | null> {
+  const url = await deps.store.get(dailyPostKey(date));
+  return url?.startsWith('https://') ? url : null;
+}
+
+/**
  * Tie a new post to its date (see post-day.ts). Best effort: a post that
  * misses this is matched by its title on first load.
  */

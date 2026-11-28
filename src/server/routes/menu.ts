@@ -9,8 +9,10 @@ import {
 } from '../core/daily-post';
 import type { Deps } from '../core/deps';
 import { startPoolCheck } from '../core/pool-check';
-import { repickPuzzle, runDailyPick } from '../core/puzzle';
-import { clearWrongGuesses, resetRound } from '../core/round';
+import { clearWrongGuesses } from '../core/day-stats';
+import { runDailyPick } from '../core/puzzle-pick';
+import { repickPuzzle } from '../core/puzzle-serve';
+import { resetRound } from '../core/round';
 
 /**
  * Moderator menu actions. devvit.json only shows these items to
