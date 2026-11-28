@@ -19,7 +19,7 @@ const ignoreControls = (): void => undefined;
 function statusLine(p: PuzzleResponse): string {
   if (p.today) {
     // With a link, the "Play today's" button says which is today's.
-    const later = p.today.url ? '' : ` Today’s is #${p.today.number}.`;
+    const later = p.today.url ? '' : ' Today’s puzzle isn’t up yet.';
     if (p.status === 'solved') {
       const solved = solvedWith(p.result?.score ?? 0);
       return `${solved.charAt(0).toUpperCase()}${solved.slice(1)}.${later}`;
@@ -99,7 +99,7 @@ export const Splash = () => {
             today's, so that comes first and this one becomes the quiet option. */}
         {todayUrl ? (
           <a className="rh-button" href={todayUrl} onClick={playToday}>
-            Play today’s #{puzzle?.today?.number}
+            Play today’s puzzle
           </a>
         ) : null}
         {/* On Reddit this opens the expanded view; in local mock mode it is a plain link. */}

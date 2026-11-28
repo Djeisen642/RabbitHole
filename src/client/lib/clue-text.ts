@@ -1,3 +1,4 @@
+import type { PuzzleResponse } from '../../shared/api';
 import type { ClueKind } from '../../shared/game/rules';
 
 /** How each clue is introduced, as a layer of the burrow. */
@@ -25,3 +26,31 @@ export function guessHint(
 
 const lowerFirst = (text: string): string =>
   text.charAt(0).toLowerCase() + text.slice(1);
+
+/**
+ * What a screen reader hears after a guess: whether it was right, and if
+ * not, which clue just opened and how many guesses are left. Sighted players
+ * get the same from the bunny, the new clue and the tunnel.
+ */
+export function guessAnnouncement(
+  next: Pick<
+    PuzzleResponse,
+    'status' | 'guesses' | 'clues' | 'result' | 'guessesLeft'
+  >
+): string {
+  const last = next.guesses[next.guesses.length - 1];
+  const answer = next.result?.answer;
+  if (next.status === 'solved')
+    return `Right! It was r/${answer ?? last?.name ?? ''}.`;
+  if (next.status === 'failed')
+    return answer ? `Out of guesses. It was r/${answer}.` : 'Out of guesses.';
+  const said = !last
+    ? ''
+    : last.skipped
+      ? 'Skipped.'
+      : `r/${last.name} is wrong.`;
+  const kind = next.clues[next.clues.length - 1]?.kind;
+  const clue = kind ? ` New clue: ${lowerFirst(CLUE_LABELS[kind])}.` : '';
+  const left = ` ${String(next.guessesLeft)} ${next.guessesLeft === 1 ? 'guess' : 'guesses'} left.`;
+  return `${said}${clue}${left}`.trim();
+}

@@ -24,7 +24,7 @@ import { PostCard } from './components/PostCard';
 import { Result, ResultActions } from './components/Result';
 import { Tunnel } from './components/Tunnel';
 import { ApiError, fetchPuzzle, sendChoices, sendGuess } from './lib/api';
-import { CLUE_LABELS } from './lib/clue-text';
+import { CLUE_LABELS, guessAnnouncement } from './lib/clue-text';
 import { streakLabel } from './lib/format';
 import { trackVisualViewport } from './lib/viewport';
 import { shortDate } from '../shared/game/day';
@@ -33,6 +33,8 @@ export const App = () => {
   const [puzzle, setPuzzle] = useState<PuzzleResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Read out after each guess; see guessAnnouncement.
+  const [said, setSaid] = useState('');
   const [busy, setBusy] = useState(false);
   const [freshFrom, setFreshFrom] = useState(Number.POSITIVE_INFINITY);
   // Clues the player opened or closed by hand; the rest follow the default
@@ -119,6 +121,7 @@ export const App = () => {
         setFreshFrom(shownBefore);
         scrollAfterGuess.current = true;
         setPuzzle(next);
+        setSaid(guessAnnouncement(next));
         const last = next.guesses[next.guesses.length - 1];
         if (next.status === 'solved') {
           void bunny.current
@@ -177,7 +180,7 @@ export const App = () => {
 
   return (
     <div className="rh-app" ref={shell}>
-      <header className="rh-top">
+      <header className="rh-top" inert={howTo}>
         <BunnyStage
           onReady={onBunny}
           ready={puzzle !== null || error !== null}
@@ -247,7 +250,7 @@ export const App = () => {
                 answer={puzzle.result?.answer ?? null}
               />
               {clues.length > 0 ? (
-                <div className="rh-clues" aria-live="polite">
+                <div className="rh-clues">
                   {clues.map((clue, i) => (
                     <Clue
                       key={clue.kind}
@@ -341,6 +344,10 @@ export const App = () => {
           </footer>
         ) : null}
         {howTo ? <HowToPlay onClose={closeHowTo} /> : null}
+        {/* Always in the page, so screen readers pick up each change. */}
+        <p className="rh-sr-only" role="status">
+          {said}
+        </p>
       </div>
     </div>
   );

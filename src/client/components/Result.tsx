@@ -20,7 +20,7 @@ export function Result({
     : 'Out of guesses. This one stayed buried.';
 
   return (
-    <section className="rh-result" aria-live="polite">
+    <section className="rh-result">
       <div className="rh-result-head">
         <div>
           <h2>
@@ -75,7 +75,7 @@ function CommentsLink({ url }: { url: string }) {
         visit(url);
       }}
     >
-      How did everyone else do? See the comments
+      See how others did
     </button>
   ) : (
     <a
@@ -84,7 +84,7 @@ function CommentsLink({ url }: { url: string }) {
       target="_blank"
       rel="noopener noreferrer"
     >
-      How did everyone else do? See the comments
+      See how others did
     </a>
   );
 }

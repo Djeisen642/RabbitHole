@@ -460,7 +460,7 @@ body {
   display: grid;
   /* minmax(0, ...) keeps the column at the dock's width. With a plain auto
      column, the hint line's full unwrapped width set the column, which pushed
-     Dig and Skip off the right edge on phones. */
+     Guess and Skip off the right edge on phones. */
   grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
@@ -541,6 +541,9 @@ body {
 .rh-skip {
   flex: none;
   font-size: 14px;
+  /* Text-sized, so give it a finger-sized target. */
+  min-height: 44px;
+  padding: 0 4px;
 }
 .rh-skip:disabled {
   opacity: 0.55;
@@ -798,6 +801,9 @@ body {
   justify-self: start;
   text-align: left;
   font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 .rh-result-line {
   margin: 4px 0 0;
