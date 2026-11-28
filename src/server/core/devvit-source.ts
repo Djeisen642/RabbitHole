@@ -67,6 +67,7 @@ function toSourcePost(post: Post): SourcePost | null {
   return {
     id: post.id,
     title: post.title,
+    author: post.authorName,
     body: self ? (post.body ?? '') : '',
     isSelf: self,
     nsfw: post.nsfw,

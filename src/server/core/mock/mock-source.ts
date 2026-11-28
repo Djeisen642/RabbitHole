@@ -23,6 +23,7 @@ function toSourcePost(post: FixturePost): SourcePost {
   return {
     id: post.id,
     title: post.title,
+    author: post.author ?? 'example_poster',
     body: isSelf ? post.body : '',
     isSelf,
     nsfw: post.nsfw ?? false,

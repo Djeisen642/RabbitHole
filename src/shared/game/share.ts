@@ -66,3 +66,16 @@ export function postLink(subreddit: string, postId: string): string {
   const id = postId.startsWith('t3_') ? postId.slice(3) : postId;
   return `https://www.reddit.com/r/${subreddit}/comments/${id}/`;
 }
+
+/**
+ * The link to one comment on a post. Ids may carry their `t3_`/`t1_`
+ * prefix; `_` stands in for the title slug, which Reddit ignores.
+ */
+export function commentLink(
+  subreddit: string,
+  postId: string,
+  commentId: string
+): string {
+  const id = commentId.startsWith('t1_') ? commentId.slice(3) : commentId;
+  return `${postLink(subreddit, postId)}_/${id}/`;
+}

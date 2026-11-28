@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { postLink, shareText, solvedWith } from './share';
+import { commentLink, postLink, shareText, solvedWith } from './share';
 
 const POST = 'https://www.reddit.com/r/abbit_hole/comments/abc123/';
 
@@ -81,6 +81,15 @@ describe('shareText', () => {
 });
 
 describe('postLink', () => {
+  it('links one comment under its post', () => {
+    expect(commentLink('Breadit', 't3_abc', 't1_xyz')).toBe(
+      'https://www.reddit.com/r/Breadit/comments/abc/_/xyz/'
+    );
+    expect(commentLink('Breadit', 'abc', 'xyz')).toBe(
+      'https://www.reddit.com/r/Breadit/comments/abc/_/xyz/'
+    );
+  });
+
   it('builds the permalink from the bare id, with or without t3_', () => {
     expect(postLink('abbit_hole', 't3_abc123')).toBe(POST);
     expect(postLink('abbit_hole', 'abc123')).toBe(POST);

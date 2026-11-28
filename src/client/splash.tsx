@@ -71,7 +71,7 @@ export const Splash = () => {
             : 'Guess the community'}
         </p>
         <p className="rh-muted" style={{ margin: 0, fontSize: 12 }}>
-          by u/djeisen642
+          A game by u/djeisen642
         </p>
       </div>
       {/* Same live, tappable bunny as the game header. Wait for the puzzle so a

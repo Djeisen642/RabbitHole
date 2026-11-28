@@ -240,7 +240,7 @@ const BOTS = new Set(['automoderator', '[deleted]']);
 export function pickTopComment(
   comments: readonly SourceComment[],
   entry: PoolEntry
-): { id: string; body: string; score: number } | null {
+): { id: string; body: string; score: number; author: string } | null {
   for (const c of comments) {
     const body = c.body.trim();
     if (c.stickied || c.removed || c.distinguished) continue;
@@ -251,7 +251,7 @@ export function pickTopComment(
     // Masking only replaces whole words; a name glued into another word
     // ("#castironcooking") survives it, so such a comment is skipped.
     if (containsGiveaway(masked, entry)) continue;
-    return { id: c.id, body: masked, score: c.score };
+    return { id: c.id, body: masked, score: c.score, author: c.author };
   }
   return null;
 }

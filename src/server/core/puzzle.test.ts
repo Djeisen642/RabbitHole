@@ -120,6 +120,8 @@ describe('buildPuzzle', () => {
       't3_mockbr2',
     ]);
     expect(p.candidates[0]?.topComment.body).toMatch(/scoring angle/);
+    expect(p.candidates[0]?.postAuthor).toBe('example_poster');
+    expect(p.candidates[0]?.commentAuthor).toBe('example_user_1');
     expect(p.about).toMatch(
       /^Welcome to r\/\?{5}! A place to share your loaves/
     );
@@ -169,6 +171,31 @@ describe('buildPuzzle', () => {
       subscribers: 1_240_000,
       createdYear: 2011,
     });
+  });
+
+  it('credits no one for a deleted account or a puzzle stored before authors', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    const real = createMockSource();
+    deps.source.topPosts = async (sub, timeframe, limit) =>
+      (await real.topPosts(sub, timeframe, limit)).map((p) => ({
+        ...p,
+        author: '[deleted]',
+      }));
+    const built = await buildPuzzle(deps.source, entry('Breadit'));
+    if (!('puzzle' in built)) throw new Error(built.problem);
+    expect(built.puzzle.candidates[0]?.postAuthor).toBeNull();
+    expect(built.puzzle.candidates[0]?.commentAuthor).toBe('example_user_1');
+
+    const old = {
+      ...built.puzzle,
+      date: '2026-11-25',
+      candidates: built.puzzle.candidates.map(
+        ({ postAuthor: _p, commentAuthor: _c, ...c }) => c
+      ),
+    };
+    const parsed = parseStoredPuzzle(JSON.stringify(old));
+    expect(parsed?.candidates[0]?.postAuthor).toBeNull();
+    expect(parsed?.candidates[0]?.commentAuthor).toBeNull();
   });
 
   it('leaves the founding year out when Reddit gives no date', async () => {

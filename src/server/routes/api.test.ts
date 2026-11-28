@@ -192,6 +192,13 @@ describe('a full round', () => {
       'icon',
     ]);
     expect(result.visitUrl).toBe('https://www.reddit.com/r/Breadit/');
+    expect(result.credit).toEqual({
+      postUrl: 'https://www.reddit.com/r/Breadit/comments/mockbr1/',
+      postAuthor: 'example_poster',
+      commentUrl:
+        'https://www.reddit.com/r/Breadit/comments/mockbr1/_/mockbr1c1/',
+      commentAuthor: 'example_user_1',
+    });
     expect(result.wrongGuesses.map((w) => w.name).sort()).toEqual([
       'AskBaking',
       'AskCulinary',

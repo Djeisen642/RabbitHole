@@ -40,6 +40,12 @@ export type StoredCandidate = {
   commentId: string | null;
   post: PostCard;
   topComment: { body: string; score: number };
+  /**
+   * Who wrote the post and the top comment, credited once the round ends.
+   * Null when deleted, or for puzzles stored before authors were kept.
+   */
+  postAuthor: string | null;
+  commentAuthor: string | null;
 };
 
 export type StoredPuzzle = {
@@ -155,6 +161,8 @@ function parseCandidate(value: unknown): StoredCandidate | null {
     commentId,
     post: { title, body, score, comments, createdAt },
     topComment: { body: commentBody, score: commentScore },
+    postAuthor: asString(c?.postAuthor),
+    commentAuthor: asString(c?.commentAuthor),
   };
 }
 

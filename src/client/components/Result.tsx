@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { RoundResult } from '../../shared/api';
 import { copyText } from '../lib/clipboard';
 import { onReddit, toast, visit } from '../lib/platform';
@@ -23,7 +24,8 @@ export function Result({
     <section className="rh-result">
       <div className="rh-result-head">
         <div>
-          <h2>
+          {/* Focusable so focus can land here when the round ends. */}
+          <h2 tabIndex={-1}>
             <span className="rh-sr-only">It was </span>
             <b>r/</b>
             {result.answer}
@@ -38,6 +40,7 @@ export function Result({
           />
         ) : null}
       </div>
+      {result.credit ? <Credit credit={result.credit} /> : null}
 
       <div className="rh-chart">
         <h3 className="rh-section-title">What others guessed</h3>
@@ -65,26 +68,69 @@ export function Result({
   );
 }
 
+/**
+ * Who wrote today's post and its top comment, linked back to both, so the
+ * people whose words made the puzzle get the credit.
+ */
+function Credit({ credit }: { credit: NonNullable<RoundResult['credit']> }) {
+  const { postAuthor, commentAuthor, commentUrl } = credit;
+  return (
+    <p className="rh-credit rh-muted">
+      From{' '}
+      <OutLink url={credit.postUrl}>
+        {postAuthor ? `a post by u/${postAuthor}` : 'today’s post'}
+      </OutLink>
+      {commentUrl ? (
+        <>
+          , with{' '}
+          <OutLink url={commentUrl}>
+            {commentAuthor
+              ? `the top comment by u/${commentAuthor}`
+              : 'its top comment'}
+          </OutLink>
+        </>
+      ) : null}
+      .
+    </p>
+  );
+}
+
 /** Off to the post's comments, where the day's guesses get talked over. */
 function CommentsLink({ url }: { url: string }) {
+  return (
+    <OutLink url={url} className="rh-comments">
+      See how others did
+    </OutLink>
+  );
+}
+
+/**
+ * A link out of the game. Inside Reddit's webview a plain link can't leave
+ * the post, so it navigates through Devvit instead.
+ */
+function OutLink({
+  url,
+  className,
+  children,
+}: {
+  url: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const classes = className ? `rh-link ${className}` : 'rh-link';
   return onReddit ? (
     <button
       type="button"
-      className="rh-link rh-comments"
+      className={classes}
       onClick={() => {
         visit(url);
       }}
     >
-      See how others did
+      {children}
     </button>
   ) : (
-    <a
-      className="rh-link rh-comments"
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      See how others did
+    <a className={classes} href={url} target="_blank" rel="noopener noreferrer">
+      {children}
     </a>
   );
 }
