@@ -10,6 +10,7 @@ import { shortDate } from '../shared/game/day';
 import { BunnyStage } from './components/BunnyStage';
 import { fetchPuzzle } from './lib/api';
 import { openGame } from './lib/platform';
+import { streakLabel } from './lib/streak';
 
 // The splash has no game events to drive the bunny, so it never needs its
 // controls; a module-level no-op keeps BunnyStage's effect from re-running.
@@ -58,7 +59,9 @@ export const Splash = () => {
         </h1>
         <p className="rh-muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
           {puzzle
-            ? `#${puzzle.number} · ${shortDate(puzzle.date)}${puzzle.streak.current > 0 ? ` · ${puzzle.streak.current} day streak` : ''}`
+            ? [`#${puzzle.number}`, shortDate(puzzle.date), streakLabel(puzzle)]
+                .filter(Boolean)
+                .join(' · ')
             : 'Guess the community'}
         </p>
         <p className="rh-muted" style={{ margin: 0, fontSize: 12 }}>
