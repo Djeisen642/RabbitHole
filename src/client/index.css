@@ -368,6 +368,13 @@ body {
   text-align: left;
   cursor: pointer;
 }
+.rh-clue-h {
+  margin: 0;
+  font: inherit;
+}
+.rh-result h2:focus {
+  outline: none;
+}
 .rh-clue-head:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
@@ -807,6 +814,16 @@ body {
 }
 .rh-result-line {
   margin: 4px 0 0;
+}
+.rh-credit {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.rh-credit .rh-link {
+  font-weight: 600;
+  text-align: left;
 }
 .rh-result-actions {
   display: grid;

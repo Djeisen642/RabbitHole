@@ -24,21 +24,24 @@ export function Clue({
     <section
       className={`rh-clue${open ? ' open' : ''}${fresh ? ' fresh' : ''}`}
     >
-      <button
-        type="button"
-        className="rh-clue-head"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={onToggle}
-      >
-        <span className="rh-clue-label">
-          {layer} · {CLUE_LABELS[clue.kind]}
-        </span>
-        {open ? null : <span className="rh-clue-peek">{preview(clue)}</span>}
-        <svg className="rh-chevron" viewBox="0 0 12 12" aria-hidden="true">
-          <path d="M3 4.5 6 7.5 9 4.5" />
-        </svg>
-      </button>
+      {/* A heading, so screen readers can jump from clue to clue. */}
+      <h3 className="rh-clue-h">
+        <button
+          type="button"
+          className="rh-clue-head"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          <span className="rh-clue-label">
+            {layer} · {CLUE_LABELS[clue.kind]}
+          </span>
+          {open ? null : <span className="rh-clue-peek">{preview(clue)}</span>}
+          <svg className="rh-chevron" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M3 4.5 6 7.5 9 4.5" />
+          </svg>
+        </button>
+      </h3>
       <div className="rh-clue-body" id={bodyId} hidden={!open}>
         <ClueBody clue={clue} />
       </div>

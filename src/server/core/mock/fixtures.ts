@@ -20,6 +20,8 @@ export type FixtureComment = {
 export type FixturePost = {
   id: string;
   title: string;
+  /** Defaults to example_poster. */
+  author?: string;
   body: string;
   score: number;
   comments: number;

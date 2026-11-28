@@ -7,6 +7,8 @@
 export type SourcePost = {
   id: string;
   title: string;
+  /** Username without u/, or '[deleted]'. */
+  author: string;
   /** Plain text body; empty for anything that isn't a text post. */
   body: string;
   /** A text (self) post: no link, image, gallery or video. */

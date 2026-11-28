@@ -87,6 +87,12 @@ async function step<T>(what: string, read: () => Promise<T>): Promise<T> {
   }
 }
 
+/** A username worth crediting, or null for a deleted account. */
+function credited(author: string): string | null {
+  const name = author.trim();
+  return name === '' || name === '[deleted]' ? null : name;
+}
+
 /**
  * Build a puzzle from one sub, or explain why it can't make one. Reads the
  * sub's facts and month of top posts, then the comments of passing posts
@@ -126,6 +132,8 @@ export async function buildPuzzle(
         createdAt: post.createdAt,
       },
       topComment: { body: topComment.body, score: topComment.score },
+      postAuthor: credited(post.author),
+      commentAuthor: credited(topComment.author),
     });
     if (candidates.length >= MAX_CANDIDATES) break;
   }

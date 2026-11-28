@@ -50,6 +50,7 @@ const BODY =
 const post = (over: Partial<SourcePost> = {}): SourcePost => ({
   id: 't3_a',
   title: 'My third loaf finally has an open crumb',
+  author: 'example_poster',
   body: BODY,
   isSelf: true,
   nsfw: false,
@@ -282,6 +283,7 @@ describe('pickTopComment', () => {
       id: 't1_a',
       body: 'Welcome to r/?????, that crumb is lovely!',
       score: 7,
+      author: 'example_user',
     });
     expect(pickTopComment([], breadit)).toBeNull();
   });

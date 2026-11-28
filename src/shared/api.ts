@@ -53,6 +53,16 @@ export type RoundResult = {
   avatarUrl: string | null;
   /** The post the round was played in, for its comments, or null. */
   postUrl: string | null;
+  /**
+   * Where today's post and top comment came from, with who wrote them
+   * (null when deleted or unknown). Null when the day's puzzle changed.
+   */
+  credit: {
+    postUrl: string;
+    postAuthor: string | null;
+    commentUrl: string | null;
+    commentAuthor: string | null;
+  } | null;
 };
 
 export type PuzzleResponse = {

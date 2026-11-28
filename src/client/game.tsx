@@ -54,6 +54,8 @@ export const App = () => {
   const shell = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLElement>(null);
   const scrollAfterGuess = useRef(false);
+  // Set by a guess or an offer answer; see the focus effect below.
+  const recoverFocus = useRef(false);
   const onBunny = useCallback((controls: BunnyControls | null) => {
     bunny.current = controls;
   }, []);
@@ -98,6 +100,25 @@ export const App = () => {
     return el ? trackVisualViewport(el) : undefined;
   }, []);
 
+  // A guess or an answer to the offer can remove the control that had
+  // focus (the guess box when the round ends, a picked option, the offer's
+  // buttons). Then focus goes to the result's heading or the next control,
+  // instead of falling back to the top of the page for keyboard and screen
+  // reader users. Focus that is still on a control is left alone.
+  useEffect(() => {
+    if (!puzzle || !recoverFocus.current) return;
+    recoverFocus.current = false;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    const target =
+      puzzle.status === 'playing'
+        ? document.querySelector<HTMLElement>(
+            '.rh-dock input, .rh-dock .rh-choice:not(:disabled)'
+          )
+        : document.querySelector<HTMLElement>('.rh-result h2');
+    target?.focus({ preventScroll: true });
+  }, [puzzle]);
+
   // After a guess, bring the new clue (just above the guess box) into view;
   // after the last one, go back up to the result.
   useEffect(() => {
@@ -120,6 +141,7 @@ export const App = () => {
         const shownBefore = puzzle.result?.clues.length ?? puzzle.clues.length;
         setFreshFrom(shownBefore);
         scrollAfterGuess.current = true;
+        recoverFocus.current = true;
         setPuzzle(next);
         setSaid(guessAnnouncement(next));
         const last = next.guesses[next.guesses.length - 1];
@@ -157,7 +179,9 @@ export const App = () => {
       setBusy(true);
       setNotice(null);
       try {
-        setPuzzle(await sendChoices({ accept, date: puzzle.date }));
+        const next = await sendChoices({ accept, date: puzzle.date });
+        recoverFocus.current = true;
+        setPuzzle(next);
       } catch (e: unknown) {
         setNotice(e instanceof Error ? e.message : 'That did not go through.');
         if (e instanceof ApiError && e.status === 409)

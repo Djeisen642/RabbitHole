@@ -22,7 +22,7 @@ import {
 } from '../../shared/game/rules';
 import type { ClueKind, Streak } from '../../shared/game/rules';
 import { needsTypingIntro } from '../../shared/game/learning';
-import { shareText } from '../../shared/game/share';
+import { commentLink, postLink, shareText } from '../../shared/game/share';
 import type { StoredCandidate, StoredPuzzle } from './puzzle-store';
 import { sameSub } from './round';
 import type { PlayerRound } from './round';
@@ -108,6 +108,7 @@ export function puzzleView(args: {
           }),
           avatarUrl,
           postUrl,
+          credit: ownPuzzle ? credit(round.answer, candidate) : null,
         }
       : null;
   return {
@@ -129,6 +130,21 @@ export function puzzleView(args: {
     choices: player.choices,
     offer: player.offer,
     today,
+  };
+}
+
+/** Links back to the post and comment the round was built from. */
+function credit(
+  answer: string,
+  candidate: StoredCandidate
+): RoundResult['credit'] {
+  return {
+    postUrl: postLink(answer, candidate.postId),
+    postAuthor: candidate.postAuthor,
+    commentUrl: candidate.commentId
+      ? commentLink(answer, candidate.postId, candidate.commentId)
+      : null,
+    commentAuthor: candidate.commentAuthor,
   };
 }
 

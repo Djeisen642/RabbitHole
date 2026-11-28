@@ -35,9 +35,18 @@ export function PostCard({
   }, [open, post.body]);
 
   return (
-    <article className="rh-post" aria-label="Today's post">
+    <article className="rh-post" aria-label="The puzzle post">
       <div className="rh-post-meta">
-        <span className="sub">{answer ? `r/${answer}` : 'r/?????'}</span>
+        <span className="sub">
+          {answer ? (
+            `r/${answer}`
+          ) : (
+            <>
+              <span aria-hidden="true">r/?????</span>
+              <span className="rh-sr-only">Hidden community</span>
+            </>
+          )}
+        </span>
         <span aria-hidden="true">·</span>
         <span>{ago(post.createdAt)} ago</span>
       </div>
