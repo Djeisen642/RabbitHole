@@ -15,6 +15,8 @@ export type MockDeps = Deps & {
   posts: { id: string; title: string; url: string }[];
   pinned: { postId: string; markdown: string }[];
   notices: { subject: string; markdown: string }[];
+  /** Flair set, by username. */
+  flairs: Map<string, string>;
   store: Store;
   setUser(user: User | null): void;
   /** The post requests come from (null: none, so today's puzzle). */
@@ -48,6 +50,7 @@ export function createMockDeps(
   const posts: MockDeps['posts'] = [];
   const pinned: MockDeps['pinned'] = [];
   const notices: MockDeps['notices'] = [];
+  const flairs = new Map<string, string>();
   const deps: MockDeps = {
     // Keys expire by the mock clock, so tests can move time past a TTL.
     store: new MemoryStore(() => now),
@@ -57,6 +60,7 @@ export function createMockDeps(
     posts,
     pinned,
     notices,
+    flairs,
     user: () => Promise.resolve(user),
     // A made-up post, so the share text has a link line in mock mode too.
     postUrl: () => MOCK_POST_URL,
@@ -71,6 +75,12 @@ export function createMockDeps(
       posts.push({ id, title, url });
       return Promise.resolve({ id, url });
     },
+    setFlair(username, text) {
+      flairs.set(username, text);
+      return Promise.resolve();
+    },
+    avatarUrl: (username) =>
+      Promise.resolve(`https://i.redd.it/snoovatar/${username}.png`),
     pinComment(postId, markdown) {
       pinned.push({ postId, markdown });
       return Promise.resolve();

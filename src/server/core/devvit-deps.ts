@@ -59,6 +59,18 @@ export function createDevvitDeps(mode: SourceMode): Deps {
       const post = await reddit.submitCustomPost({ title });
       return { id: post.id, url: postLink(context.subredditName, post.id) };
     },
+    async setFlair(username, text) {
+      await reddit.setUserFlair({
+        subredditName: context.subredditName,
+        username,
+        text,
+        backgroundColor: '#c63a00',
+        textColor: 'light',
+      });
+    },
+    async avatarUrl(username) {
+      return (await reddit.getSnoovatarUrl(username)) ?? null;
+    },
     async pinComment(postId, markdown) {
       const id = postId.startsWith('t3_') ? postId : `t3_${postId}`;
       const comment = await reddit.submitComment({

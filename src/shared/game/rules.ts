@@ -195,3 +195,14 @@ export function visibleStreak(streak: Streak, day: number): Streak {
     return streak;
   return { ...streak, current: 0 };
 }
+
+/**
+ * The user flair a player's streak earns in the game's community, shown
+ * beside their name on every comment there. Null before their first solve.
+ * Flair text can't hold a comma.
+ */
+export function streakFlair(streak: Streak): string | null {
+  if (streak.current > 0) return `🐇 ${String(streak.current)} day streak`;
+  if (streak.best > 0) return `🐇 best streak ${String(streak.best)}`;
+  return null;
+}

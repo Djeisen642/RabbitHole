@@ -12,6 +12,7 @@ import {
   score,
   updateStreak,
   visibleStreak,
+  streakFlair,
 } from './rules';
 
 describe('normalizeSubreddit', () => {
@@ -158,6 +159,20 @@ describe('updateStreak', () => {
   it('does not double count the same day', () => {
     const s = updateStreak(updateStreak(start, 10, true), 10, true);
     expect(s.current).toBe(1);
+  });
+});
+
+describe('streakFlair', () => {
+  it('shows the current streak, else the best, else nothing', () => {
+    expect(streakFlair({ current: 5, best: 7, lastSolvedDay: 1 })).toBe(
+      '🐇 5 day streak'
+    );
+    expect(streakFlair({ current: 0, best: 7, lastSolvedDay: 1 })).toBe(
+      '🐇 best streak 7'
+    );
+    expect(streakFlair({ current: 0, best: 0, lastSolvedDay: null })).toBe(
+      null
+    );
   });
 });
 

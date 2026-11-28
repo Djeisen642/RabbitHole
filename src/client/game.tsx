@@ -26,6 +26,7 @@ import { Tunnel } from './components/Tunnel';
 import { ApiError, fetchPuzzle, sendChoices, sendGuess } from './lib/api';
 import { CLUE_LABELS } from './lib/clue-labels';
 import { trackVisualViewport } from './lib/viewport';
+import { shortDate } from '../shared/game/day';
 
 export const App = () => {
   const [puzzle, setPuzzle] = useState<PuzzleResponse | null>(null);
@@ -202,6 +203,8 @@ export const App = () => {
             <>
               <p className="rh-top-meta">
                 #{puzzle.number}
+                <span aria-hidden="true"> · </span>
+                {shortDate(puzzle.date)}
                 {puzzle.streak.current > 0 ? (
                   <>
                     <span aria-hidden="true"> · </span>

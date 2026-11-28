@@ -6,6 +6,7 @@ import {
   puzzleDateAt,
   puzzleDateFor,
   puzzleNumber,
+  shortDate,
 } from './day';
 
 describe('puzzle days', () => {
@@ -23,6 +24,7 @@ describe('puzzle days', () => {
     expect(puzzleNumber('2026-12-08')).toBe(13);
     expect(puzzleDateFor(1)).toBe('2026-11-26');
     expect(puzzleDateFor(13)).toBe('2026-12-08');
+    expect(shortDate('2026-11-27')).toBe('Nov 27');
   });
 
   it('validates dates', () => {

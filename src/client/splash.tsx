@@ -6,6 +6,7 @@ import type { MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { PuzzleResponse } from '../shared/api';
 import { solvedWith } from '../shared/game/share';
+import { shortDate } from '../shared/game/day';
 import { BunnyStage } from './components/BunnyStage';
 import { fetchPuzzle } from './lib/api';
 import { openGame } from './lib/platform';
@@ -57,8 +58,11 @@ export const Splash = () => {
         </h1>
         <p className="rh-muted" style={{ margin: '2px 0 0', fontSize: 14 }}>
           {puzzle
-            ? `#${puzzle.number}${puzzle.streak.current > 0 ? ` · ${puzzle.streak.current} day streak` : ''}`
+            ? `#${puzzle.number} · ${shortDate(puzzle.date)}${puzzle.streak.current > 0 ? ` · ${puzzle.streak.current} day streak` : ''}`
             : 'Guess the community'}
+        </p>
+        <p className="rh-muted" style={{ margin: 0, fontSize: 12 }}>
+          by u/djeisen642
         </p>
       </div>
       {/* Same live, tappable bunny as the game header. Wait for the puzzle so a

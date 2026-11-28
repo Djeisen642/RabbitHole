@@ -704,6 +704,8 @@ export function puzzleView(args: {
   chart: { bars: WrongGuessBar[]; players: number } | null;
   /** The post the round is played in, for the share text's link. */
   postUrl: string | null;
+  /** The player's snoovatar, for a finished round. */
+  avatarUrl: string | null;
 }): PuzzleResponse {
   const {
     puzzle,
@@ -715,6 +717,7 @@ export function puzzleView(args: {
     username,
     chart,
     postUrl,
+    avatarUrl,
   } = args;
   const { round } = player;
   // A finished round keeps the answer it was played against. If the day
@@ -748,6 +751,8 @@ export function puzzleView(args: {
             maxGuesses: maxGuesses(round),
             postUrl,
           }),
+          avatarUrl,
+          postUrl,
         }
       : null;
   return {
