@@ -69,3 +69,14 @@ export function puzzleDateAt(now: Date): PuzzleDate {
   }
   return new Date(now.getTime() - 5 * 3_600_000).toISOString().slice(0, 10);
 }
+
+const SHORT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** A puzzle date as players see it: "Nov 27". */
+export function shortDate(date: PuzzleDate): string {
+  return SHORT.format(new Date(`${date}T12:00:00Z`));
+}

@@ -49,6 +49,10 @@ export type RoundResult = {
   /** Where the Visit button goes. */
   visitUrl: string;
   shareText: string;
+  /** The player's snoovatar, shown with their result, or null. */
+  avatarUrl: string | null;
+  /** The post the round was played in, for its comments, or null. */
+  postUrl: string | null;
 };
 
 export type PuzzleResponse = {

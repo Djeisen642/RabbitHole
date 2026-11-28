@@ -777,6 +777,28 @@ body {
   color: var(--accent);
   font-weight: 600;
 }
+.rh-result-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rh-result-head > div {
+  min-width: 0;
+}
+/* Snoovatars are tall, transparent full-body images. */
+.rh-avatar {
+  flex: none;
+  width: 56px;
+  height: 72px;
+  object-fit: contain;
+  object-position: bottom;
+}
+.rh-comments {
+  justify-self: start;
+  text-align: left;
+  font-size: 15px;
+}
 .rh-result-line {
   margin: 4px 0 0;
 }

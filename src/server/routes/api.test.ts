@@ -425,6 +425,30 @@ describe('the daily rollover', () => {
   });
 });
 
+describe('the player on Reddit', () => {
+  it('gets streak flair and their snoovatar on the result', async () => {
+    const { guess, deps } = await setup('Breadit');
+    const { body } = await guess('Breadit');
+    if (body.type !== 'puzzle') throw new Error('expected a puzzle');
+    expect(deps.flairs.get('mock_player')).toBe('🐇 1 day streak');
+    expect(body.result?.avatarUrl).toBe(
+      'https://i.redd.it/snoovatar/mock_player.png'
+    );
+    expect(body.result?.postUrl).toBe(MOCK_POST_URL);
+  });
+
+  it('still finishes the round when flair or the snoovatar fails', async () => {
+    const { guess, deps } = await setup('Breadit');
+    deps.setFlair = () => Promise.reject(new Error('no flair'));
+    deps.avatarUrl = () => Promise.reject(new Error('no avatar'));
+    const { status, body } = await guess('Breadit');
+    expect(status).toBe(200);
+    if (body.type !== 'puzzle') throw new Error('expected a puzzle');
+    expect(body.status).toBe('solved');
+    expect(body.result?.avatarUrl).toBeNull();
+  });
+});
+
 describe('an older post', () => {
   const NEXT_DAY = addDays(TODAY, 1);
 

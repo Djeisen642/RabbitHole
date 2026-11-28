@@ -3,7 +3,7 @@ import type { RoundResult } from '../../shared/api';
 import { copyText } from '../lib/clipboard';
 import { onReddit, toast, visit } from '../lib/platform';
 
-/** End of round: the answer, the score and what others guessed. */
+/** End of round: the answer, the score, what others guessed, and the comments. */
 export function Result({
   result,
   solved,
@@ -21,13 +21,22 @@ export function Result({
 
   return (
     <section className="rh-result" aria-live="polite">
-      <div>
-        <h2>
-          <span className="rh-sr-only">It was </span>
-          <b>r/</b>
-          {result.answer}
-        </h2>
-        <p className="rh-result-line">{headline}</p>
+      <div className="rh-result-head">
+        <div>
+          <h2>
+            <span className="rh-sr-only">It was </span>
+            <b>r/</b>
+            {result.answer}
+          </h2>
+          <p className="rh-result-line">{headline}</p>
+        </div>
+        {result.avatarUrl ? (
+          <img
+            className="rh-avatar"
+            src={result.avatarUrl}
+            alt="Your snoovatar"
+          />
+        ) : null}
       </div>
 
       <div className="rh-chart">
@@ -51,7 +60,32 @@ export function Result({
           {result.players} {result.players === 1 ? 'player' : 'players'} today
         </p>
       </div>
+      {result.postUrl ? <CommentsLink url={result.postUrl} /> : null}
     </section>
+  );
+}
+
+/** Off to the post's comments, where the day's guesses get talked over. */
+function CommentsLink({ url }: { url: string }) {
+  return onReddit ? (
+    <button
+      type="button"
+      className="rh-link rh-comments"
+      onClick={() => {
+        visit(url);
+      }}
+    >
+      How did everyone else do? See the comments
+    </button>
+  ) : (
+    <a
+      className="rh-link rh-comments"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      How did everyone else do? See the comments
+    </a>
   );
 }
 

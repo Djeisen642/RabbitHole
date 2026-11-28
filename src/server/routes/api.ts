@@ -17,6 +17,7 @@ import type { Deps } from '../core/deps';
 import { readPoolCheck } from '../core/pool-check';
 import type { PoolCheckReport } from '../core/pool-check';
 import { dailyPostKey } from '../core/daily-post';
+import { giveStreakFlair, playerAvatar } from '../core/player-look';
 import { postDay } from '../core/post-day';
 import { servePastPuzzle, servePuzzle } from '../core/puzzle';
 import type { Served } from '../core/puzzle';
@@ -77,10 +78,11 @@ export function createApi(deps: Deps): Hono {
     streak: Streak,
     served: Served
   ): Promise<PuzzleResponse> {
-    const chart =
-      player.round.status === 'playing'
-        ? null
-        : await wrongGuessChart(deps, day.date);
+    const done = player.round.status !== 'playing';
+    const [chart, avatarUrl] = await Promise.all([
+      done ? wrongGuessChart(deps, day.date) : null,
+      done && user ? playerAvatar(deps, user) : null,
+    ]);
     return puzzleView({
       puzzle: served.puzzle,
       candidate: served.candidate,
@@ -91,6 +93,7 @@ export function createApi(deps: Deps): Hono {
       username: user?.username ?? null,
       chart,
       postUrl: deps.postUrl(),
+      avatarUrl,
     });
   }
 
@@ -145,6 +148,10 @@ export function createApi(deps: Deps): Hono {
         !day.past
       );
       if (!outcome.ok) return fail(c, outcome.status, outcome.message);
+      // The round just ended (a finished round refuses more guesses), so
+      // today's result moves the streak, and the flair with it.
+      if (user && !day.past && outcome.player.round.status !== 'playing')
+        await giveStreakFlair(deps, user, outcome.streak);
       return c.json<PuzzleResponse>(
         await view(day, user, outcome.player, outcome.streak, served)
       );

@@ -37,6 +37,10 @@ export type Deps = {
   newSalt(): string;
   /** Make a post in the app's community; returns its id and link. */
   createPost(title: string): Promise<{ id: string; url: string }>;
+  /** Set a user's flair text in the app's community. */
+  setFlair(username: string, text: string): Promise<void>;
+  /** A user's snoovatar image, or null when they have none. */
+  avatarUrl(username: string): Promise<string | null>;
   /** Comment on a post as the app and pin the comment as a moderator. */
   pinComment(postId: string, markdown: string): Promise<void>;
   /** Send the community's moderators a modmail notification. */

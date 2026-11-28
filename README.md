@@ -30,6 +30,7 @@ New players pick from a list instead of typing: 5 communities on your first roun
 - The "What others guessed" chart after a round only counts typed guesses, since picks from a short list would skew it.
 - Time doesn't count, and there is no tiebreak: players with the same score share a rank. Unsolved rounds rank last.
 - Solving on consecutive days builds your streak. Missing a day or failing a round resets it.
+- Your streak shows up as your user flair in the community ("🐇 5 day streak"), next to your name on every comment there. The result screen shows your snoovatar and a link to the post's comments.
 - Each daily post keeps its own day's puzzle. An older post can still be played for fun, but only today's counts toward the streak.
 
 ### Sharing your result
