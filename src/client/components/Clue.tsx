@@ -39,11 +39,9 @@ export function Clue({
           <path d="M3 4.5 6 7.5 9 4.5" />
         </svg>
       </button>
-      {open ? (
-        <div className="rh-clue-body" id={bodyId}>
-          <ClueBody clue={clue} />
-        </div>
-      ) : null}
+      <div className="rh-clue-body" id={bodyId} hidden={!open}>
+        <ClueBody clue={clue} />
+      </div>
     </section>
   );
 }
@@ -85,8 +83,10 @@ function ClueBody({ clue }: { clue: ClueView }) {
       return (
         <p className="rh-jargon">
           {clue.words.map((word, i) => (
+            // The trailing space keeps screen readers from running the
+            // words together; the flex gap does the spacing on screen.
             <span key={word} style={{ fontSize: 20 - Math.min(i, 6) * 1.2 }}>
-              {word}
+              {word}{' '}
             </span>
           ))}
         </p>

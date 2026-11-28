@@ -19,10 +19,10 @@ export function OlderPuzzle({
       An older puzzle, just for fun. It won’t change your streak.{' '}
       {url ? (
         <a className="rh-link" href={url} onClick={open}>
-          Play today’s #{today.number}
+          Play today’s puzzle
         </a>
       ) : (
-        <>Today’s is #{today.number}.</>
+        <>Today’s puzzle isn’t up yet.</>
       )}
     </p>
   );

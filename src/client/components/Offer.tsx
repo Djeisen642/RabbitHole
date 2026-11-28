@@ -24,7 +24,7 @@ export function Offer({
           onAnswer(true);
         }}
       >
-        Yes
+        Show me a list
       </button>
       <button
         type="button"
@@ -34,7 +34,7 @@ export function Offer({
           onAnswer(false);
         }}
       >
-        No
+        I’ll type
       </button>
     </div>
   );

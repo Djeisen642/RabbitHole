@@ -134,7 +134,7 @@ export function GuessBox({
           className="rh-button"
           disabled={disabled || value.trim() === ''}
         >
-          Dig
+          Guess
         </button>
         {showList ? (
           <ul className="rh-suggest" id={listId} role="listbox">

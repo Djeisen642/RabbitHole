@@ -15,6 +15,11 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
     button.current?.focus();
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') onClose();
+      // The card has one control, so Tab stays on it (the rest is inert).
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        button.current?.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => {
