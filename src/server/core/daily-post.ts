@@ -13,6 +13,7 @@ import { puzzleNumber } from '../../shared/game/day';
 import type { PuzzleDate } from '../../shared/game/day';
 import type { Deps } from './deps';
 import { tryLock } from './lock';
+import { recordPostDay } from './post-day';
 
 /** How long the markers live: long enough to outlast the day they're for. */
 const MARKER_SECONDS = 3 * 86_400;
@@ -73,6 +74,7 @@ export async function postDaily(
     throw error;
   }
   await deps.store.set(key, post.url, { expiration: expiry(deps) });
+  await tiePost(deps, post.id, date);
 
   try {
     await deps.pinComment(post.id, SPOILER_COMMENT);
@@ -91,14 +93,33 @@ export async function postDaily(
 
 /**
  * Record a post a moderator made by hand from the menu, so the scheduler
- * doesn't post the same day again.
+ * doesn't post the same day again, and tie it to its date.
  */
 export async function recordDailyPost(
   deps: Deps,
   date: PuzzleDate,
-  url: string
+  post: { id: string; url: string }
 ): Promise<void> {
-  await deps.store.set(dailyPostKey(date), url, { expiration: expiry(deps) });
+  await deps.store.set(dailyPostKey(date), post.url, {
+    expiration: expiry(deps),
+  });
+  await tiePost(deps, post.id, date);
+}
+
+/**
+ * Tie a new post to its date (see post-day.ts). Best effort: a post that
+ * misses this is matched by its title on first load.
+ */
+async function tiePost(
+  deps: Deps,
+  postId: string,
+  date: PuzzleDate
+): Promise<void> {
+  try {
+    await recordPostDay(deps, postId, date);
+  } catch (error) {
+    deps.log(`daily post ${date}: tying the post failed: ${String(error)}`);
+  }
 }
 
 async function tell(deps: Deps, subject: string, body: string): Promise<void> {

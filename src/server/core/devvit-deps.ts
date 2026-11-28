@@ -34,6 +34,14 @@ export function createDevvitDeps(mode: SourceMode): Deps {
       const { postId, subredditName } = context;
       return postId ? postLink(subredditName, postId) : null;
     },
+    postId() {
+      return context.postId ?? null;
+    },
+    async postTitle(postId) {
+      const id = postId.startsWith('t3_') ? postId : `t3_${postId}`;
+      const post = await reddit.getPostById(id as `t3_${string}`);
+      return post.title;
+    },
     isModerator() {
       const { userId, username, subredditName } = context;
       if (!userId || !username) return Promise.resolve(false);

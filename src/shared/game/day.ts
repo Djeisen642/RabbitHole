@@ -38,6 +38,11 @@ export function addDays(date: PuzzleDate, days: number): PuzzleDate {
   return dateFromDayNumber(dayNumber(date) + days);
 }
 
+/** The date of puzzle #`number` (FIRST_PUZZLE_DATE is #1). */
+export function puzzleDateFor(number: number): PuzzleDate {
+  return addDays(FIRST_PUZZLE_DATE, number - 1);
+}
+
 /** The puzzle number shown to players (#1 on FIRST_PUZZLE_DATE). */
 export function puzzleNumber(date: PuzzleDate): number {
   return dayNumber(date) - dayNumber(FIRST_PUZZLE_DATE) + 1;

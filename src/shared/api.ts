@@ -85,6 +85,12 @@ export type PuzzleResponse = {
    * losses. Answer with POST /api/choices before the first guess.
    */
   offer: boolean;
+  /**
+   * Set when this post is an earlier day's puzzle: it can still be played,
+   * but not for the streak. `number` is today's puzzle, and `url` its post
+   * once it's up.
+   */
+  today: { number: number; url: string | null } | null;
 };
 
 export type GuessRequest = {

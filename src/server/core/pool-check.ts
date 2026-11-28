@@ -6,7 +6,7 @@
  *
  * Redis: `poolcheck:YYYY-MM-DD` hash, one field per sub (SubCheck JSON) plus
  * `_cursor` (next pool index), `_total` and `_updatedAt` (ms of the last
- * batch). Expires PUZZLE_KEEP_DAYS after its date. `poolcheck-lock:` guards
+ * batch). Expires POOL_CHECK_KEEP_DAYS after its date. `poolcheck-lock:` guards
  * starting a check.
  */
 import { addDays, puzzleDateAt } from '../../shared/game/day';
@@ -25,6 +25,8 @@ import { checkSub, loadPuzzle, secondsToKeep } from './puzzle';
 import type { SubCheck } from './puzzle';
 
 export const POOL_CHECK_BATCH = 10;
+/** Days a pool check's results are kept after its date. */
+export const POOL_CHECK_KEEP_DAYS = 3;
 /**
  * A check whose last batch is older than this counts as dead (its
  * scheduler job failed), so a new one may start.
@@ -62,7 +64,7 @@ export async function runPoolCheckBatch(
     _total: String(total),
     _updatedAt: String(deps.now().getTime()),
   });
-  await deps.store.expire(key, secondsToKeep(deps, date));
+  await deps.store.expire(key, secondsToKeep(deps, date, POOL_CHECK_KEEP_DAYS));
   const done = checked >= total;
   if (!done) await deps.scheduleNextPoolCheck(date);
   return { checked, total, done };

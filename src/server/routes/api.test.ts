@@ -16,6 +16,8 @@ import type { MockDeps } from '../core/mock/mock-deps';
 import { PLAYER_KEEP_DAYS } from '../core/round';
 import { addDays } from '../../shared/game/day';
 import { SKIP_GUESS, normalizeSubreddit } from '../../shared/game/rules';
+import { postDaily } from '../core/daily-post';
+import { recordPostDay } from '../core/post-day';
 import { createApi } from './api';
 
 const NOW = new Date('2026-11-25T15:00:00Z');
@@ -420,6 +422,60 @@ describe('the daily rollover', () => {
     const tomorrow = puzzle((await get('/puzzle')).body);
     expect(tomorrow.date).toBe('2026-11-26');
     expect(tomorrow.guesses).toEqual([]);
+  });
+});
+
+describe('an older post', () => {
+  const NEXT_DAY = addDays(TODAY, 1);
+
+  /** A post tied to TODAY, opened the day after, with that day's post up. */
+  async function olderPost() {
+    const t = await setup('Breadit');
+    const old = await t.deps.createPost('older');
+    await recordPostDay(t.deps, old.id, TODAY);
+    t.deps.setNow(new Date(NOW.getTime() + 86_400_000));
+    const picks = await runDailyPick(t.deps, NEXT_DAY);
+    await postDaily(t.deps, NEXT_DAY, picks[0]?.answer ?? null);
+    const todays = t.deps.posts[t.deps.posts.length - 1];
+    t.deps.setPostId(old.id);
+    return { ...t, todaysUrl: todays?.url };
+  }
+
+  it("plays its own day's puzzle and points to today's", async () => {
+    const { get, deps, todaysUrl } = await olderPost();
+    const { status, body } = await get('/puzzle');
+    expect(status).toBe(200);
+    if (body.type !== 'puzzle') throw new Error('expected a puzzle');
+    expect(body.date).toBe(TODAY);
+    expect(body.today).toEqual({ number: 1, url: todaysUrl });
+
+    // A post with no day of its own plays today's.
+    deps.setPostId(null);
+    const fresh = await get('/puzzle');
+    if (fresh.body.type !== 'puzzle') throw new Error('expected a puzzle');
+    expect(fresh.body.date).toBe(NEXT_DAY);
+    expect(fresh.body.today).toBeNull();
+  });
+
+  it('can be solved, but leaves the streak alone', async () => {
+    const { guess, deps } = await olderPost();
+    expect((await guess('Breadit', NEXT_DAY)).status).toBe(409);
+    const { status, body } = await guess('Breadit', TODAY);
+    expect(status).toBe(200);
+    if (body.type !== 'puzzle') throw new Error('expected a puzzle');
+    expect(body.status).toBe('solved');
+    expect(body.streak.current).toBe(0);
+    expect(await deps.store.hGetAll('user:t2_mockplayer:streak')).toEqual({});
+  });
+
+  it('says so when its puzzle is gone, rather than serving another', async () => {
+    const { get, deps } = await olderPost();
+    await deps.store.del(`puzzle:${TODAY}`);
+    const { status, body } = await get('/puzzle');
+    expect(status).toBe(410);
+    if (body.type !== 'error') throw new Error('expected an error');
+    expect(body.message).toMatch(/no longer available/);
+    expect(await loadPuzzle(deps, TODAY)).toBeNull();
   });
 });
 

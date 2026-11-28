@@ -19,6 +19,7 @@ import { Clue } from './components/Clue';
 import { GuessBox } from './components/GuessBox';
 import { HowToPlay } from './components/HowToPlay';
 import { Offer } from './components/Offer';
+import { OlderPuzzle } from './components/OlderPuzzle';
 import { PostCard } from './components/PostCard';
 import { Result, ResultActions } from './components/Result';
 import { Tunnel } from './components/Tunnel';
@@ -228,6 +229,7 @@ export const App = () => {
             <p className="rh-muted">Digging up today’s post…</p>
           ) : (
             <>
+              {puzzle.today ? <OlderPuzzle today={puzzle.today} /> : null}
               {done && puzzle.result ? (
                 <Result
                   result={puzzle.result}

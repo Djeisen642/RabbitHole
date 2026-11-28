@@ -30,6 +30,7 @@ New players pick from a list instead of typing: 5 communities on your first roun
 - The "What others guessed" chart after a round only counts typed guesses, since picks from a short list would skew it.
 - Time doesn't count, and there is no tiebreak: players with the same score share a rank. Unsolved rounds rank last.
 - Solving on consecutive days builds your streak. Missing a day or failing a round resets it.
+- Each daily post keeps its own day's puzzle. An older post can still be played for fun, but only today's counts toward the streak.
 
 ### Sharing your result
 
@@ -57,7 +58,7 @@ Posts and top comments that are deleted or removed on Reddit are dropped from th
 
 ### What is kept
 
-Each player's round and the day's scores are kept for 30 days, then deleted, and so is the small record of how many rounds they've finished and lost in a row (which decides whether they get options). Streaks are kept, since they run across days. Puzzles and pool check results are deleted a few days after their date.
+Each player's round and the day's scores are kept for 30 days, then deleted, and so is the small record of how many rounds they've finished and lost in a row (which decides whether they get options). Streaks are kept, since they run across days. Puzzles are kept for a year so older posts keep working; pool check results are deleted a few days after their date.
 
 ## Setup
 
