@@ -25,6 +25,7 @@ import { Result, ResultActions } from './components/Result';
 import { Tunnel } from './components/Tunnel';
 import { ApiError, fetchPuzzle, sendChoices, sendGuess } from './lib/api';
 import { CLUE_LABELS } from './lib/clue-labels';
+import { streakLabel } from './lib/streak';
 import { trackVisualViewport } from './lib/viewport';
 import { shortDate } from '../shared/game/day';
 
@@ -172,6 +173,7 @@ export const App = () => {
   const wonAt = puzzle ? puzzle.guesses.findIndex((g) => g.correct) : -1;
   const nextKind = puzzle && !done ? puzzle.clueKinds[clues.length] : undefined;
   const newest = clues[clues.length - 1]?.kind;
+  const streak = puzzle ? streakLabel(puzzle) : null;
 
   return (
     <div className="rh-app" ref={shell}>
@@ -205,10 +207,10 @@ export const App = () => {
                 #{puzzle.number}
                 <span aria-hidden="true"> · </span>
                 {shortDate(puzzle.date)}
-                {puzzle.streak.current > 0 ? (
+                {streak ? (
                   <>
                     <span aria-hidden="true"> · </span>
-                    {puzzle.streak.current} day streak
+                    {streak}
                   </>
                 ) : null}
               </p>
