@@ -1,4 +1,4 @@
-import { guessHint } from '../lib/hint';
+import { guessHint } from '../lib/clue-text';
 
 /**
  * The line under the guess box: what a miss costs, and a Skip for a player

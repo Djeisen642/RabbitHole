@@ -48,7 +48,7 @@ import {
 } from './json';
 import { optionsFor } from './choices';
 import type { StoredPuzzle } from './puzzle-store';
-import { PLAYER_KEEP_SECONDS } from './player-keep';
+import { PLAYER_KEEP_SECONDS } from './keep';
 import { loadLearner, saveLearner } from './learner';
 import { loadStreak, saveStreak } from './streak';
 import { countPlayer, countWrongGuess, recordScore } from './day-stats';

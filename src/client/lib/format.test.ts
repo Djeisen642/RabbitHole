@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { streakLabel } from './streak';
+import { streakLabel } from './format';
 
 const streak = { current: 2, best: 5 };
 

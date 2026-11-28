@@ -24,8 +24,8 @@ import { PostCard } from './components/PostCard';
 import { Result, ResultActions } from './components/Result';
 import { Tunnel } from './components/Tunnel';
 import { ApiError, fetchPuzzle, sendChoices, sendGuess } from './lib/api';
-import { CLUE_LABELS } from './lib/clue-labels';
-import { streakLabel } from './lib/streak';
+import { CLUE_LABELS } from './lib/clue-text';
+import { streakLabel } from './lib/format';
 import { trackVisualViewport } from './lib/viewport';
 import { shortDate } from '../shared/game/day';
 

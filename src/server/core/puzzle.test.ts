@@ -21,8 +21,8 @@ import {
   runDailyPick,
 } from './puzzle-pick';
 import { LIVE_CHECK_MS, servePastPuzzle, servePuzzle } from './puzzle-serve';
+import { PUZZLE_KEEP_DAYS } from './keep';
 import {
-  PUZZLE_KEEP_DAYS,
   keepRecentPuzzles,
   loadPuzzle,
   parseStoredPuzzle,

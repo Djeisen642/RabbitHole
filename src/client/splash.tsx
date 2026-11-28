@@ -10,7 +10,7 @@ import { shortDate } from '../shared/game/day';
 import { BunnyStage } from './components/BunnyStage';
 import { fetchPuzzle } from './lib/api';
 import { openGame } from './lib/platform';
-import { streakLabel } from './lib/streak';
+import { streakLabel } from './lib/format';
 
 // The splash has no game events to drive the bunny, so it never needs its
 // controls; a module-level no-op keeps BunnyStage's effect from re-running.

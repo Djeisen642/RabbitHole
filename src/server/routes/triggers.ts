@@ -1,30 +1,33 @@
 import { Hono } from 'hono';
 import type { OnAppInstallRequest, TriggerResponse } from '@devvit/web/shared';
-import { context } from '@devvit/web/server';
-import { createPost } from '../core/post';
+import { runDaily } from '../core/daily-post';
+import type { Deps } from '../core/deps';
 
-export const triggers = new Hono();
+export function createTriggers(deps: Deps): Hono {
+  const triggers = new Hono();
 
-triggers.post('/on-app-install', async (c) => {
-  try {
-    const post = await createPost();
-    const input = await c.req.json<OnAppInstallRequest>();
+  // Installing the app runs the same daily run as the hourly scheduler, so
+  // the first post is the real, recorded daily post rather than a second
+  // one the scheduler doesn't know about.
+  triggers.post('/on-app-install', async (c) => {
+    try {
+      const input = await c.req.json<OnAppInstallRequest>();
+      const outcome = await runDaily(deps);
+      return c.json<TriggerResponse>(
+        {
+          status: 'success',
+          message: `Install (${input.type}): ${outcome.kind === 'no-puzzle' ? 'no puzzle yet, the scheduler retries hourly' : outcome.url}`,
+        },
+        200
+      );
+    } catch (error) {
+      console.error(`Install run failed: ${String(error)}`);
+      return c.json<TriggerResponse>(
+        { status: 'error', message: 'Install run failed' },
+        400
+      );
+    }
+  });
 
-    return c.json<TriggerResponse>(
-      {
-        status: 'success',
-        message: `Post created in subreddit ${context.subredditName} with id ${post.id} (trigger: ${input.type})`,
-      },
-      200
-    );
-  } catch (error) {
-    console.error(`Error creating post: ${String(error)}`);
-    return c.json<TriggerResponse>(
-      {
-        status: 'error',
-        message: 'Failed to create post',
-      },
-      400
-    );
-  }
-});
+  return triggers;
+}

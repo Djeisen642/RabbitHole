@@ -9,11 +9,13 @@
  * (a lock token while one is being made). `daily-post-missing:YYYY-MM-DD`
  * marks that the moderators were told a day has no puzzle.
  */
-import { puzzleNumber } from '../../shared/game/day';
+import { puzzleDateAt, puzzleNumber } from '../../shared/game/day';
 import type { PuzzleDate } from '../../shared/game/day';
 import type { Deps } from './deps';
 import { tryLock } from './lock';
 import { recordPostDay } from './post-day';
+import { runDailyPick } from './puzzle-pick';
+import { keepRecentPuzzles } from './puzzle-store';
 
 /** How long the markers live: long enough to outlast the day they're for. */
 const MARKER_SECONDS = 3 * 86_400;
@@ -140,4 +142,27 @@ async function tell(deps: Deps, subject: string, body: string): Promise<void> {
   } catch (error) {
     deps.log(`moderator notice failed: ${String(error)}`);
   }
+}
+
+/**
+ * One daily run: keep the last week's puzzles the full year, pick today's
+ * and tomorrow's puzzles if they're missing, and make today's post if it
+ * isn't up yet. The hourly scheduler and the install trigger both run it,
+ * so installing the app posts the real daily post (recorded, with its
+ * spoiler comment) and the next hourly run leaves that day alone.
+ */
+export async function runDaily(deps: Deps): Promise<DailyPostOutcome> {
+  const today = puzzleDateAt(deps.now());
+  // Older posts play their own day, so their puzzles must outlive the
+  // 3 days they were once kept. First, so a failed pick can't skip it.
+  await keepRecentPuzzles(deps, today);
+  const picks = await runDailyPick(deps, today);
+  for (const p of picks)
+    if (p.fresh || !p.answer)
+      deps.log(
+        `daily-pick ${p.date}: ${p.answer ? `r/${p.answer}` : 'none'}${p.fresh ? ' (new)' : ''}`
+      );
+  const posted = await postDaily(deps, today, picks[0]?.answer ?? null);
+  if (posted.kind === 'posted') deps.log(`daily post ${today}: ${posted.url}`);
+  return posted;
 }
