@@ -1,6 +1,6 @@
 /**
- * A player's round and streak, stored per user and date, and the view of
- * the puzzle the API sends back.
+ * A player's round on a day's puzzle: where it starts, replaying its
+ * guesses, and the guess and training-wheels actions that change it.
  *
  * Redis keys:
  * - `round:YYYY-MM-DD:{userId}` hash: `start` (RoundStart JSON: the answer
@@ -9,37 +9,15 @@
  *   to a training-wheels offer) and one field per guess, `0`, `1`, ...,
  *   holding the community name. Expires PLAYER_KEEP_DAYS after the last
  *   write.
- * - `user:{userId}:learn` hash: the player's Learner (rounds finished,
- *   losses in a row, training wheels), which decides how much help a round
- *   starts with. Expires PLAYER_KEEP_DAYS after the last finished round; a
- *   player who comes back after that is treated as one who knows the game
- *   (see loadLearner).
- * - `user:{userId}:streak` hash: `current`, `best`, `lastSolvedDay`. Kept
- *   with no expiry: it is the player's running record across days (the best
- *   streak never lapses), and holds only three numbers.
- * - `wrong:YYYY-MM-DD` sorted set: wrong guess name scored by how many
- *   players made it.
- * - `stats:YYYY-MM-DD` hash: `players` (players who guessed at least once)
- *   and `typed` (those of them who typed their guesses).
- * - `scores:YYYY-MM-DD` sorted set: userId scored by clues used (unsolved
- *   rounds score 99), for a later leaderboard. Expires after
- *   PLAYER_KEEP_DAYS.
+ *
+ * A finished round also updates the streak (streak.ts), the learner record
+ * (learner.ts) and the day's stats and scores (day-stats.ts).
  */
-import type {
-  ClueView,
-  GuessView,
-  PostCard,
-  PuzzleResponse,
-  RoundResult,
-  Streak as StreakView,
-  WrongGuessBar,
-} from '../../shared/api';
-import { dayNumber, puzzleNumber } from '../../shared/game/day';
+import { dayNumber } from '../../shared/game/day';
 import type { PuzzleDate } from '../../shared/game/day';
 import {
   SKIP_GUESS,
   applyGuess,
-  cluesRevealed,
   isCorrectGuess,
   isSkip,
   maxGuesses,
@@ -47,21 +25,17 @@ import {
   normalizeSubreddit,
   score,
   updateStreak,
-  visibleStreak,
 } from '../../shared/game/rules';
-import type { ClueKind, Round, Streak } from '../../shared/game/rules';
+import type { Round, Streak } from '../../shared/game/rules';
 import {
   CHOICES,
   NEW_LEARNER,
-  RETURNING_LEARNER,
   acceptWheels,
   afterRound,
-  needsTypingIntro,
   choiceCount,
   offersWheels,
 } from '../../shared/game/learning';
 import type { Learner } from '../../shared/game/learning';
-import { shareText } from '../../shared/game/share';
 import { POOL, findEntry } from '../../shared/pool';
 import type { Deps, User } from './deps';
 import {
@@ -73,29 +47,16 @@ import {
   parseJson,
 } from './json';
 import { optionsFor } from './choices';
-import { clueView } from './puzzle';
-import type { StoredCandidate, StoredPuzzle } from './puzzle';
-
-export const UNSOLVED_SCORE = 99;
-export const CHART_BARS = 5;
-/**
- * Days a player's round and the day's scores are kept. Long enough for a
- * later leaderboard over recent days; after that only the streak remains.
- */
-export const PLAYER_KEEP_DAYS = 30;
-const PLAYER_KEEP_SECONDS = PLAYER_KEEP_DAYS * 86_400;
+import type { StoredPuzzle } from './puzzle-store';
+import { PLAYER_KEEP_SECONDS } from './player-keep';
+import { loadLearner, saveLearner } from './learner';
+import { loadStreak, saveStreak } from './streak';
+import { countPlayer, countWrongGuess, recordScore } from './day-stats';
 
 const roundKey = (date: string, userId: string): string =>
   `round:${date}:${userId}`;
-const streakKey = (userId: string): string => `user:${userId}:streak`;
-const wrongKey = (date: string): string => `wrong:${date}`;
-const statsKey = (date: string): string => `stats:${date}`;
-const scoresKey = (date: string): string => `scores:${date}`;
-const learnKey = (userId: string): string => `user:${userId}:learn`;
 /** The round hash field holding the answer to a training-wheels offer. */
 const OFFER_FIELD = 'offer';
-
-const EMPTY_STREAK: Streak = { current: 0, best: 0, lastSolvedDay: null };
 
 /**
  * What a round is played against, saved when it starts so a later change
@@ -167,7 +128,7 @@ function parseStart(json: string | undefined): RoundStart | null {
   return { answer, aliases, hasCustomIcon, hasTopPost, from, options, offer };
 }
 
-const sameSub = (a: string, b: string): boolean =>
+export const sameSub = (a: string, b: string): boolean =>
   normalizeSubreddit(a) === normalizeSubreddit(b);
 
 /** A player's stored round, replayed against the answer it started with. */
@@ -243,46 +204,6 @@ function playerRound(loaded: Loaded): PlayerRound {
       round.guesses.length === 0,
     learner,
   };
-}
-
-/**
- * The player's Learner. A player with no record but a streak hash has
- * finished a round before (the streak is written on every finished round
- * and never expires), either before the record was kept or long enough ago
- * that it expired. They know the game, so they get RETURNING_LEARNER and
- * type, rather than the first-timer card and five options.
- */
-export async function loadLearner(deps: Deps, user: User): Promise<Learner> {
-  const l = await deps.store.hGetAll(learnKey(user.id));
-  if (l.finished === undefined) {
-    const played = await deps.store.hGet(streakKey(user.id), 'best');
-    return played === undefined ? NEW_LEARNER : RETURNING_LEARNER;
-  }
-  const count = (value: string | undefined): number => Number(value) || 0;
-  return {
-    finished: count(l.finished),
-    losses: count(l.losses),
-    wheels: l.wheels === '1',
-    wheelWins: count(l.wheelWins),
-    // Missing on records saved before this field existed: no intro.
-    lastWithChoices: l.lastChoices === '1',
-  };
-}
-
-async function saveLearner(
-  deps: Deps,
-  user: User,
-  learner: Learner
-): Promise<void> {
-  const key = learnKey(user.id);
-  await deps.store.hSet(key, {
-    finished: String(learner.finished),
-    losses: String(learner.losses),
-    wheels: learner.wheels ? '1' : '0',
-    wheelWins: String(learner.wheelWins),
-    lastChoices: learner.lastWithChoices ? '1' : '0',
-  });
-  await deps.store.expire(key, PLAYER_KEEP_SECONDS);
 }
 
 /**
@@ -431,20 +352,6 @@ function pickedOption(
   return choices.find((option) => sameSub(option, input)) ?? null;
 }
 
-export async function loadStreak(
-  deps: Deps,
-  user: User | null
-): Promise<Streak> {
-  if (!user) return EMPTY_STREAK;
-  const s = await deps.store.hGetAll(streakKey(user.id));
-  const last = s.lastSolvedDay;
-  return {
-    current: Number(s.current ?? '0') || 0,
-    best: Number(s.best ?? '0') || 0,
-    lastSolvedDay: last === undefined || last === '' ? null : Number(last),
-  };
-}
-
 type Refusal = { ok: false; status: 400 | 401 | 409; message: string };
 
 export type GuessOutcome =
@@ -541,10 +448,7 @@ export async function submitGuess(
     return TAKEN;
   await deps.store.expire(key, PLAYER_KEEP_SECONDS);
   const typed = choices === null;
-  if (loaded.nextSlot === 0) {
-    await deps.store.hIncrBy(statsKey(date), 'players', 1);
-    if (typedRound) await deps.store.hIncrBy(statsKey(date), 'typed', 1);
-  }
+  if (loaded.nextSlot === 0) await countPlayer(deps, date, typedRound);
   // Only typed wrong guesses feed the chart: a pick from a short list says
   // little about what players really thought it was, and every new player
   // picking among the same few options would crowd out the typed guesses.
@@ -554,25 +458,16 @@ export async function submitGuess(
     !isSkip(name) &&
     !isCorrectGuess(name, round.answer, round.aliases)
   )
-    await deps.store.zIncrBy(wrongKey(date), name, 1);
+    await countWrongGuess(deps, date, name);
 
   let learner = loaded.learner;
   if (round.status !== 'playing') {
     const solved = round.status === 'solved';
     if (forStreak) {
       streak = updateStreak(streak, dayNumber(date), solved);
-      await deps.store.hSet(streakKey(user.id), {
-        current: String(streak.current),
-        best: String(streak.best),
-        lastSolvedDay:
-          streak.lastSolvedDay === null ? '' : String(streak.lastSolvedDay),
-      });
+      await saveStreak(deps, user, streak);
     }
-    await deps.store.zAdd(scoresKey(date), {
-      member: user.id,
-      score: score(round) ?? UNSOLVED_SCORE,
-    });
-    await deps.store.expire(scoresKey(date), PLAYER_KEEP_SECONDS);
+    await recordScore(deps, date, user.id, score(round));
     learner = afterRound(learner, { solved, withChoices: !typedRound });
     await saveLearner(deps, user, learner);
   }
@@ -647,138 +542,6 @@ export async function answerOffer(
 }
 
 /**
- * The most common wrong guesses of the day. Only typed guesses count (see
- * submitGuess), so each bar's share is of the players who typed, not of
- * everyone: new players picking from options would otherwise pull every
- * percentage down. A day counted before `typed` was kept falls back to all
- * players, who all typed then.
- */
-export async function wrongGuessChart(
-  deps: Deps,
-  date: string
-): Promise<{ bars: WrongGuessBar[]; players: number }> {
-  const stats = await deps.store.hGetAll(statsKey(date));
-  const players = Number(stats.players ?? '0') || 0;
-  const typed = stats.typed === undefined ? players : Number(stats.typed) || 0;
-  const top = await deps.store.zRange(wrongKey(date), 0, CHART_BARS - 1, {
-    by: 'rank',
-    reverse: true,
-  });
-  const bars = top.map(({ member, score: count }) => ({
-    name: member,
-    count,
-    percent: typed > 0 ? Math.round((count / typed) * 100) : 0,
-  }));
-  return { bars, players };
-}
-
-/**
- * Stands in for the post of a round that ended before the day's puzzle
- * changed (a takedown or a moderator's repick).
- */
-function removedPost(date: string): PostCard {
-  return {
-    title: 'Today’s puzzle changed after you finished it.',
-    body: '',
-    score: 0,
-    comments: 0,
-    createdAt: Date.parse(`${date}T12:00:00Z`),
-  };
-}
-
-/**
- * What the player may see. While the round is being played: the masked
- * post, the clues revealed so far and the guesses. The answer, the other
- * clues and the chart are only added once the round has ended.
- */
-export function puzzleView(args: {
-  puzzle: StoredPuzzle;
-  candidate: StoredCandidate;
-  player: PlayerRound;
-  streak: Streak;
-  /** Today's day number, for the streak shown. */
-  day: number;
-  /** Set when this is an earlier day's puzzle (PuzzleResponse.today). */
-  today: { number: number; url: string | null } | null;
-  username: string | null;
-  chart: { bars: WrongGuessBar[]; players: number } | null;
-  /** The post the round is played in, for the share text's link. */
-  postUrl: string | null;
-  /** The player's snoovatar, for a finished round. */
-  avatarUrl: string | null;
-}): PuzzleResponse {
-  const {
-    puzzle,
-    candidate,
-    player,
-    streak,
-    day,
-    today,
-    username,
-    chart,
-    postUrl,
-    avatarUrl,
-  } = args;
-  const { round } = player;
-  // A finished round keeps the answer it was played against. If the day
-  // has since moved to another community, today's post and clues aren't
-  // the ones this player saw, and theirs were taken down on Reddit, so
-  // none are shown.
-  const ownPuzzle = sameSub(round.answer, puzzle.answer);
-  const clue = (kind: ClueKind): ClueView => clueView(kind, puzzle, candidate);
-  const revealed = ownPuzzle ? cluesRevealed(round) : 0;
-  const guesses: GuessView[] = round.guesses.map((name) => ({
-    name,
-    correct: isCorrectGuess(name, round.answer, round.aliases),
-    skipped: isSkip(name),
-  }));
-  const shown = visibleStreak(streak, day);
-  const streakView: StreakView = { current: shown.current, best: shown.best };
-  const number = puzzleNumber(puzzle.date);
-  const done = round.status !== 'playing';
-  const result: RoundResult | null =
-    done && chart
-      ? {
-          answer: round.answer,
-          clues: ownPuzzle ? round.clues.map(clue) : [],
-          score: score(round),
-          wrongGuesses: chart.bars,
-          players: chart.players,
-          visitUrl: `https://www.reddit.com/r/${round.answer}/`,
-          shareText: shareText({
-            puzzleNumber: number,
-            guesses: guesses.map((g) => g.correct),
-            maxGuesses: maxGuesses(round),
-            postUrl,
-          }),
-          avatarUrl,
-          postUrl,
-        }
-      : null;
-  return {
-    type: 'puzzle',
-    date: puzzle.date,
-    number,
-    post: ownPuzzle ? candidate.post : removedPost(puzzle.date),
-    clueKinds: [...round.clues],
-    clues: round.clues.slice(0, revealed).map(clue),
-    guesses,
-    maxGuesses: maxGuesses(round),
-    guessesLeft: done ? 0 : maxGuesses(round) - round.guesses.length,
-    status: round.status,
-    streak: streakView,
-    username,
-    result,
-    firstTime: player.learner.finished === 0,
-    typingIntro: player.choices === null && needsTypingIntro(player.learner),
-    choices: player.choices,
-    offer: player.offer,
-    today,
-  };
-}
-
-/** Forget a date's wrong guesses, after its answer changes (see repickPuzzle). */
-/**
  * Deletes `user`'s round for `date`, so a moderator can replay a day while
  * testing. The day's stats and wrong-guess chart keep what the first try
  * added; the streak is safe, since a second solve of the same day doesn't
@@ -790,11 +553,4 @@ export async function resetRound(
   date: string
 ): Promise<void> {
   await deps.store.del(roundKey(date, user.id));
-}
-
-export async function clearWrongGuesses(
-  deps: Deps,
-  date: string
-): Promise<void> {
-  await deps.store.del(wrongKey(date));
 }

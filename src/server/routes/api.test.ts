@@ -6,14 +6,11 @@ import type {
 } from '../../shared/api';
 import { MOCK_POST_URL, createMockDeps } from '../core/mock/mock-deps';
 import { findEntry, POOL } from '../../shared/pool';
-import {
-  LIVE_CHECK_MS,
-  loadPuzzle,
-  runDailyPick,
-  savePuzzle,
-} from '../core/puzzle';
+import { runDailyPick } from '../core/puzzle-pick';
+import { LIVE_CHECK_MS } from '../core/puzzle-serve';
+import { loadPuzzle, savePuzzle } from '../core/puzzle-store';
 import type { MockDeps } from '../core/mock/mock-deps';
-import { PLAYER_KEEP_DAYS } from '../core/round';
+import { PLAYER_KEEP_DAYS } from '../core/player-keep';
 import { addDays } from '../../shared/game/day';
 import { SKIP_GUESS, normalizeSubreddit } from '../../shared/game/rules';
 import { postDaily } from '../core/daily-post';

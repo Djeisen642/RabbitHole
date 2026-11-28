@@ -21,7 +21,7 @@ import { puzzleDateAt } from '../../shared/game/day';
 import { MemoryStore } from '../core/store';
 import { createMockDeps } from '../core/mock/mock-deps';
 import { runPoolCheckBatch, startPoolCheck } from '../core/pool-check';
-import { runDailyPick } from '../core/puzzle';
+import { runDailyPick } from '../core/puzzle-pick';
 import { createApi } from '../routes/api';
 
 const ROOT = 'dist/client';

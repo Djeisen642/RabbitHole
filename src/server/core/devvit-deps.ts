@@ -10,7 +10,7 @@ import type { Deps } from './deps';
 import { devvitSource } from './devvit-source';
 import { MOCK_POOL, mockSource } from './mock/mock-source';
 import { cachedIsModerator } from './moderator';
-import { randomSalt } from './puzzle';
+import { randomSalt } from './puzzle-pick';
 import { postLink } from '../../shared/game/share';
 
 export type SourceMode = 'devvit' | 'mock';

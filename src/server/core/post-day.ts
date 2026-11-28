@@ -12,7 +12,11 @@
  * kept is matched once, on its first load, by the puzzle number in its
  * title (see dailyTitle).
  */
-import { isPuzzleDate, puzzleDateFor } from '../../shared/game/day';
+import {
+  isPuzzleDate,
+  puzzleDateAt,
+  puzzleDateFor,
+} from '../../shared/game/day';
 import type { PuzzleDate } from '../../shared/game/day';
 import type { Deps } from './deps';
 
@@ -71,4 +75,14 @@ export async function postDay(
   const own = date !== null && date <= today ? date : null;
   await deps.store.set(key, own ?? TODAY);
   return own !== null && own < today ? own : today;
+}
+
+/** The puzzle a request plays: its post's day, and today. */
+export type PlayDay = { date: PuzzleDate; today: PuzzleDate; past: boolean };
+
+/** The request's PlayDay, from its post (see postDay) and the clock. */
+export async function playDay(deps: Deps): Promise<PlayDay> {
+  const today = puzzleDateAt(deps.now());
+  const date = await postDay(deps, today);
+  return { date, today, past: date < today };
 }
