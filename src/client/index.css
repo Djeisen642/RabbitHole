@@ -458,6 +458,10 @@ body {
 /* Guessing ---------------------------------------------------------------- */
 .rh-guess {
   display: grid;
+  /* minmax(0, ...) keeps the column at the dock's width. With a plain auto
+     column, the hint line's full unwrapped width set the column, which pushed
+     Dig and Skip off the right edge on phones. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
 .rh-guess-row {
@@ -531,6 +535,8 @@ body {
 .rh-hint-row .rh-hint {
   flex: 1;
   min-width: 0;
+  /* Wrap rather than cut the hint short beside Skip on a narrow phone. */
+  white-space: normal;
 }
 .rh-skip {
   flex: none;
