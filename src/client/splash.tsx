@@ -9,7 +9,7 @@ import { solvedWith } from '../shared/game/share';
 import { shortDate } from '../shared/game/day';
 import { BunnyStage } from './components/BunnyStage';
 import { fetchPuzzle } from './lib/api';
-import { openGame } from './lib/platform';
+import { openGame, visit } from './lib/platform';
 import { streakLabel } from './lib/format';
 
 // The splash has no game events to drive the bunny, so it never needs its
@@ -18,13 +18,14 @@ const ignoreControls = (): void => undefined;
 
 function statusLine(p: PuzzleResponse): string {
   if (p.today) {
-    const later = `Today’s is #${p.today.number}.`;
+    // With a link, the "Play today's" button says which is today's.
+    const later = p.today.url ? '' : ` Today’s is #${p.today.number}.`;
     if (p.status === 'solved') {
       const solved = solvedWith(p.result?.score ?? 0);
-      return `${solved.charAt(0).toUpperCase()}${solved.slice(1)}. ${later}`;
+      return `${solved.charAt(0).toUpperCase()}${solved.slice(1)}.${later}`;
     }
-    if (p.status === 'failed') return `Stumped on this one. ${later}`;
-    return `An older puzzle, just for fun. ${later}`;
+    if (p.status === 'failed') return `Stumped on this one.${later}`;
+    return `An older puzzle, just for fun.${later}`;
   }
   if (p.status === 'solved')
     return `Today: ${solvedWith(p.result?.score ?? 0)}. Come back tomorrow.`;
@@ -49,6 +50,11 @@ export const Splash = () => {
 
   function play(event: MouseEvent<HTMLAnchorElement>): void {
     if (openGame(event.nativeEvent)) event.preventDefault();
+  }
+
+  const todayUrl = puzzle?.today?.url ?? null;
+  function playToday(event: MouseEvent<HTMLAnchorElement>): void {
+    if (todayUrl && visit(todayUrl)) event.preventDefault();
   }
 
   return (
@@ -88,15 +94,27 @@ export const Splash = () => {
           'Loading today’s post…'
         )}
       </p>
-      {/* On Reddit this opens the expanded view; in local mock mode it is a plain link. */}
-      <a
-        className="rh-button"
-        href="game.html"
-        style={{ gridColumn: '1 / -1', justifySelf: 'start' }}
-        onClick={play}
-      >
-        {puzzle && puzzle.status !== 'playing' ? 'See results' : 'Play'}
-      </a>
+      <div className="actions">
+        {/* Someone who lands on an older post in the feed most likely wants
+            today's, so that comes first and this one becomes the quiet option. */}
+        {todayUrl ? (
+          <a className="rh-button" href={todayUrl} onClick={playToday}>
+            Play today’s #{puzzle?.today?.number}
+          </a>
+        ) : null}
+        {/* On Reddit this opens the expanded view; in local mock mode it is a plain link. */}
+        <a
+          className={todayUrl ? 'rh-button quiet' : 'rh-button'}
+          href="game.html"
+          onClick={play}
+        >
+          {puzzle && puzzle.status !== 'playing'
+            ? 'See results'
+            : todayUrl
+              ? 'Play this one'
+              : 'Play'}
+        </a>
+      </div>
     </main>
   );
 };
