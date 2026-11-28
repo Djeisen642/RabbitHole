@@ -15,6 +15,15 @@ import { openGame } from './lib/platform';
 const ignoreControls = (): void => undefined;
 
 function statusLine(p: PuzzleResponse): string {
+  if (p.today) {
+    const later = `Today’s is #${p.today.number}.`;
+    if (p.status === 'solved') {
+      const solved = solvedWith(p.result?.score ?? 0);
+      return `${solved.charAt(0).toUpperCase()}${solved.slice(1)}. ${later}`;
+    }
+    if (p.status === 'failed') return `Stumped on this one. ${later}`;
+    return `An older puzzle, just for fun. ${later}`;
+  }
   if (p.status === 'solved')
     return `Today: ${solvedWith(p.result?.score ?? 0)}. Come back tomorrow.`;
   if (p.status === 'failed')

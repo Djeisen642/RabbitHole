@@ -650,6 +650,17 @@ body {
   font-size: 16px;
 }
 
+.rh-older {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--ink);
+  background: var(--paper-deep);
+  border: 2px dashed var(--soil);
+  border-radius: var(--wobble-sm);
+}
+
 .rh-typing-intro {
   margin: 0;
   font: 600 16px/1.25 var(--display);

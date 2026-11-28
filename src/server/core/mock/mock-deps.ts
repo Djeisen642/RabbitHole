@@ -17,6 +17,8 @@ export type MockDeps = Deps & {
   notices: { subject: string; markdown: string }[];
   store: Store;
   setUser(user: User | null): void;
+  /** The post requests come from (null: none, so today's puzzle). */
+  setPostId(postId: string | null): void;
   setNow(now: Date): void;
   logs: string[];
 };
@@ -41,6 +43,7 @@ export function createMockDeps(
       ? { id: 't2_mockplayer', username: 'mock_player' }
       : options.user;
   let now = options.now ?? new Date();
+  let currentPost: string | null = null;
   const logs: string[] = [];
   const posts: MockDeps['posts'] = [];
   const pinned: MockDeps['pinned'] = [];
@@ -57,6 +60,9 @@ export function createMockDeps(
     user: () => Promise.resolve(user),
     // A made-up post, so the share text has a link line in mock mode too.
     postUrl: () => MOCK_POST_URL,
+    postId: () => currentPost,
+    postTitle: (id) =>
+      Promise.resolve(posts.find((p) => p.id === id)?.title ?? null),
     isModerator: () => Promise.resolve(user !== null),
     newSalt: () => options.salt ?? MOCK_SALT,
     createPost(title) {
@@ -82,6 +88,9 @@ export function createMockDeps(
     },
     setUser(next) {
       user = next;
+    },
+    setPostId(next) {
+      currentPost = next;
     },
     setNow(next) {
       now = next;

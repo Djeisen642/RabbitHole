@@ -5,12 +5,20 @@ import type {
   PuzzleResponse,
   SuggestResponse,
 } from '../../shared/api';
-import { dayNumber, isPuzzleDate, puzzleDateAt } from '../../shared/game/day';
+import {
+  dayNumber,
+  isPuzzleDate,
+  puzzleDateAt,
+  puzzleNumber,
+} from '../../shared/game/day';
+import type { PuzzleDate } from '../../shared/game/day';
 import { suggest } from '../../shared/pool';
 import type { Deps } from '../core/deps';
 import { readPoolCheck } from '../core/pool-check';
 import type { PoolCheckReport } from '../core/pool-check';
-import { servePuzzle } from '../core/puzzle';
+import { dailyPostKey } from '../core/daily-post';
+import { postDay } from '../core/post-day';
+import { servePastPuzzle, servePuzzle } from '../core/puzzle';
 import type { Served } from '../core/puzzle';
 import {
   answerOffer,
@@ -27,19 +35,43 @@ import { asBoolean, asRecord, asString } from '../core/json';
 
 const fail = (
   c: Context,
-  status: 400 | 401 | 403 | 404 | 409 | 500 | 503,
+  status: 400 | 401 | 403 | 404 | 409 | 410 | 500 | 503,
   message: string
 ) => c.json<ErrorResponse>({ type: 'error', message }, status);
 
+/** The puzzle a request plays: its post's day (see post-day.ts) and today. */
+type Day = { date: PuzzleDate; today: PuzzleDate; past: boolean };
+
 /**
- * The player-facing API: today's puzzle, guessing, the training-wheels
- * offer and autocomplete.
+ * The player-facing API: the post's puzzle (today's, or an earlier day's
+ * for an older post), guessing, the training-wheels offer and autocomplete.
  */
 export function createApi(deps: Deps): Hono {
   const api = new Hono();
 
+  async function dayOf(): Promise<Day> {
+    const today = puzzleDateAt(deps.now());
+    const date = await postDay(deps, today);
+    return { date, today, past: date < today };
+  }
+
+  const serve = (day: Day) =>
+    day.past ? servePastPuzzle(deps, day.date) : servePuzzle(deps, day.date);
+
+  /** Where an older post points: today's number and post. */
+  async function todayLink(
+    day: Day
+  ): Promise<{ number: number; url: string | null } | null> {
+    if (!day.past) return null;
+    const url = await deps.store.get(dailyPostKey(day.today));
+    return {
+      number: puzzleNumber(day.today),
+      url: url?.startsWith('https://') ? url : null,
+    };
+  }
+
   async function view(
-    date: string,
+    day: Day,
     user: User | null,
     player: PlayerRound,
     streak: Streak,
@@ -48,34 +80,41 @@ export function createApi(deps: Deps): Hono {
     const chart =
       player.round.status === 'playing'
         ? null
-        : await wrongGuessChart(deps, date);
+        : await wrongGuessChart(deps, day.date);
     return puzzleView({
       puzzle: served.puzzle,
       candidate: served.candidate,
       player,
       streak,
-      day: dayNumber(date),
+      day: dayNumber(day.today),
+      today: await todayLink(day),
       username: user?.username ?? null,
       chart,
       postUrl: deps.postUrl(),
     });
   }
 
-  const notReady = (c: Context) =>
-    fail(c, 503, 'Today’s puzzle is still being dug up. Try again soon.');
+  const notReady = (c: Context, day: Day) =>
+    day.past
+      ? fail(
+          c,
+          410,
+          `Puzzle #${String(puzzleNumber(day.date))} is no longer available. Today’s is #${String(puzzleNumber(day.today))}.`
+        )
+      : fail(c, 503, 'Today’s puzzle is still being dug up. Try again soon.');
 
   api.get('/puzzle', async (c) => {
     try {
-      const date = puzzleDateAt(deps.now());
-      const served = await servePuzzle(deps, date);
-      if (!served) return notReady(c);
+      const day = await dayOf();
+      const served = await serve(day);
+      if (!served) return notReady(c, day);
       const user = await deps.user();
       const [player, streak] = await Promise.all([
         loadRound(deps, served.puzzle, user),
         loadStreak(deps, user),
       ]);
       return c.json<PuzzleResponse>(
-        await view(date, user, player, streak, served)
+        await view(day, user, player, streak, served)
       );
     } catch (error) {
       console.error('GET /api/puzzle failed', error);
@@ -89,19 +128,25 @@ export function createApi(deps: Deps): Hono {
       const guess = asString(body?.guess)?.trim() ?? '';
       if (guess === '' || guess.length > 64)
         return fail(c, 400, 'Type a community to guess.');
-      const date = puzzleDateAt(deps.now());
-      // The client says which day's post it is looking at. A guess sent
-      // after midnight from a page loaded before it would otherwise land on
-      // a puzzle the player has never seen.
-      if (asString(body?.date) !== date)
+      const day = await dayOf();
+      // The client says which day's puzzle it is looking at. On a post that
+      // isn't tied to a day, a guess sent after midnight from a page loaded
+      // before it would otherwise land on a puzzle the player has never seen.
+      if (asString(body?.date) !== day.date)
         return fail(c, 409, 'A new puzzle is out. Reload to play it.');
-      const served = await servePuzzle(deps, date);
-      if (!served) return notReady(c);
+      const served = await serve(day);
+      if (!served) return notReady(c, day);
       const user = await deps.user();
-      const outcome = await submitGuess(deps, served.puzzle, user, guess);
+      const outcome = await submitGuess(
+        deps,
+        served.puzzle,
+        user,
+        guess,
+        !day.past
+      );
       if (!outcome.ok) return fail(c, outcome.status, outcome.message);
       return c.json<PuzzleResponse>(
-        await view(date, user, outcome.player, outcome.streak, served)
+        await view(day, user, outcome.player, outcome.streak, served)
       );
     } catch (error) {
       console.error('POST /api/guess failed', error);
@@ -115,17 +160,17 @@ export function createApi(deps: Deps): Hono {
       const body = asRecord(await c.req.json<unknown>().catch(() => null));
       const accept = asBoolean(body?.accept);
       if (accept === null) return fail(c, 400, 'Say yes or no to the options.');
-      const date = puzzleDateAt(deps.now());
-      if (asString(body?.date) !== date)
+      const day = await dayOf();
+      if (asString(body?.date) !== day.date)
         return fail(c, 409, 'A new puzzle is out. Reload to play it.');
-      const served = await servePuzzle(deps, date);
-      if (!served) return notReady(c);
+      const served = await serve(day);
+      if (!served) return notReady(c, day);
       const user = await deps.user();
       const outcome = await answerOffer(deps, served.puzzle, user, accept);
       if (!outcome.ok) return fail(c, outcome.status, outcome.message);
       const streak = await loadStreak(deps, user);
       return c.json<PuzzleResponse>(
-        await view(date, user, outcome.player, streak, served)
+        await view(day, user, outcome.player, streak, served)
       );
     } catch (error) {
       console.error('POST /api/choices failed', error);

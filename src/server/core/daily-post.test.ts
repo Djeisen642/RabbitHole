@@ -6,6 +6,7 @@ import {
   recordDailyPost,
 } from './daily-post';
 import { createMockDeps } from './mock/mock-deps';
+import { postDayKey } from './post-day';
 
 const NOW = new Date('2026-11-26T05:00:00Z');
 const DATE = '2026-11-26';
@@ -63,15 +64,22 @@ describe('daily post', () => {
 
   it("doesn't post a day a moderator already posted by hand", async () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
-    await recordDailyPost(
-      deps,
-      DATE,
-      'https://www.reddit.com/r/x/comments/abc/'
-    );
+    await recordDailyPost(deps, DATE, {
+      id: 't3_abc',
+      url: 'https://www.reddit.com/r/x/comments/abc/',
+    });
     expect(await postDaily(deps, DATE, 'AskOldPeople')).toEqual({
       kind: 'already',
       url: 'https://www.reddit.com/r/x/comments/abc/',
     });
     expect(deps.posts).toHaveLength(0);
+    expect(await deps.store.get(postDayKey('t3_abc'))).toBe(DATE);
+  });
+
+  it('ties the post to its date, so it keeps playing that day', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await postDaily(deps, DATE, 'AskOldPeople');
+    const id = deps.posts[0]?.id ?? '';
+    expect(await deps.store.get(postDayKey(id))).toBe(DATE);
   });
 });

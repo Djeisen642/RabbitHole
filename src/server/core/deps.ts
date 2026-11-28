@@ -24,6 +24,10 @@ export type Deps = {
    * null when the request didn't come from a post.
    */
   postUrl(): string | null;
+  /** The id of the post the request came from, or null when there is none. */
+  postId(): string | null;
+  /** A post's title, or null when it can't be found. */
+  postTitle(postId: string): Promise<string | null>;
   /** Whether the current user moderates the community the app runs in. */
   isModerator(): Promise<boolean>;
   /**

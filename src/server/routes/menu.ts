@@ -30,7 +30,7 @@ export function createMenu(deps: Deps): Hono {
       // so the scheduler doesn't post today again.
       const date = puzzleDateAt(deps.now());
       const post = await deps.createPost(dailyTitle(date));
-      await recordDailyPost(deps, date, post.url);
+      await recordDailyPost(deps, date, post);
       try {
         await deps.pinComment(post.id, SPOILER_COMMENT);
       } catch (error) {

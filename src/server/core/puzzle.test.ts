@@ -4,6 +4,7 @@ import type { PoolEntry } from '../../shared/pool';
 import { MOCK_SALT, createMockDeps } from './mock/mock-deps';
 import { MOCK_POOL, createMockSource } from './mock/mock-source';
 import {
+  POOL_CHECK_KEEP_DAYS,
   POOL_CHECK_STALE_MS,
   readPoolCheck,
   runPoolCheckBatch,
@@ -17,7 +18,9 @@ import {
   buildPuzzle,
   checkSub,
   clueView,
+  keepRecentPuzzles,
   loadPuzzle,
+  puzzleKey,
   parseStoredPuzzle,
   pickOrder,
   pickPuzzle,
@@ -25,6 +28,7 @@ import {
   randomSalt,
   runDailyPick,
   savePuzzle,
+  servePastPuzzle,
   servePuzzle,
 } from './puzzle';
 
@@ -405,7 +409,7 @@ describe('runDailyPick and servePuzzle', () => {
     expect(served?.puzzle.date).toBe('2026-11-25');
   });
 
-  it('expires a puzzle a few days after its date', async () => {
+  it('expires a puzzle a year after its date', async () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
     await runDailyPick(deps, '2026-11-25');
     const day = 86_400_000;
@@ -413,6 +417,45 @@ describe('runDailyPick and servePuzzle', () => {
     expect(await loadPuzzle(deps, '2026-11-25')).not.toBeNull();
     deps.setNow(new Date(NOW.getTime() + (PUZZLE_KEEP_DAYS + 1) * day));
     expect(await loadPuzzle(deps, '2026-11-25')).toBeNull();
+  });
+
+  it('gives puzzles stored under the old 3 days the full year', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runDailyPick(deps, '2026-11-25');
+    const day = 86_400_000;
+    // As stored before: gone 3 days after its date.
+    await deps.store.expire(puzzleKey('2026-11-25'), (4 * day) / 1000);
+    deps.setNow(new Date(NOW.getTime() + 2 * day));
+    await keepRecentPuzzles(deps, '2026-11-27');
+    deps.setNow(new Date(NOW.getTime() + 30 * day));
+    expect(await loadPuzzle(deps, '2026-11-25')).not.toBeNull();
+  });
+});
+
+describe('servePastPuzzle', () => {
+  it('serves an earlier day as stored, never picking one', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    await runDailyPick(deps, '2026-11-25');
+    const today = await servePuzzle(deps, '2026-11-25');
+    deps.setNow(new Date(NOW.getTime() + 2 * 86_400_000));
+    const past = await servePastPuzzle(deps, '2026-11-25');
+    expect(past?.puzzle.answer).toBe(today?.puzzle.answer);
+    expect(await servePastPuzzle(deps, '2026-11-20')).toBeNull();
+    expect(await loadPuzzle(deps, '2026-11-20')).toBeNull();
+  });
+
+  it('is null once every post is gone, rather than a new community', async () => {
+    const deps = createMockDeps({ now: NOW, quiet: true });
+    deps.pool = [entry('Breadit')];
+    await runDailyPick(deps, '2026-11-25');
+    deps.pool = MOCK_POOL;
+    deps.source.removePost('t3_mockbr1');
+    deps.source.removePost('t3_mockbr2');
+    deps.setNow(new Date(NOW.getTime() + 2 * 86_400_000));
+    expect(await servePastPuzzle(deps, '2026-11-25')).toBeNull();
+    expect((await loadPuzzle(deps, '2026-11-25'))?.puzzle.answer).toBe(
+      'Breadit'
+    );
   });
 });
 
@@ -534,7 +577,9 @@ describe('pool check', () => {
   it('expires a few days after its date', async () => {
     const deps = createMockDeps({ now: NOW, quiet: true });
     await runPoolCheckBatch(deps, '2026-11-25', 2);
-    deps.setNow(new Date(NOW.getTime() + (PUZZLE_KEEP_DAYS + 1) * 86_400_000));
+    deps.setNow(
+      new Date(NOW.getTime() + (POOL_CHECK_KEEP_DAYS + 1) * 86_400_000)
+    );
     expect((await readPoolCheck(deps, '2026-11-25')).results).toEqual([]);
   });
 });

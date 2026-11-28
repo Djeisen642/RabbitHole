@@ -6,6 +6,7 @@
  *   `active` (index of the candidate post being served), `checkedAt` (ms of
  *   the last check that the post and its comment are still live). Expires
  *   PUZZLE_KEEP_DAYS after its date.
+ *   (A year: old posts keep playing their own day.)
  * - `pick-salt` string: the secret mixed into the pick order.
  * - `used-subs` sorted set: sub name scored by the day number it was used.
  * - `pick-lock:YYYY-MM-DD` lock guarding an on-demand pick or refill.
@@ -56,10 +57,16 @@ export const LIVE_CHECK_MS = 10 * 60_000;
 /** How long one request may hold the liveness check before another may. */
 export const LIVE_LOCK_MS = 30_000;
 /**
- * Days a puzzle is kept after its date. Only today's is served; the spare
- * days cover time zones and a late look at yesterday's result.
+ * Days a puzzle is kept after its date. Each daily post keeps playing its
+ * own day's puzzle (see post-day.ts), so an old post found in the feed or
+ * a link still works. A puzzle is a few kilobytes.
  */
-export const PUZZLE_KEEP_DAYS = 3;
+export const PUZZLE_KEEP_DAYS = 365;
+/**
+ * How far back keepRecentPuzzles reaches: past the 3 days puzzles were
+ * kept before old posts played their own day.
+ */
+const KEEP_REACH_DAYS = 7;
 
 export type StoredCandidate = {
   postId: string;
@@ -377,11 +384,15 @@ async function tryBuild(
 }
 
 /**
- * Seconds from now until a date's keys (its puzzle, its pool check) should
- * go: the end of the day PUZZLE_KEEP_DAYS after it, at least a minute.
+ * Seconds from now until a date's keys should go: the end of the day
+ * `days` (PUZZLE_KEEP_DAYS for a puzzle) after it, at least a minute.
  */
-export function secondsToKeep(deps: Deps, date: PuzzleDate): number {
-  const end = Date.parse(`${addDays(date, PUZZLE_KEEP_DAYS + 1)}T00:00:00Z`);
+export function secondsToKeep(
+  deps: Deps,
+  date: PuzzleDate,
+  days: number = PUZZLE_KEEP_DAYS
+): number {
+  const end = Date.parse(`${addDays(date, days + 1)}T00:00:00Z`);
   return Math.max(60, Math.ceil((end - deps.now().getTime()) / 1000));
 }
 
@@ -640,15 +651,37 @@ async function replaceGonePosts(
  * Redis, and the next stored candidate is served, then fresh posts (see
  * replaceGonePosts). Picks on demand if the nightly job hasn't run.
  */
-export async function servePuzzle(
+export function servePuzzle(
   deps: Deps,
   date: PuzzleDate
 ): Promise<Served | null> {
+  return serve(deps, date, true);
+}
+
+/**
+ * An earlier day's puzzle, for its own post. Checked like today's, but
+ * never picked or refilled: a missing day, or one whose posts are all gone,
+ * is null, since a new community wouldn't match the post's comments.
+ */
+export function servePastPuzzle(
+  deps: Deps,
+  date: PuzzleDate
+): Promise<Served | null> {
+  return serve(deps, date, false);
+}
+
+async function serve(
+  deps: Deps,
+  date: PuzzleDate,
+  today: boolean
+): Promise<Served | null> {
   const loaded = await loadPuzzle(deps, date);
   if (!loaded)
-    return firstCandidate(
-      await withPickLock(deps, date, () => pickPuzzle(deps, date))
-    );
+    return today
+      ? firstCandidate(
+          await withPickLock(deps, date, () => pickPuzzle(deps, date))
+        )
+      : null;
 
   const { puzzle, checkedAt } = loaded;
   const active = Math.min(loaded.active, puzzle.candidates.length - 1);
@@ -660,7 +693,7 @@ export async function servePuzzle(
     nowMs - checkedAt >= LIVE_CHECK_MS &&
     (await tryLock(deps.store, `live-lock:${date}`, LIVE_LOCK_MS, deps.now()))
   )
-    return checkCandidates(deps, puzzle, active, nowMs);
+    return checkCandidates(deps, puzzle, active, nowMs, today);
   const candidate = puzzle.candidates[active];
   return candidate ? { puzzle, candidate } : null;
 }
@@ -674,7 +707,8 @@ async function checkCandidates(
   deps: Deps,
   puzzle: StoredPuzzle,
   active: number,
-  nowMs: number
+  nowMs: number,
+  refill: boolean
 ): Promise<Served | null> {
   for (let i = active; i < puzzle.candidates.length; i += 1) {
     const candidate = puzzle.candidates[i];
@@ -693,7 +727,24 @@ async function checkCandidates(
     deps.log(`serve ${puzzle.date}: dropped ${String(i)} gone post(s)`);
     return { puzzle: pruned, candidate };
   }
-  return replaceGonePosts(deps, puzzle);
+  return refill ? replaceGonePosts(deps, puzzle) : null;
+}
+
+/**
+ * Give the last few days' puzzles the full PUZZLE_KEEP_DAYS. Puzzles stored
+ * when only 3 days were kept would otherwise expire under their posts. Run
+ * by the hourly job; a day with no puzzle is skipped.
+ */
+export async function keepRecentPuzzles(
+  deps: Deps,
+  today: PuzzleDate
+): Promise<void> {
+  for (let back = 1; back <= KEEP_REACH_DAYS; back += 1) {
+    const date = addDays(today, -back);
+    const key = puzzleKey(date);
+    if ((await deps.store.hGet(key, 'answer')) !== undefined)
+      await deps.store.expire(key, secondsToKeep(deps, date));
+  }
 }
 
 /** Whether a candidate's post and top comment are both still up. */

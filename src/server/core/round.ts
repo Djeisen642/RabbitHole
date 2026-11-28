@@ -474,7 +474,8 @@ const TAKEN: Refusal = {
  * of the options. A skip is only allowed while typing and counts as a miss that names
  * nothing, so it stays off the chart. Records the
  * guess, the wrong-guess tally, and on the last guess the score, streak and
- * learner record.
+ * learner record. An earlier day's puzzle, played from its own post, leaves
+ * the streak alone (`forStreak` false): the streak is for today's puzzle.
  *
  * Two requests from the same player can arrive together (a double tap, two
  * tabs, or a script firing every guess at once). Each guess claims its slot
@@ -488,7 +489,8 @@ export async function submitGuess(
   deps: Deps,
   puzzle: StoredPuzzle,
   user: User | null,
-  input: string
+  input: string,
+  forStreak = true
 ): Promise<GuessOutcome> {
   if (!user) return LOGGED_OUT;
   const loaded = await readRound(deps, puzzle, user);
@@ -557,13 +559,15 @@ export async function submitGuess(
   let learner = loaded.learner;
   if (round.status !== 'playing') {
     const solved = round.status === 'solved';
-    streak = updateStreak(streak, dayNumber(date), solved);
-    await deps.store.hSet(streakKey(user.id), {
-      current: String(streak.current),
-      best: String(streak.best),
-      lastSolvedDay:
-        streak.lastSolvedDay === null ? '' : String(streak.lastSolvedDay),
-    });
+    if (forStreak) {
+      streak = updateStreak(streak, dayNumber(date), solved);
+      await deps.store.hSet(streakKey(user.id), {
+        current: String(streak.current),
+        best: String(streak.best),
+        lastSolvedDay:
+          streak.lastSolvedDay === null ? '' : String(streak.lastSolvedDay),
+      });
+    }
     await deps.store.zAdd(scoresKey(date), {
       member: user.id,
       score: score(round) ?? UNSOLVED_SCORE,
@@ -692,14 +696,26 @@ export function puzzleView(args: {
   candidate: StoredCandidate;
   player: PlayerRound;
   streak: Streak;
+  /** Today's day number, for the streak shown. */
   day: number;
+  /** Set when this is an earlier day's puzzle (PuzzleResponse.today). */
+  today: { number: number; url: string | null } | null;
   username: string | null;
   chart: { bars: WrongGuessBar[]; players: number } | null;
   /** The post the round is played in, for the share text's link. */
   postUrl: string | null;
 }): PuzzleResponse {
-  const { puzzle, candidate, player, streak, day, username, chart, postUrl } =
-    args;
+  const {
+    puzzle,
+    candidate,
+    player,
+    streak,
+    day,
+    today,
+    username,
+    chart,
+    postUrl,
+  } = args;
   const { round } = player;
   // A finished round keeps the answer it was played against. If the day
   // has since moved to another community, today's post and clues aren't
@@ -752,6 +768,7 @@ export function puzzleView(args: {
     typingIntro: player.choices === null && needsTypingIntro(player.learner),
     choices: player.choices,
     offer: player.offer,
+    today,
   };
 }
 
