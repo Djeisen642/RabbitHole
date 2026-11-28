@@ -67,6 +67,9 @@
   "overrides": {
     "external-editor": {
       "tmp": "^0.2.7"
+    },
+    "@devvit/cli": {
+      "isomorphic-git": "^1.38.6"
     }
   }
 }
