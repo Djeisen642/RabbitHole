@@ -22,7 +22,7 @@ The first time you open the game, a short "How to play" card explains this; the 
 
 ### New players and training wheels
 
-New players pick from a list instead of typing: 5 communities on your first round, 10 on your second and third, then you type. The first round you type shows a short line on how typing works. If you lose 3 rounds in a row, the next round asks "Missed the last few? Want to pick from a list?" before your first guess. Say yes and you get 10 options, and keep getting them until you win 2 rounds that way. Picking works exactly like typing: a wrong pick uses a guess and shows the next clue, and scoring is the same. Everyone with options on a given day sees the same ones, and they never include another day's answer.
+New players pick from a list instead of typing: 5 communities on your first round, 10 on your second and third, then you type. The first round you type shows a short line on how typing works. If you lose 3 rounds in a row, the next round asks "Missed the last few? Want to pick from a list?" before your first guess. Tap "Show me a list" and you get 10 options, and keep getting them until you win 2 rounds that way. Picking works exactly like typing: a wrong pick uses a guess and shows the next clue, and scoring is the same. Everyone with options on a given day sees the same ones, and they never include another day's answer.
 
 ### Scoring
 
@@ -30,8 +30,8 @@ New players pick from a list instead of typing: 5 communities on your first roun
 - The "What others guessed" chart after a round only counts typed guesses, since picks from a short list would skew it.
 - Time doesn't count, and there is no tiebreak: players with the same score share a rank. Unsolved rounds rank last.
 - Solving on consecutive days builds your streak. Missing a day or failing a round resets it.
-- Your streak shows up as your user flair in the community ("🐇 5 day streak"), next to your name on every comment there. The result screen shows your snoovatar and a link to the post's comments.
-- Each daily post keeps its own day's puzzle. An older post can still be played for fun, but only today's counts toward the streak.
+- Your streak shows up as your user flair in the community ("🐇 5 day streak"), next to your name on every comment there. The result screen shows your snoovatar, credits the people who wrote the day's post and its top comment (linked back to both on Reddit), and links to the post's comments.
+- Each daily post keeps its own day's puzzle. An older post can still be played for fun, but only today's counts toward the streak; it shows a "Play today's puzzle" button and hides the streak.
 
 ### Sharing your result
 
