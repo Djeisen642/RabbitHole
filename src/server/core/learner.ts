@@ -11,7 +11,7 @@
 import { NEW_LEARNER, RETURNING_LEARNER } from '../../shared/game/learning';
 import type { Learner } from '../../shared/game/learning';
 import type { Deps, User } from './deps';
-import { PLAYER_KEEP_SECONDS } from './player-keep';
+import { PLAYER_KEEP_SECONDS } from './keep';
 import { streakKey } from './streak';
 
 const learnKey = (userId: string): string => `user:${userId}:learn`;

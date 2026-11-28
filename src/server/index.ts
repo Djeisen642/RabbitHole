@@ -5,7 +5,7 @@ import { createDevvitDeps, sourceMode } from './core/devvit-deps';
 import { createApi } from './routes/api';
 import { createMenu } from './routes/menu';
 import { createScheduler } from './routes/scheduler';
-import { triggers } from './routes/triggers';
+import { createTriggers } from './routes/triggers';
 
 // Real Reddit content unless RABBITHOLE_SOURCE=mock.
 const deps = createDevvitDeps(sourceMode(process.env.RABBITHOLE_SOURCE));
@@ -14,7 +14,7 @@ const app = new Hono();
 const internal = new Hono();
 
 internal.route('/menu', createMenu(deps));
-internal.route('/triggers', triggers);
+internal.route('/triggers', createTriggers(deps));
 internal.route('/scheduler', createScheduler(deps));
 
 app.route('/api', createApi(deps));

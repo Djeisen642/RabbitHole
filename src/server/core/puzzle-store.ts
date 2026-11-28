@@ -15,6 +15,7 @@ import type { PuzzleDate } from '../../shared/game/day';
 import { normalizeSubreddit } from '../../shared/game/rules';
 import type { PostCard } from '../../shared/api';
 import type { Deps } from './deps';
+import { secondsToKeep } from './keep';
 import {
   asBoolean,
   asNumber,
@@ -24,12 +25,6 @@ import {
   parseJson,
 } from './json';
 
-/**
- * Days a puzzle is kept after its date. Each daily post keeps playing its
- * own day's puzzle (see post-day.ts), so an old post found in the feed or
- * a link still works. A puzzle is a few kilobytes.
- */
-export const PUZZLE_KEEP_DAYS = 365;
 /**
  * How far back keepRecentPuzzles reaches: past the 3 days puzzles were
  * kept before old posts played their own day.
@@ -75,19 +70,6 @@ export const puzzleKey = (date: PuzzleDate): string => `puzzle:${date}`;
 
 /** Sorted set of picked subs, scored by the day number each was used. */
 export const USED_SUBS_KEY = 'used-subs';
-
-/**
- * Seconds from now until a date's keys should go: the end of the day
- * `days` (PUZZLE_KEEP_DAYS for a puzzle) after it, at least a minute.
- */
-export function secondsToKeep(
-  deps: Deps,
-  date: PuzzleDate,
-  days: number = PUZZLE_KEEP_DAYS
-): number {
-  const end = Date.parse(`${addDays(date, days + 1)}T00:00:00Z`);
-  return Math.max(60, Math.ceil((end - deps.now().getTime()) / 1000));
-}
 
 /**
  * Store a freshly picked puzzle unless the date already has one, and return

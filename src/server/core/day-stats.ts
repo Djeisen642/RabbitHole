@@ -13,7 +13,7 @@
  */
 import type { WrongGuessBar } from '../../shared/api';
 import type { Deps } from './deps';
-import { PLAYER_KEEP_SECONDS } from './player-keep';
+import { PLAYER_KEEP_SECONDS } from './keep';
 
 const wrongKey = (date: string): string => `wrong:${date}`;
 const statsKey = (date: string): string => `stats:${date}`;

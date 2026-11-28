@@ -1,5 +1,5 @@
 import type { ClueView } from '../../shared/api';
-import { CLUE_LABELS } from '../lib/clue-labels';
+import { CLUE_LABELS } from '../lib/clue-text';
 import { compact, grouped } from '../lib/format';
 
 /**

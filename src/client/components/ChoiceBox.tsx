@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { GuessView } from '../../shared/api';
 import { normalizeSubreddit } from '../../shared/game/rules';
-import { guessHint } from '../lib/hint';
+import { guessHint } from '../lib/clue-text';
 
 /**
  * Names longer than this get smaller text, so most fit a phone-width

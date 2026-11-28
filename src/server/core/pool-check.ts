@@ -23,7 +23,8 @@ import {
 import { tryLock } from './lock';
 import { checkSub } from './puzzle-build';
 import type { SubCheck } from './puzzle-build';
-import { loadPuzzle, secondsToKeep } from './puzzle-store';
+import { secondsToKeep } from './keep';
+import { loadPuzzle } from './puzzle-store';
 
 export const POOL_CHECK_BATCH = 10;
 /** Days a pool check's results are kept after its date. */

@@ -10,7 +10,7 @@ import { runDailyPick } from '../core/puzzle-pick';
 import { LIVE_CHECK_MS } from '../core/puzzle-serve';
 import { loadPuzzle, savePuzzle } from '../core/puzzle-store';
 import type { MockDeps } from '../core/mock/mock-deps';
-import { PLAYER_KEEP_DAYS } from '../core/player-keep';
+import { PLAYER_KEEP_DAYS } from '../core/keep';
 import { addDays } from '../../shared/game/day';
 import { SKIP_GUESS, normalizeSubreddit } from '../../shared/game/rules';
 import { postDaily } from '../core/daily-post';
